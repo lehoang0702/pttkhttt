@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
+  m_Name: Mage_ArcaneBolt
+  m_EditorClassIdentifier: 
+  skillName: "Arcane Bolt"
+  description: "Bắn ra tia năng lượng ma thuật sắc bén vào một mục tiêu."
+  requiredClass: 1
+  icon: {fileID: 0}
+  manaCost: 5
+  cooldownTurns: 0
+  targetType: 0
+  damageType: 1
+  powerMultiplier: 1.15
+  flatBonusDamage: 0
+  baseHealAmount: 0
+  defenseBonus: 0
+  bonusCritRate: 0
+  effectDurationTurns: 0

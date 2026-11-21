@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42610554debfc54de55ea110ef79e23b, type: 3}
+  m_Name: MageClass
+  m_EditorClassIdentifier: 
+  classType: 1
+  className: "Mage (Pháp Sư)"
+  loreDescription: "Học giả thần bí thông thạo năng lượng arcane, thiêu đốt địch với Fireball và cứu vãn đồng đội bằng Healing Light."
+  maxHealth: 85
+  maxMana: 120
+  physicalAttack: 6
+  magicAttack: 28
+  physicalDefense: 6
+  magicDefense: 20
+  speed: 11
+  critRate: 0.1
+  critMultiplier: 1.6
+  idleSprite: {fileID: 21300000, guid: 1f2818a89f567d7582cf03fcb3e2fc97, type: 3}
+  idleSpriteAlt: {fileID: 21300000, guid: 3171f2a319f2c84a992477ba6fb12549, type: 3}
+  actionSprite: {fileID: 21300000, guid: de35285029f1e91faff63199a9b8fcf3, type: 3}
+  hitSprite: {fileID: 21300000, guid: 5b4d52d9fe00738ecaf3db91928c5fcf, type: 3}
+  skills:
+  - {fileID: 11400000, guid: d651e2310fd703ed69c95e91fec04bfc, type: 3}
+  - {fileID: 11400000, guid: 12eabf540f25324921b0785c7f624ea1, type: 3}
+  - {fileID: 11400000, guid: 8e24689847f3546f8b672b9645a7439e, type: 3}

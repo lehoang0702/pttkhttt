@@ -1,0 +1,134 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4000000001}
+  - component: {fileID: 2120000001}
+  - component: {fileID: 1140000001}
+  - component: {fileID: 1140000002}
+  - component: {fileID: 6100000001}
+  m_Layer: 0
+  m_Name: DarkKnightBoss
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4000000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.35, y: 1.35, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &2120000001
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: 2ca7565ab70a08dff1862a970fc11a8f, type: 3}
+  m_Color: {r: 0.85, g: 0.35, b: 0.35, a: 1}
+  m_FlipX: 1
+  m_FlipY: 0
+--- !u!114 &1140000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e826e67f063c9cb98b98628da4cb9fcc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spriteRenderer: {fileID: 2120000001}
+  idleFrames:
+  - {fileID: 21300000, guid: 2ca7565ab70a08dff1862a970fc11a8f, type: 3}
+  - {fileID: 21300000, guid: 11b35dc0d1fa89cb4550dd39dac3219b, type: 3}
+  - {fileID: 21300000, guid: d77444ba835cd47884a473dedb749ed1, type: 3}
+  - {fileID: 21300000, guid: 96ac1371829f505f638604f2baa2cd6a, type: 3}
+  - {fileID: 21300000, guid: 60858a7b3c6b1a032035ea5c866b911b, type: 3}
+  - {fileID: 21300000, guid: d92cf4837dd4cabbcf129453163400dd, type: 3}
+  - {fileID: 21300000, guid: 4be83b07de6cd627ccc389ab9f80ddfb, type: 3}
+  - {fileID: 21300000, guid: dfb922f0330e7bc4920ecfe77972e481, type: 3}
+  - {fileID: 21300000, guid: cfbc3eed238fbd1447a98955dfc6f310, type: 3}
+  - {fileID: 21300000, guid: 854b9c0892ed560b3c9f8c9cc842bba6, type: 3}
+  - {fileID: 21300000, guid: 3dc5a32c84edb7cff49be9d97d0f7461, type: 3}
+  runFrames: []
+  attackFrames:
+  - {fileID: 21300000, guid: 5164fbfebe85f7040dfcf859372f7728, type: 3}
+  - {fileID: 21300000, guid: 7466c5aceda9297646fd9214dc94d5b2, type: 3}
+  - {fileID: 21300000, guid: 32e7e820cb09fb5230a8409e27ca499c, type: 3}
+  - {fileID: 21300000, guid: f2ac90b240b7cedf954d2db9d0d625c6, type: 3}
+  - {fileID: 21300000, guid: ea5b79a44f323b19f944562ecbe2bf19, type: 3}
+  - {fileID: 21300000, guid: f687b2661564fdad63cdefbd9da779c4, type: 3}
+  hitFrames:
+  - {fileID: 21300000, guid: 0818ebc1e580149d28ef4d800e09824a, type: 3}
+  - {fileID: 21300000, guid: b86eb996639bf8d3c303b199104cf009, type: 3}
+  - {fileID: 21300000, guid: de59e37ff31b97885e68203fb42f7557, type: 3}
+  - {fileID: 21300000, guid: 182aa0a19af7cdaa96ee07c289b8e78d, type: 3}
+  deathFrames:
+  - {fileID: 21300000, guid: 65dada913ef9198dd073f7f45735ccb2, type: 3}
+  - {fileID: 21300000, guid: 7351c718da8228f7d1071a4ce6c4be0c, type: 3}
+  - {fileID: 21300000, guid: 4e3d33444287267e80cc7e274b76eb09, type: 3}
+  - {fileID: 21300000, guid: dca1358a41ee506ebc0d58a334b3dea9, type: 3}
+  - {fileID: 21300000, guid: 2e181879187277ad11301ddc5915fbc8, type: 3}
+  - {fileID: 21300000, guid: bf221abf4502dde8d44d5d4ad732f51e, type: 3}
+  - {fileID: 21300000, guid: 1d1709487ffd59f4943a8a00f094fced, type: 3}
+  - {fileID: 21300000, guid: 3786643d3386a2434205675c39c5c0e2, type: 3}
+  - {fileID: 21300000, guid: 2c08d9cc90b355cd8fdd832826b7a192, type: 3}
+  frameRate: 10
+  attackStepDistance: -0.9
+  hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+--- !u!114 &1140000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3a1e82401b8dd2cd99f6ac371a28b2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitName: "Dark Knight Boss"
+  unitLevel: 5
+  damage: 32
+  maxHP: 320
+  currentHP: 320
+  isDefending: 0
+  isEnemy: 1
+  classData: {fileID: 11400000, guid: 51af132f6586e1488b77e279d9f49004, type: 3}
+  visual: {fileID: 0}
+  pixelAnimator: {fileID: 1140000001}
+--- !u!61 &6100000001
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_IsTrigger: 0
+  m_Size: {x: 1.2, y: 1.4}

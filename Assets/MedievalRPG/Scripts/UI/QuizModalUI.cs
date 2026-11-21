@@ -1,0 +1,256 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using MedievalRPG.Quiz;
+
+namespace MedievalRPG.UI
+{
+    /// <summary>
+    /// Bảng câu hỏi trắc nghiệm giáo dục (Quiz Modal).
+    /// Khắc phục lỗi cũ: khóa bấm đúp sau khi chọn, tô màu đáp án Đúng/Sai và hiển thị giải thích kiến thức rõ ràng trước khi xuất chiêu.
+    /// </summary>
+    public class QuizModalUI : MonoBehaviour
+    {
+        [Header("Thành phần hiển thị")]
+        [SerializeField] private Image categoryBadgeImage;
+        [SerializeField] private TextMeshProUGUI categoryText;
+        [SerializeField] private TextMeshProUGUI bonusBadgeText;
+        [SerializeField] private TextMeshProUGUI pendingActionText;
+        [SerializeField] private TextMeshProUGUI questionContentText;
+
+        [Header("4 nút đáp án A, B, C, D")]
+        [SerializeField] private Button[] optionButtons = new Button[4];
+        [SerializeField] private Image[] optionBackgrounds = new Image[4];
+        [SerializeField] private Image[] optionLetterBadges = new Image[4];
+        [SerializeField] private TextMeshProUGUI[] optionTexts = new TextMeshProUGUI[4];
+        [SerializeField] private UIButtonFeedback[] optionFeedbacks = new UIButtonFeedback[4];
+
+        [Header("Khung kết quả & giải thích")]
+        [SerializeField] private GameObject feedbackContainer;
+        [SerializeField] private Image feedbackBackground;
+        [SerializeField] private TextMeshProUGUI feedbackTitleText;
+        [SerializeField] private TextMeshProUGUI feedbackExplanationText;
+        [SerializeField] private Image feedbackTimerFill;
+        [SerializeField] private Button continueButton;
+
+        private bool _isLocked;
+        private float _feedbackDuration = 2.4f;
+        private float _feedbackElapsed;
+        private bool _isShowingFeedback;
+        private Action<int> _onAnswerSubmitted;
+        private Action _onContinueClicked;
+
+        public void Configure(
+            Image catBadge, TextMeshProUGUI catText, TextMeshProUGUI bonusText,
+            TextMeshProUGUI pendingText, TextMeshProUGUI qText,
+            Button[] buttons, Image[] bgs, Image[] letterBadges, TextMeshProUGUI[] texts, UIButtonFeedback[] feedbacks,
+            GameObject fbContainer, Image fbBg, TextMeshProUGUI fbTitle, TextMeshProUGUI fbExpl,
+            Image fbTimerFill, Button contBtn)
+        {
+            categoryBadgeImage = catBadge;
+            categoryText = catText;
+            bonusBadgeText = bonusText;
+            pendingActionText = pendingText;
+            questionContentText = qText;
+            optionButtons = buttons;
+            optionBackgrounds = bgs;
+            optionLetterBadges = letterBadges;
+            optionTexts = texts;
+            optionFeedbacks = feedbacks;
+            feedbackContainer = fbContainer;
+            feedbackBackground = fbBg;
+            feedbackTitleText = fbTitle;
+            feedbackExplanationText = fbExpl;
+            feedbackTimerFill = fbTimerFill;
+            continueButton = contBtn;
+
+            WireOptionButtons();
+        }
+
+        private void Awake()
+        {
+            WireOptionButtons();
+        }
+
+        private void WireOptionButtons()
+        {
+            if (optionButtons != null)
+            {
+                for (int i = 0; i < optionButtons.Length; i++)
+                {
+                    if (optionButtons[i] == null) continue;
+                    int idx = i;
+                    optionButtons[i].onClick.RemoveAllListeners();
+                    optionButtons[i].onClick.AddListener(() => SubmitOption(idx));
+                }
+            }
+
+            if (continueButton != null)
+            {
+                continueButton.onClick.RemoveAllListeners();
+                continueButton.onClick.AddListener(() => _onContinueClicked?.Invoke());
+            }
+        }
+
+        public void ShowQuestion(QuizQuestion q, string actionContext, Action<int> onAnswerSubmitted, Action onContinueClicked)
+        {
+            _onAnswerSubmitted = onAnswerSubmitted;
+            _onContinueClicked = onContinueClicked;
+            _isLocked = false;
+            _isShowingFeedback = false;
+            _feedbackElapsed = 0f;
+
+            gameObject.SetActive(true);
+            if (feedbackContainer != null) feedbackContainer.SetActive(false);
+
+            if (q == null) return;
+
+            if (categoryText != null) categoryText.text = q.category.ToUpperInvariant();
+            if (categoryBadgeImage != null) categoryBadgeImage.color = MedievalUITheme.GetCategoryColor(q.category);
+            if (bonusBadgeText != null) bonusBadgeText.text = $"Thưởng +{q.bonusDamage} ST";
+            if (pendingActionText != null) pendingActionText.text = actionContext;
+            if (questionContentText != null) questionContentText.text = q.questionText;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (optionButtons != null && i < optionButtons.Length && optionButtons[i] != null)
+                {
+                    optionButtons[i].interactable = true;
+                }
+                if (optionBackgrounds != null && i < optionBackgrounds.Length && optionBackgrounds[i] != null)
+                {
+                    optionBackgrounds[i].color = MedievalUITheme.BtnNeutralSlate;
+                }
+                if (optionFeedbacks != null && i < optionFeedbacks.Length && optionFeedbacks[i] != null)
+                {
+                    optionFeedbacks[i].SetBaseColor(MedievalUITheme.BtnNeutralSlate);
+                }
+                if (optionLetterBadges != null && i < optionLetterBadges.Length && optionLetterBadges[i] != null)
+                {
+                    optionLetterBadges[i].color = MedievalUITheme.GoldPrimary;
+                }
+                if (optionTexts != null && i < optionTexts.Length && optionTexts[i] != null)
+                {
+                    string ans = (q.answers != null && i < q.answers.Length) ? q.answers[i] : "";
+                    optionTexts[i].text = ans;
+                }
+            }
+        }
+
+        public void ShowResult(bool isCorrect, int selectedIndex, int correctIndex, int bonusDamage, string explanation, float duration)
+        {
+            _isLocked = true;
+            _isShowingFeedback = true;
+            _feedbackDuration = Mathf.Max(0.5f, duration);
+            _feedbackElapsed = 0f;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (optionButtons != null && i < optionButtons.Length && optionButtons[i] != null)
+                {
+                    optionButtons[i].interactable = false;
+                }
+
+                Color cardColor = MedievalUITheme.BtnDisabled;
+                Color letterColor = MedievalUITheme.SlateBorder;
+
+                if (i == correctIndex)
+                {
+                    cardColor = MedievalUITheme.SuccessPanel;
+                    letterColor = MedievalUITheme.SuccessGreen;
+                }
+                else if (i == selectedIndex && !isCorrect)
+                {
+                    cardColor = MedievalUITheme.DangerPanel;
+                    letterColor = MedievalUITheme.DangerRed;
+                }
+
+                if (optionFeedbacks != null && i < optionFeedbacks.Length && optionFeedbacks[i] != null)
+                {
+                    optionFeedbacks[i].SetBaseColor(cardColor);
+                }
+                else if (optionBackgrounds != null && i < optionBackgrounds.Length && optionBackgrounds[i] != null)
+                {
+                    optionBackgrounds[i].color = cardColor;
+                }
+
+                if (optionLetterBadges != null && i < optionLetterBadges.Length && optionLetterBadges[i] != null)
+                {
+                    optionLetterBadges[i].color = letterColor;
+                }
+            }
+
+            if (feedbackContainer != null) feedbackContainer.SetActive(true);
+            if (feedbackBackground != null)
+            {
+                feedbackBackground.color = isCorrect ? MedievalUITheme.SuccessPanel : MedievalUITheme.DangerPanel;
+            }
+            if (feedbackTitleText != null)
+            {
+                feedbackTitleText.text = isCorrect
+                    ? $"CHÍNH XÁC!  Tăng +{bonusDamage} sức mạnh chiêu thức!"
+                    : "CHƯA ĐÚNG!  Anh hùng mất lượt hành động này.";
+                feedbackTitleText.color = isCorrect ? MedievalUITheme.GoldSoft : new Color(1f, 0.68f, 0.68f, 1f);
+            }
+            if (feedbackExplanationText != null)
+            {
+                feedbackExplanationText.text = string.IsNullOrEmpty(explanation)
+                    ? "Hãy tiếp tục phát huy ở câu hỏi tiếp theo!"
+                    : $"Kiến thức: {explanation}";
+            }
+            if (feedbackTimerFill != null)
+            {
+                feedbackTimerFill.fillAmount = 1f;
+                feedbackTimerFill.color = isCorrect ? MedievalUITheme.SuccessGreen : MedievalUITheme.DangerRed;
+            }
+        }
+
+        public void Hide()
+        {
+            _isShowingFeedback = false;
+            _isLocked = false;
+            gameObject.SetActive(false);
+        }
+
+        private void SubmitOption(int index)
+        {
+            if (_isLocked) return;
+            _isLocked = true;
+            _onAnswerSubmitted?.Invoke(index);
+        }
+
+        private void Update()
+        {
+            if (!gameObject.activeInHierarchy) return;
+
+            if (_isShowingFeedback)
+            {
+                _feedbackElapsed += Time.deltaTime;
+                if (feedbackTimerFill != null)
+                {
+                    feedbackTimerFill.fillAmount = Mathf.Clamp01(1f - (_feedbackElapsed / _feedbackDuration));
+                }
+
+                Keyboard kb = Keyboard.current;
+                if (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
+                {
+                    _onContinueClicked?.Invoke();
+                }
+                return;
+            }
+
+            if (!_isLocked)
+            {
+                Keyboard kb = Keyboard.current;
+                if (kb == null) return;
+
+                if (kb.aKey.wasPressedThisFrame || kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) SubmitOption(0);
+                else if (kb.bKey.wasPressedThisFrame || kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) SubmitOption(1);
+                else if (kb.cKey.wasPressedThisFrame || kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) SubmitOption(2);
+                else if (kb.dKey.wasPressedThisFrame || kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) SubmitOption(3);
+            }
+        }
+    }
+}

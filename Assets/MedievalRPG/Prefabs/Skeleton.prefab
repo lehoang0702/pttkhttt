@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4000000001}
+  - component: {fileID: 2120000001}
+  - component: {fileID: 1140000001}
+  - component: {fileID: 1140000002}
+  - component: {fileID: 6100000001}
+  m_Layer: 0
+  m_Name: Skeleton
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4000000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &2120000001
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: 28a4ca5db2b174876d1b30db77d39927, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 1
+  m_FlipY: 0
+--- !u!114 &1140000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e826e67f063c9cb98b98628da4cb9fcc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spriteRenderer: {fileID: 2120000001}
+  idleFrames:
+  - {fileID: 21300000, guid: 28a4ca5db2b174876d1b30db77d39927, type: 3}
+  - {fileID: 21300000, guid: 072ae6dec9d6ce10304f01dc231c3c8f, type: 3}
+  - {fileID: 21300000, guid: 74273d2dc98d3a66d6c76281e42e508a, type: 3}
+  - {fileID: 21300000, guid: e947f32bc55077e8a49d8ce834b41a1a, type: 3}
+  - {fileID: 21300000, guid: b42d41048ed55789a34ec22463f41716, type: 3}
+  runFrames: []
+  attackFrames:
+  - {fileID: 21300000, guid: 916faf13a9b939314ca424d64207b6b4, type: 3}
+  - {fileID: 21300000, guid: 549020e2395c128fb681d26c10e8c0ce, type: 3}
+  - {fileID: 21300000, guid: 544256d700404321d52afee50ca1c62b, type: 3}
+  - {fileID: 21300000, guid: 5f649e2817a5dbe1fb46608598388a91, type: 3}
+  - {fileID: 21300000, guid: 09e32c4a8c59289836c59956c2de73e2, type: 3}
+  - {fileID: 21300000, guid: 23516bcaa00a9da334cbf8374ec23c30, type: 3}
+  hitFrames:
+  - {fileID: 21300000, guid: 4e23e5ffaa4b2988d642b52b1bc60172, type: 3}
+  - {fileID: 21300000, guid: 485185a2b9c526699af3bb6829903a85, type: 3}
+  deathFrames: []
+  frameRate: 10
+  attackStepDistance: -0.8
+  hitFlashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+--- !u!114 &1140000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3a1e82401b8dd2cd99f6ac371a28b2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitName: "Skeleton Warrior"
+  unitLevel: 2
+  damage: 22
+  maxHP: 130
+  currentHP: 130
+  isDefending: 0
+  isEnemy: 1
+  classData: {fileID: 11400000, guid: 6ca56388e226d260599ed40de95bcf32, type: 3}
+  visual: {fileID: 0}
+  pixelAnimator: {fileID: 1140000001}
+--- !u!61 &6100000001
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_IsTrigger: 0
+  m_Size: {x: 1.0, y: 1.2}
