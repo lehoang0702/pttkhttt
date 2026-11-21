@@ -1,18 +1,23 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using MedievalRPG.Audio;
 using MedievalRPG.Combat;
+using MedievalRPG.Data;
 
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// Thẻ hiển thị trạng thái từng anh hùng ở góc trên bên trái (Chân dung, HP/MP mượt mà, trạng thái lượt & thủ).
+    /// Thẻ hiển thị trạng thái từng anh hùng (có thể bấm chọn làm mục tiêu hồi phục / vật phẩm).
     /// </summary>
-    public class PartyMemberCardUI : MonoBehaviour
+    public class PartyMemberCardUI : MonoBehaviour, IPointerClickHandler
     {
         [Header("Thành phần hiển thị")]
         [SerializeField] private Image cardBackground;
         [SerializeField] private Image activeGlowBorder;
+        [SerializeField] private Image selectedAllyBorder;
         [SerializeField] private Image portraitImage;
         [SerializeField] private Image classIconImage;
         [SerializeField] private TextMeshProUGUI nameText;
@@ -35,8 +40,10 @@ namespace MedievalRPG.UI
         private float _displayedMpRatio = 1f;
         private bool _isCurrentTurn;
 
+        public event Action<Unit> OnCardClicked;
+
         public void Configure(
-            Image bg, Image glowBorder, Image portrait, Image classIcon,
+            Image bg, Image glowBorder, Image selectedBorder, Image portrait, Image classIcon,
             TextMeshProUGUI heroName, TextMeshProUGUI heroLv,
             GameObject badgeRoot, TextMeshProUGUI badgeText,
             GameObject turnBadge, GameObject deadCover,
@@ -45,6 +52,7 @@ namespace MedievalRPG.UI
         {
             cardBackground = bg;
             activeGlowBorder = glowBorder;
+            selectedAllyBorder = selectedBorder;
             portraitImage = portrait;
             classIconImage = classIcon;
             nameText = heroName;
@@ -70,6 +78,7 @@ namespace MedievalRPG.UI
             }
 
             gameObject.SetActive(true);
+            if (cardBackground != null) cardBackground.raycastTarget = true;
             if (portraitImage != null && portraitSprite != null) portraitImage.sprite = portraitSprite;
             if (classIconImage != null && classIconSprite != null) classIconImage.sprite = classIconSprite;
             if (nameText != null) nameText.text = MedievalUITheme.FormatHeroDisplayName(unit.unitName);
@@ -79,7 +88,7 @@ namespace MedievalRPG.UI
             _trailHpRatio = _displayedHpRatio;
             _displayedMpRatio = unit.maxMP > 0 ? (float)unit.currentMP / unit.maxMP : 0f;
 
-            RefreshImmediate(false);
+            RefreshImmediate(false, false);
         }
 
         public void SetActiveTurn(bool isTurn)
@@ -89,9 +98,10 @@ namespace MedievalRPG.UI
             if (activeTurnBadge != null) activeTurnBadge.SetActive(isTurn);
         }
 
-        public void RefreshImmediate(bool isTurn)
+        public void RefreshImmediate(bool isTurn, bool isSelectedAlly = false)
         {
             SetActiveTurn(isTurn);
+            if (selectedAllyBorder != null) selectedAllyBorder.enabled = isSelectedAlly && !isTurn;
             if (_boundUnit == null) return;
 
             bool isDead = _boundUnit.currentHP <= 0;
@@ -104,28 +114,51 @@ namespace MedievalRPG.UI
             if (hpValueText != null) hpValueText.text = $"HP {_boundUnit.currentHP}/{_boundUnit.maxHP}";
             if (mpValueText != null) mpValueText.text = $"MP {_boundUnit.currentMP}/{_boundUnit.maxMP}";
 
-            if (statusBadgeRoot != null && statusBadgeText != null)
+            UpdateStatusBadge(isDead);
+        }
+
+        private void UpdateStatusBadge(bool isDead)
+        {
+            if (statusBadgeRoot == null || statusBadgeText == null) return;
+
+            if (isDead)
             {
-                if (isDead)
-                {
-                    statusBadgeRoot.SetActive(true);
-                    statusBadgeText.text = "GỤC NGÃ";
-                }
-                else if (_boundUnit.isDefending)
-                {
-                    statusBadgeRoot.SetActive(true);
-                    statusBadgeText.text = "THỦ -50%";
-                }
-                else if (_boundUnit.bonusDefense > 0)
-                {
-                    statusBadgeRoot.SetActive(true);
-                    statusBadgeText.text = $"+{_boundUnit.bonusDefense} GIÁP";
-                }
-                else
-                {
-                    statusBadgeRoot.SetActive(false);
-                }
+                statusBadgeRoot.SetActive(true);
+                statusBadgeText.text = "GỤC NGÃ";
+                return;
             }
+
+            if (_boundUnit.HasTaunt)
+            {
+                statusBadgeRoot.SetActive(true);
+                statusBadgeText.text = "KHIÊU KHÍCH";
+            }
+            else if (_boundUnit.isDefending)
+            {
+                statusBadgeRoot.SetActive(true);
+                statusBadgeText.text = "THỦ -50%";
+            }
+            else if (_boundUnit.ActiveStatuses.Count > 0)
+            {
+                statusBadgeRoot.SetActive(true);
+                statusBadgeText.text = _boundUnit.ActiveStatuses[0].GetShortBadgeLabel();
+            }
+            else if (_boundUnit.bonusDefense > 0)
+            {
+                statusBadgeRoot.SetActive(true);
+                statusBadgeText.text = $"+{_boundUnit.bonusDefense} GIÁP";
+            }
+            else
+            {
+                statusBadgeRoot.SetActive(false);
+            }
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (_boundUnit == null) return;
+            AudioManager.Instance?.PlayButtonHover();
+            OnCardClicked?.Invoke(_boundUnit);
         }
 
         private void Update()

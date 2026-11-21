@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: ArcherClass
   m_EditorClassIdentifier: 
   classType: 2
-  className: "Archer (Cung Thủ)"
-  loreDescription: "Thiện xạ rừng sâu với phản xạ cực nhanh, tốc độ đi trước mở đầu trận chiến và khả năng bắn chí mạng khủng khiếp."
+  className: "Archer (Cung Th\u1EE7)"
+  baseLevel: 1
+  isBoss: 0
+  loreDescription: "Thi\u1EC7n x\u1EA1 r\u1EEBng s\xE2u v\u1EDBi ph\u1EA3n x\u1EA1 c\u1EF1c nhanh, t\u1ED1c \u0111\u1ED9 \u0111i tr\u01B0\u1EDBc m\u1EDF \u0111\u1EA7u tr\u1EADn chi\u1EBFn v\xE0 kh\u1EA3 n\u0103ng b\u1EAFn ch\xED m\u1EA1ng kh\u1EE7ng khi\u1EBFp."
   maxHealth: 110
   maxMana: 60
   physicalAttack: 24
@@ -29,6 +31,6 @@ MonoBehaviour:
   actionSprite: {fileID: 21300000, guid: ac8b1cdc2e5675518c891bd73c1f3ead, type: 3}
   hitSprite: {fileID: 21300000, guid: 396211256cc5b7f4f50dc3cdc46e48fe, type: 3}
   skills:
-  - {fileID: 11400000, guid: af5f3e2190586d12aad88e08655ad133, type: 3}
-  - {fileID: 11400000, guid: a0ba91873498ed6307d7dfdad2315987, type: 3}
-  - {fileID: 11400000, guid: 2230eba966ce991ab3f563f996344359, type: 3}
+  - {fileID: 11400000, guid: af5f3e2190586d12aad88e08655ad133, type: 2}
+  - {fileID: 11400000, guid: a0ba91873498ed6307d7dfdad2315987, type: 2}
+  - {fileID: 11400000, guid: 2230eba966ce991ab3f563f996344359, type: 2}

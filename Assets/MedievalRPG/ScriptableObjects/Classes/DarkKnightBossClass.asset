@@ -9,12 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1131e5014917b0a5a38a26e87b812f31, type: 3}
+  m_Script: {fileID: 11500000, guid: 42610554debfc54de55ea110ef79e23b, type: 3}
   m_Name: DarkKnightBossClass
   m_EditorClassIdentifier: 
   classType: 0
-  className: "Dark Knight Boss"
-  loreDescription: "Thủ lĩnh kỵ sĩ bóng đêm cai trị tầng sâu nhất hầm ngục, sở hữu đòn chém hủy diệt."
+  className: Dark Knight Boss
+  baseLevel: 5
+  isBoss: 1
+  loreDescription: "Th\u1EE7 l\u0129nh k\u1EF5 s\u0129 b\xF3ng \u0111\xEAm cai tr\u1ECB t\u1EA7ng s\xE2u nh\u1EA5t h\u1EA7m ng\u1EE5c, s\u1EDF h\u1EEFu \u0111\xF2n ch\xE9m h\u1EE7y di\u1EC7t."
   maxHealth: 320
   maxMana: 100
   physicalAttack: 32
@@ -28,4 +30,7 @@ MonoBehaviour:
   idleSpriteAlt: {fileID: 21300000, guid: 2ca7565ab70a08dff1862a970fc11a8f, type: 3}
   actionSprite: {fileID: 21300000, guid: 5164fbfebe85f7040dfcf859372f7728, type: 3}
   hitSprite: {fileID: 21300000, guid: 0818ebc1e580149d28ef4d800e09824a, type: 3}
-  skills: []
+  skills:
+  - {fileID: 11400000, guid: 05f7f865649abce0b8e6adc22f460692, type: 2}
+  - {fileID: 11400000, guid: 98c6eedaacaa14cc8ad2b5004e08f62d, type: 2}
+  - {fileID: 11400000, guid: c299d7044cd506fb5b40987484e9e808, type: 2}

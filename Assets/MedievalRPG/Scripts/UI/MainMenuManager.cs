@@ -4,16 +4,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using MedievalRPG.Audio;
 
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// [Quản Lý Màn Hình Menu Chính - MainMenuManager]
-    /// Điều khiển giao diện uGUI hiện đại tại màn hình khởi động game:
-    /// - Bắt đầu trận chiến mới (New Game) với chuyển cảnh mượt
-    /// - Bảng Hướng dẫn luật chơi giáo dục (Instructions)
-    /// - Bảng Cài đặt âm lượng & chế độ Quiz / tốc độ (Settings lưu PlayerPrefs)
-    /// - Thoát game (Quit)
+    /// Điều khiển giao diện màn hình Menu chính với Nhạc nền, Âm lượng tách biệt (Music / SFX), Hướng dẫn và chuyển cảnh mượt.
     /// </summary>
     public class MainMenuManager : MonoBehaviour
     {
@@ -35,8 +31,10 @@ namespace MedievalRPG.UI
         [SerializeField] private UnityEngine.UI.Button closeSettingsButton;
 
         [Header("Điều khiển Cài đặt")]
-        [SerializeField] private UnityEngine.UI.Slider volumeSlider;
-        [SerializeField] private TextMeshProUGUI volumeValueTMP;
+        [SerializeField] private UnityEngine.UI.Slider musicVolumeSlider;
+        [SerializeField] private TextMeshProUGUI musicVolumeValueTMP;
+        [SerializeField] private UnityEngine.UI.Slider sfxVolumeSlider;
+        [SerializeField] private TextMeshProUGUI sfxVolumeValueTMP;
         [SerializeField] private UnityEngine.UI.Toggle quizModeToggle;
         [SerializeField] private UnityEngine.UI.Toggle fastSpeedToggle;
 
@@ -50,7 +48,8 @@ namespace MedievalRPG.UI
             UnityEngine.UI.Button btnSettings, UnityEngine.UI.Button btnQuit,
             GameObject guidePanel, UnityEngine.UI.Button btnCloseGuide,
             GameObject settPanel, UnityEngine.UI.Button btnCloseSett,
-            UnityEngine.UI.Slider volSlider, TextMeshProUGUI volValue,
+            UnityEngine.UI.Slider musicSlider, TextMeshProUGUI musicValue,
+            UnityEngine.UI.Slider sfxSlider, TextMeshProUGUI sfxValue,
             UnityEngine.UI.Toggle quizToggle, UnityEngine.UI.Toggle speedToggle)
         {
             rootCanvas = canvas;
@@ -63,8 +62,10 @@ namespace MedievalRPG.UI
             closeInstructionsButton = btnCloseGuide;
             settingsPanel = settPanel;
             closeSettingsButton = btnCloseSett;
-            volumeSlider = volSlider;
-            volumeValueTMP = volValue;
+            musicVolumeSlider = musicSlider;
+            musicVolumeValueTMP = musicValue;
+            sfxVolumeSlider = sfxSlider;
+            sfxVolumeValueTMP = sfxValue;
             quizModeToggle = quizToggle;
             fastSpeedToggle = speedToggle;
         }
@@ -72,13 +73,20 @@ namespace MedievalRPG.UI
         private void Start()
         {
             Time.timeScale = 1f;
-            AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            AudioManager audio = AudioManager.EnsureExists();
+            audio.SetPausedDuck(false);
+            audio.PlayMenuMusic();
 
             if (instructionsPanel != null) instructionsPanel.SetActive(false);
             if (settingsPanel != null) settingsPanel.SetActive(false);
 
             WireButtons();
             WireSettings();
+
+            if (quitButton != null && Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                quitButton.gameObject.SetActive(false);
+            }
 
             if (fadeOverlay != null)
             {
@@ -122,19 +130,33 @@ namespace MedievalRPG.UI
 
         private void WireSettings()
         {
-            if (volumeSlider != null)
+            AudioManager audio = AudioManager.EnsureExists();
+
+            if (musicVolumeSlider != null)
             {
-                volumeSlider.minValue = 0f;
-                volumeSlider.maxValue = 1f;
-                volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 1f);
-                UpdateVolumeText(volumeSlider.value);
-                volumeSlider.onValueChanged.RemoveAllListeners();
-                volumeSlider.onValueChanged.AddListener(val =>
+                musicVolumeSlider.minValue = 0f;
+                musicVolumeSlider.maxValue = 1f;
+                musicVolumeSlider.value = audio.MusicVolume;
+                UpdatePercentText(musicVolumeValueTMP, musicVolumeSlider.value);
+                musicVolumeSlider.onValueChanged.RemoveAllListeners();
+                musicVolumeSlider.onValueChanged.AddListener(val =>
                 {
-                    PlayerPrefs.SetFloat("MasterVolume", val);
-                    PlayerPrefs.Save();
-                    AudioListener.volume = val;
-                    UpdateVolumeText(val);
+                    AudioManager.EnsureExists().SetMusicVolume(val);
+                    UpdatePercentText(musicVolumeValueTMP, val);
+                });
+            }
+
+            if (sfxVolumeSlider != null)
+            {
+                sfxVolumeSlider.minValue = 0f;
+                sfxVolumeSlider.maxValue = 1f;
+                sfxVolumeSlider.value = audio.SFXVolume;
+                UpdatePercentText(sfxVolumeValueTMP, sfxVolumeSlider.value);
+                sfxVolumeSlider.onValueChanged.RemoveAllListeners();
+                sfxVolumeSlider.onValueChanged.AddListener(val =>
+                {
+                    AudioManager.EnsureExists().SetSFXVolume(val);
+                    UpdatePercentText(sfxVolumeValueTMP, val);
                 });
             }
 
@@ -161,11 +183,11 @@ namespace MedievalRPG.UI
             }
         }
 
-        private void UpdateVolumeText(float val)
+        private static void UpdatePercentText(TextMeshProUGUI label, float val)
         {
-            if (volumeValueTMP != null)
+            if (label != null)
             {
-                volumeValueTMP.text = $"{Mathf.RoundToInt(val * 100f)}%";
+                label.text = $"{Mathf.RoundToInt(val * 100f)}%";
             }
         }
 
@@ -181,48 +203,31 @@ namespace MedievalRPG.UI
             }
         }
 
-        /// <summary>
-        /// Bắt đầu một ván chơi mới
-        /// </summary>
         public void OnNewGameClicked()
         {
             if (_isTransitioning) return;
-            Debug.Log("[MainMenu] Khởi tạo trận chiến mới...");
             StartCoroutine(LoadBattleWithFade());
         }
 
-        /// <summary>
-        /// Tiếp tục màn chơi hiện tại
-        /// </summary>
         public void OnContinueClicked()
         {
             OnNewGameClicked();
         }
 
-        /// <summary>
-        /// Mở / Đóng bảng hướng dẫn chơi
-        /// </summary>
         public void ToggleInstructions(bool show)
         {
             if (show && settingsPanel != null) settingsPanel.SetActive(false);
             if (instructionsPanel != null) instructionsPanel.SetActive(show);
         }
 
-        /// <summary>
-        /// Mở / Đóng bảng cài đặt
-        /// </summary>
         public void ToggleSettings(bool show)
         {
             if (show && instructionsPanel != null) instructionsPanel.SetActive(false);
             if (settingsPanel != null) settingsPanel.SetActive(show);
         }
 
-        /// <summary>
-        /// Thoát trò chơi ra màn hình Desktop
-        /// </summary>
         public void OnQuitClicked()
         {
-            Debug.Log("[MainMenu] Đang thoát trò chơi...");
             Application.Quit();
         }
 
@@ -246,36 +251,6 @@ namespace MedievalRPG.UI
             }
             fadeOverlay.alpha = toAlpha;
             fadeOverlay.blocksRaycasts = toAlpha > 0.05f;
-        }
-
-        // Chỉ vẽ OnGUI dự phòng nếu chưa cấu hình Canvas uGUI
-        private void OnGUI()
-        {
-            if (HasCanvasUI) return;
-            if (SceneManager.GetActiveScene().name == battleSceneName) return;
-
-            GUI.skin.box.fontSize = 14;
-            GUI.skin.button.fontSize = 14;
-
-            float menuWidth = 320;
-            float menuHeight = 320;
-            Rect rect = new Rect((Screen.width - menuWidth) / 2, (Screen.height - menuHeight) / 2, menuWidth, menuHeight);
-
-            GUILayout.BeginArea(rect, GUI.skin.box);
-            GUILayout.Space(10);
-            GUILayout.Label("<size=18><b>MEDIEVAL RPG</b></size>", GUI.skin.label);
-            GUILayout.Label("<size=12><i>Chiến Binh Tri Thức - Game Giáo Dục</i></size>");
-            GUILayout.Space(20);
-
-            if (GUILayout.Button("BẮT ĐẦU CHƠI (NEW GAME)", GUILayout.Height(40))) OnNewGameClicked();
-            GUILayout.Space(8);
-            if (GUILayout.Button("HƯỚNG DẪN CÁCH CHƠI", GUILayout.Height(36))) ToggleInstructions(true);
-            GUILayout.Space(8);
-            if (GUILayout.Button("CÀI ĐẶT (SETTINGS)", GUILayout.Height(36))) ToggleSettings(true);
-            GUILayout.Space(8);
-            if (GUILayout.Button("THOÁT GAME (QUIT)", GUILayout.Height(36))) OnQuitClicked();
-
-            GUILayout.EndArea();
         }
     }
 }

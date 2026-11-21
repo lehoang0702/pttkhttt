@@ -9,6 +9,8 @@ namespace MedievalRPG.Data
         [Header("Class Identity")]
         public CharacterClassType classType;
         public string className = "Knight";
+        public int baseLevel = 1;
+        public bool isBoss = false;
         [TextArea(2, 4)]
         public string loreDescription = "A stalwart protector clad in iron plate armor.";
 

@@ -5,23 +5,18 @@ using UnityEngine;
 
 namespace MedievalRPG.Visuals
 {
-    /// <summary>
-    /// Các trạng thái hoạt ảnh pixel cơ bản của nhân vật
-    /// </summary>
     public enum PixelAnimState
     {
-        Idle,      // Đứng thở (chờ lượt)
-        Run,       // Chạy / Di chuyển
-        Attack,    // Vung kiếm / Bắn cung / Niệm phép
-        Hit,       // Bị trúng đòn (chớp đỏ)
-        Death      // Gục ngã khi hết máu
+        Idle,
+        Run,
+        Attack,
+        Hit,
+        Death
     }
 
     /// <summary>
-    /// [Bộ Hoạt Ảnh Pixel Độc Lập - PixelCharacterAnimator]
-    /// Lấy cảm hứng từ triết lý frame-based của thư viện đồ họa pixel (gopxl/pixel).
-    /// Giúp phát hoạt ảnh từng khung hình cực kỳ mượt mà, chính xác, không cần qua Animator Controller phức tạp của Unity.
-    /// Rất phù hợp cho người mới bắt đầu làm game 2D Pixel Art!
+    /// Bộ hoạt ảnh khung hình pixel (Idle / Run / Attack / Hit / Death) với callback tại thời điểm va chạm,
+    /// giữ đúng màu gốc (Boss tint), hỗ trợ bước vào trận, hồi sinh và fallback death khi thiếu frame chết.
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     public class PixelCharacterAnimator : MonoBehaviour
@@ -30,38 +25,28 @@ namespace MedievalRPG.Visuals
         [SerializeField] private SpriteRenderer spriteRenderer;
 
         [Header("--- Danh sách các khung hình (Sprites) ---")]
-        [Tooltip("Các khung hình trạng thái đứng yên (Idle)")]
         public List<Sprite> idleFrames = new List<Sprite>();
-
-        [Tooltip("Các khung hình trạng thái chạy (Run)")]
         public List<Sprite> runFrames = new List<Sprite>();
-
-        [Tooltip("Các khung hình xuất chiêu tấn công (Attack)")]
         public List<Sprite> attackFrames = new List<Sprite>();
-
-        [Tooltip("Các khung hình khi bị trúng đòn (Hit)")]
         public List<Sprite> hitFrames = new List<Sprite>();
-
-        [Tooltip("Các khung hình khi tử trận (Death)")]
         public List<Sprite> deathFrames = new List<Sprite>();
 
         [Header("--- Tốc độ và Hiệu ứng chuyển động ---")]
-        [Tooltip("Số khung hình trên giây (FPS)")]
         [SerializeField] private float frameRate = 10f;
-
-        [Tooltip("Khoảng cách nhân vật bước lên phía trước khi tấn công")]
         [SerializeField] private float attackStepDistance = 0.8f;
-
-        [Tooltip("Màu chớp nháy khi bị trúng đòn (Đỏ nhạt)")]
         [SerializeField] private Color hitFlashColor = new Color(1f, 0.35f, 0.35f, 1f);
 
         private PixelAnimState _currentState = PixelAnimState.Idle;
         private Coroutine _currentAnimCoroutine;
         private Vector3 _originalPosition;
-        private bool _isActionLocked = false;
-        private bool _isDead = false;
+        private Color _baseColor = Color.white;
+        private Quaternion _baseRotation = Quaternion.identity;
+        private bool _isActionLocked;
+        private bool _isDead;
+        private bool _isTargetHighlighted;
 
         public PixelAnimState CurrentState => _currentState;
+        public Vector3 HomePosition => _originalPosition;
 
         private void Awake()
         {
@@ -69,41 +54,117 @@ namespace MedievalRPG.Visuals
             {
                 spriteRenderer = GetComponent<SpriteRenderer>();
             }
+            if (spriteRenderer != null)
+            {
+                _baseColor = spriteRenderer.color;
+            }
             _originalPosition = transform.position;
+            _baseRotation = transform.rotation;
         }
 
         private void Start()
         {
-            PlayIdle();
+            if (!_isActionLocked && !_isDead)
+            {
+                PlayIdle();
+            }
         }
 
-        /// <summary>
-        /// Phát hoạt ảnh đứng thở (Idle) lặp vô tận
-        /// </summary>
+        public void SetHomePosition(Vector3 homePos)
+        {
+            _originalPosition = homePos;
+            transform.position = homePos;
+        }
+
+        public void SetTargetHighlight(bool highlighted)
+        {
+            _isTargetHighlighted = highlighted;
+            if (_isDead || _isActionLocked || spriteRenderer == null) return;
+            RefreshIdleTint();
+        }
+
+        private void RefreshIdleTint()
+        {
+            if (spriteRenderer == null || _isDead) return;
+            if (_isTargetHighlighted)
+            {
+                spriteRenderer.color = Color.Lerp(_baseColor, new Color(1f, 0.92f, 0.55f, _baseColor.a), 0.32f);
+            }
+            else
+            {
+                spriteRenderer.color = _baseColor;
+            }
+        }
+
+        public void PlayEntranceStep(Vector3 startPos, Vector3 destinationPos, Action onComplete = null)
+        {
+            _originalPosition = destinationPos;
+            transform.position = startPos;
+            if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
+            _currentAnimCoroutine = StartCoroutine(EntranceRoutine(startPos, destinationPos, onComplete));
+        }
+
+        private IEnumerator EntranceRoutine(Vector3 startPos, Vector3 destPos, Action onComplete)
+        {
+            _isActionLocked = true;
+            _currentState = PixelAnimState.Run;
+
+            List<Sprite> walkList = (runFrames != null && runFrames.Count > 0) ? runFrames : idleFrames;
+            float duration = 0.45f;
+            float elapsed = 0f;
+            float frameTimer = 0f;
+            float frameDelay = 1f / Mathf.Max(1f, frameRate);
+            int idx = 0;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                transform.position = Vector3.Lerp(startPos, destPos, eased);
+
+                if (walkList != null && walkList.Count > 0 && spriteRenderer != null)
+                {
+                    frameTimer += Time.deltaTime;
+                    if (frameTimer >= frameDelay)
+                    {
+                        frameTimer -= frameDelay;
+                        spriteRenderer.sprite = walkList[idx];
+                        idx = (idx + 1) % walkList.Count;
+                    }
+                }
+                yield return null;
+            }
+
+            transform.position = destPos;
+            _isActionLocked = false;
+            PlayIdle();
+            onComplete?.Invoke();
+        }
+
         public void PlayIdle()
         {
             if (_isDead || _isActionLocked) return;
             _currentState = PixelAnimState.Idle;
+            RefreshIdleTint();
 
             if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
             _currentAnimCoroutine = StartCoroutine(LoopAnimationRoutine(idleFrames));
         }
 
-        /// <summary>
-        /// Kích hoạt chuỗi động tác tấn công: bước lên -> vung vũ khí -> lùi về vị trí cũ -> quay về Idle
-        /// </summary>
-        /// <param name="targetWorldPos">Vị trí của mục tiêu để xác định hướng bước tới</param>
-        public void PlayAttack(Vector3 targetWorldPos)
+        public void PlayAttack(Vector3 targetWorldPos, Action onImpact = null, Action onComplete = null)
         {
-            if (_isDead) return;
+            if (_isDead)
+            {
+                onImpact?.Invoke();
+                onComplete?.Invoke();
+                return;
+            }
 
             if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
-            _currentAnimCoroutine = StartCoroutine(AttackSequenceRoutine(targetWorldPos));
+            _currentAnimCoroutine = StartCoroutine(AttackSequenceRoutine(targetWorldPos, onImpact, onComplete));
         }
 
-        /// <summary>
-        /// Kích hoạt hoạt ảnh bị trúng đòn: chớp màu đỏ và rung nhẹ
-        /// </summary>
         public void PlayHit()
         {
             if (_isDead) return;
@@ -112,33 +173,39 @@ namespace MedievalRPG.Visuals
             _currentAnimCoroutine = StartCoroutine(HitSequenceRoutine());
         }
 
-        /// <summary>
-        /// Kích hoạt hoạt ảnh tử trận: phát chuỗi ngã xuống và giữ nguyên ở khung hình cuối
-        /// </summary>
         public void PlayDeath()
         {
+            if (_isDead) return;
             _isDead = true;
+            _isActionLocked = false;
             _currentState = PixelAnimState.Death;
 
             if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
-            _currentAnimCoroutine = StartCoroutine(PlayOnceRoutine(deathFrames, true));
+            _currentAnimCoroutine = StartCoroutine(DeathSequenceRoutine());
         }
 
-        // =====================================================================
-        // CÁC COROUTINE ĐIỀU KHIỂN CHUYỂN ĐỘNG & FRAME TỪNG BƯỚC
-        // =====================================================================
+        public void ReviveToIdle()
+        {
+            _isDead = false;
+            _isActionLocked = false;
+            transform.position = _originalPosition;
+            transform.rotation = _baseRotation;
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = true;
+                spriteRenderer.color = _baseColor;
+            }
+            PlayIdle();
+        }
 
-        /// <summary>
-        /// Phát lặp tuần hoàn một danh sách khung hình
-        /// </summary>
         private IEnumerator LoopAnimationRoutine(List<Sprite> frames)
         {
-            if (frames == null || frames.Count == 0) yield break;
+            if (frames == null || frames.Count == 0 || spriteRenderer == null) yield break;
 
             int index = 0;
             float delay = 1f / Mathf.Max(1f, frameRate);
 
-            while (true)
+            while (!_isDead)
             {
                 spriteRenderer.sprite = frames[index];
                 index = (index + 1) % frames.Count;
@@ -146,91 +213,95 @@ namespace MedievalRPG.Visuals
             }
         }
 
-        /// <summary>
-        /// Phát chuỗi khung hình một lần duy nhất
-        /// </summary>
-        private IEnumerator PlayOnceRoutine(List<Sprite> frames, bool holdLastFrame)
-        {
-            if (frames == null || frames.Count == 0) yield break;
-
-            float delay = 1f / Mathf.Max(1f, frameRate);
-
-            for (int i = 0; i < frames.Count; i++)
-            {
-                spriteRenderer.sprite = frames[i];
-                yield return new WaitForSeconds(delay);
-            }
-
-            if (!holdLastFrame && !_isDead)
-            {
-                PlayIdle();
-            }
-        }
-
-        /// <summary>
-        /// Chuỗi hành động tấn công hoàn chỉnh
-        /// </summary>
-        private IEnumerator AttackSequenceRoutine(Vector3 targetWorldPos)
+        private IEnumerator AttackSequenceRoutine(Vector3 targetWorldPos, Action onImpact, Action onComplete)
         {
             _isActionLocked = true;
             _currentState = PixelAnimState.Attack;
 
-            Vector3 direction = (targetWorldPos - _originalPosition).normalized;
-            Vector3 stepTarget = _originalPosition + direction * attackStepDistance;
+            if (spriteRenderer != null) spriteRenderer.color = _baseColor;
+
+            Vector3 dir = (targetWorldPos - _originalPosition);
+            dir.z = 0f;
+            if (dir.sqrMagnitude < 0.0001f) dir = Vector3.right;
+            else dir.Normalize();
+
+            float stepDist = Mathf.Abs(attackStepDistance);
+            Vector3 stepTarget = _originalPosition + dir * stepDist;
 
             // 1. Lao nhanh về phía mục tiêu
-            float lungeTime = 0.12f;
+            float lungeTime = 0.14f;
             float elapsed = 0f;
             while (elapsed < lungeTime)
             {
-                transform.position = Vector3.Lerp(_originalPosition, stepTarget, elapsed / lungeTime);
                 elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / lungeTime);
+                transform.position = Vector3.Lerp(_originalPosition, stepTarget, t);
                 yield return null;
             }
             transform.position = stepTarget;
 
-            // 2. Phát lần lượt các frame tấn công
-            if (attackFrames != null && attackFrames.Count > 0)
+            // 2. Phát chuỗi frame tấn công và kích hoạt impact ở giữa đòn
+            bool impactFired = false;
+            if (attackFrames != null && attackFrames.Count > 0 && spriteRenderer != null)
             {
-                float frameDelay = 1f / Mathf.Max(1f, frameRate * 1.3f);
+                float frameDelay = 1f / Mathf.Max(1f, frameRate * 1.25f);
+                int impactFrameIndex = Mathf.Clamp(attackFrames.Count / 2, 0, attackFrames.Count - 1);
+
                 for (int i = 0; i < attackFrames.Count; i++)
                 {
                     spriteRenderer.sprite = attackFrames[i];
+                    if (i == impactFrameIndex && !impactFired)
+                    {
+                        impactFired = true;
+                        onImpact?.Invoke();
+                    }
                     yield return new WaitForSeconds(frameDelay);
                 }
             }
             else
             {
-                yield return new WaitForSeconds(0.2f);
+                impactFired = true;
+                onImpact?.Invoke();
+                yield return new WaitForSeconds(0.22f);
             }
 
-            // 3. Lùi về vị trí ban đầu
-            float returnTime = 0.15f;
+            if (!impactFired)
+            {
+                onImpact?.Invoke();
+            }
+
+            // 3. Lùi về vị trí đứng
+            float returnTime = 0.16f;
             elapsed = 0f;
             while (elapsed < returnTime)
             {
-                transform.position = Vector3.Lerp(stepTarget, _originalPosition, elapsed / returnTime);
                 elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / returnTime);
+                transform.position = Vector3.Lerp(stepTarget, _originalPosition, t);
                 yield return null;
             }
             transform.position = _originalPosition;
 
             _isActionLocked = false;
             PlayIdle();
+            onComplete?.Invoke();
         }
 
-        /// <summary>
-        /// Chuỗi hiệu ứng khi bị đánh trúng
-        /// </summary>
         private IEnumerator HitSequenceRoutine()
         {
             _isActionLocked = true;
             _currentState = PixelAnimState.Hit;
 
-            Color originalColor = spriteRenderer.color;
-            spriteRenderer.color = hitFlashColor; // Chớp màu đỏ
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = hitFlashColor;
+            }
 
-            if (hitFrames != null && hitFrames.Count > 0)
+            // Rung nhẹ khi nhận sát thương
+            Vector3 knockOffset = new Vector3(transform.position.x >= 0f ? 0.08f : -0.08f, 0f, 0f);
+            transform.position = _originalPosition + knockOffset;
+
+            if (hitFrames != null && hitFrames.Count > 0 && spriteRenderer != null)
             {
                 float frameDelay = 1f / Mathf.Max(1f, frameRate);
                 for (int i = 0; i < hitFrames.Count; i++)
@@ -241,15 +312,59 @@ namespace MedievalRPG.Visuals
             }
             else
             {
-                yield return new WaitForSeconds(0.2f);
+                yield return new WaitForSeconds(0.18f);
             }
 
-            spriteRenderer.color = originalColor; // Khôi phục màu sắc ban đầu
+            transform.position = _originalPosition;
             _isActionLocked = false;
 
             if (!_isDead)
             {
                 PlayIdle();
+            }
+        }
+
+        private IEnumerator DeathSequenceRoutine()
+        {
+            if (spriteRenderer == null) yield break;
+
+            if (deathFrames != null && deathFrames.Count > 0)
+            {
+                spriteRenderer.color = _baseColor;
+                float delay = 1f / Mathf.Max(1f, frameRate);
+                for (int i = 0; i < deathFrames.Count; i++)
+                {
+                    spriteRenderer.sprite = deathFrames[i];
+                    yield return new WaitForSeconds(delay);
+                }
+            }
+            else
+            {
+                // Fallback cho quái không có frame Death (Goblin / Skeleton): chớp hit -> nghiêng ngã & mờ dần
+                if (hitFrames != null && hitFrames.Count > 0)
+                {
+                    spriteRenderer.sprite = hitFrames[hitFrames.Count - 1];
+                }
+
+                float elapsed = 0f;
+                float duration = 0.45f;
+                Vector3 startPos = _originalPosition;
+                Quaternion startRot = _baseRotation;
+                Quaternion endRot = Quaternion.Euler(0f, 0f, spriteRenderer.flipX ? -75f : 75f);
+
+                while (elapsed < duration)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / duration);
+                    transform.position = Vector3.Lerp(startPos, startPos + new Vector3(0f, -0.22f, 0f), t);
+                    transform.rotation = Quaternion.Slerp(startRot, endRot, t);
+                    Color c = Color.Lerp(_baseColor, new Color(0.4f, 0.4f, 0.4f, 0f), t);
+                    c.a = Mathf.Lerp(_baseColor.a, 0f, t);
+                    spriteRenderer.color = c;
+                    yield return null;
+                }
+
+                spriteRenderer.enabled = false;
             }
         }
     }

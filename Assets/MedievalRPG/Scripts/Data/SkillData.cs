@@ -32,5 +32,21 @@ namespace MedievalRPG.Data
         public float bonusCritRate = 0f;
         [Tooltip("Duration of buff/debuff in turns")]
         public int effectDurationTurns = 0;
+
+        [Header("Status Effects")]
+        public StatusEffectType statusEffect = StatusEffectType.None;
+        public int statusDurationTurns = 0;
+        public int statusPotency = 0;
+        public bool applyStatusToSelf = false;
+
+        public bool IsHealSkill =>
+            baseHealAmount > 0 ||
+            targetType == SkillTargetType.SingleAlly ||
+            targetType == SkillTargetType.AllAllies;
+
+        public bool IsSelfSupport =>
+            targetType == SkillTargetType.Self &&
+            powerMultiplier <= 0f &&
+            !IsHealSkill;
     }
 }

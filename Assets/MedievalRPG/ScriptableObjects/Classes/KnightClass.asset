@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: KnightClass
   m_EditorClassIdentifier: 
   classType: 0
-  className: "Knight (Hiệp Sĩ)"
-  loreDescription: "Tiên phong dũng cảm khoác giáp sắt dày cộp, sử dụng khiên lớn phòng ngự và kiếm dài mở đường."
+  className: "Knight (Hi\u1EC7p S\u0129)"
+  baseLevel: 1
+  isBoss: 0
+  loreDescription: "Ti\xEAn phong d\u0169ng c\u1EA3m kho\xE1c gi\xE1p s\u1EAFt d\xE0y c\u1ED9p, s\u1EED d\u1EE5ng khi\xEAn l\u1EDBn ph\xF2ng ng\u1EF1 v\xE0 ki\u1EBFm d\xE0i m\u1EDF \u0111\u01B0\u1EDDng."
   maxHealth: 160
   maxMana: 35
   physicalAttack: 22
@@ -29,6 +31,6 @@ MonoBehaviour:
   actionSprite: {fileID: 21300000, guid: 51371a538132132bf7f75707aa1b2dc1, type: 3}
   hitSprite: {fileID: 21300000, guid: 4c744fb503ea17b06594bdd5c15cea11, type: 3}
   skills:
-  - {fileID: 11400000, guid: c63a1fe19fd103d8397b9135a8905b31, type: 3}
-  - {fileID: 11400000, guid: ea9669cc1e5bdf5ab21965f70e47a656, type: 3}
-  - {fileID: 11400000, guid: e338fe71443a15a0554114195a5540d9, type: 3}
+  - {fileID: 11400000, guid: c63a1fe19fd103d8397b9135a8905b31, type: 2}
+  - {fileID: 11400000, guid: ea9669cc1e5bdf5ab21965f70e47a656, type: 2}
+  - {fileID: 11400000, guid: e338fe71443a15a0554114195a5540d9, type: 2}

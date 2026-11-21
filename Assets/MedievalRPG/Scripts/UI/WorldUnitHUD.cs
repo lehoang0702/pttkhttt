@@ -2,12 +2,12 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using MedievalRPG.Combat;
+using MedievalRPG.Data;
 
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// Thanh máu mini & mũi tên báo hiệu lượt ngay phía trên từng nhân vật trên chiến trường.
-    /// Hiển thị trên Canvas chính theo tọa độ màn hình để giữ độ sắc nét tuyệt đối.
+    /// Thanh máu mini, mũi tên lượt, vòng chọn mục tiêu và dự báo hành động quái (Enemy Intent) trên chiến trường.
     /// </summary>
     public class WorldUnitHUD : MonoBehaviour
     {
@@ -15,6 +15,10 @@ namespace MedievalRPG.UI
         [SerializeField] private TextMeshProUGUI nameLabel;
         [SerializeField] private GameObject turnArrowRoot;
         [SerializeField] private GameObject defendBadgeRoot;
+        [SerializeField] private GameObject targetReticleRoot;
+        [SerializeField] private GameObject intentPillRoot;
+        [SerializeField] private TextMeshProUGUI intentText;
+        [SerializeField] private Image intentBackground;
         [SerializeField] private CanvasGroup canvasGroup;
 
         private Unit _unit;
@@ -28,13 +32,20 @@ namespace MedievalRPG.UI
 
         public void Configure(
             Image hpFill, TextMeshProUGUI nameTxt,
-            GameObject turnArrow, GameObject defendBadge, CanvasGroup cg)
+            GameObject turnArrow, GameObject defendBadge, CanvasGroup cg,
+            GameObject targetReticle = null, GameObject intentRoot = null,
+            TextMeshProUGUI intentLabel = null, Image intentBg = null)
         {
             hpFillImage = hpFill;
             nameLabel = nameTxt;
             turnArrowRoot = turnArrow;
             defendBadgeRoot = defendBadge;
             canvasGroup = cg;
+            targetReticleRoot = targetReticle;
+            intentPillRoot = intentRoot;
+            intentText = intentLabel;
+            intentBackground = intentBg;
+
             if (turnArrowRoot != null)
             {
                 _arrowRect = turnArrowRoot.GetComponent<RectTransform>();
@@ -66,16 +77,54 @@ namespace MedievalRPG.UI
             }
 
             gameObject.SetActive(true);
-            Refresh(false);
+            Refresh(false, false);
         }
 
-        public void Refresh(bool isActiveTurn)
+        public void Refresh(bool isActiveTurn, bool isTargeted = false)
         {
             _isTurnActive = isActiveTurn;
-            if (turnArrowRoot != null) turnArrowRoot.SetActive(isActiveTurn && _unit != null && _unit.currentHP > 0);
-            if (defendBadgeRoot != null && _unit != null)
+            bool alive = _unit != null && _unit.currentHP > 0;
+
+            if (turnArrowRoot != null) turnArrowRoot.SetActive(isActiveTurn && alive);
+            if (defendBadgeRoot != null)
             {
-                defendBadgeRoot.SetActive(_unit.currentHP > 0 && (_unit.isDefending || _unit.bonusDefense > 0));
+                defendBadgeRoot.SetActive(alive && (_unit.isDefending || _unit.bonusDefense > 0 || _unit.ShadowShieldStacks > 0));
+            }
+            if (targetReticleRoot != null)
+            {
+                targetReticleRoot.SetActive(alive && isTargeted);
+            }
+
+            if (intentPillRoot != null && intentText != null)
+            {
+                if (alive && _unit.isEnemy)
+                {
+                    string intentStr = _unit.GetIntentDisplayText();
+                    bool show = !string.IsNullOrEmpty(intentStr);
+                    intentPillRoot.SetActive(show);
+                    if (show)
+                    {
+                        intentText.text = _unit.ShadowShieldStacks > 0
+                            ? $"{intentStr} • KHIÊN {_unit.ShadowShieldStacks}"
+                            : intentStr;
+                        if (intentBackground != null)
+                        {
+                            intentBackground.color = _unit.IsStunned
+                                ? MedievalUITheme.BtnPrimaryGold
+                                : (_unit.PlannedIntent == EnemyIntentType.Buff ? MedievalUITheme.BtnDefend : MedievalUITheme.DangerPanel);
+                        }
+                    }
+                }
+                else if (alive && _unit.ActiveStatuses.Count > 0)
+                {
+                    intentPillRoot.SetActive(true);
+                    intentText.text = _unit.ActiveStatuses[0].GetShortBadgeLabel();
+                    if (intentBackground != null) intentBackground.color = MedievalUITheme.BtnDefend;
+                }
+                else
+                {
+                    intentPillRoot.SetActive(false);
+                }
             }
         }
 

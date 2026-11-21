@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be8a33c7792265657b785568d36c18a9, type: 3}
+  m_Name: MedievalAudioBank
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Audio.AudioBank
+  audioMixer: {fileID: 0}
+  musicGroup: {fileID: 0}
+  sfxGroup: {fileID: 0}
+  ambientGroup: {fileID: 0}
+  bgmMainMenu: {fileID: 8300000, guid: 625828803bbca0663ae1faeaef32bd03, type: 3}
+  bgmBattle: {fileID: 8300000, guid: 78cec0e50628256b68ae9d367b1bd9b0, type: 3}
+  bgmBoss: {fileID: 8300000, guid: 79c0cc23c29cfa015ac9e8cba42987a5, type: 3}
+  ambientForest: {fileID: 8300000, guid: 76f1bd145fb7963ac804e572133f5b7c, type: 3}
+  uiClick: {fileID: 8300000, guid: 3a82c3360afb7ae6ebf83c23f3f5dbbf, type: 3}
+  uiHover: {fileID: 8300000, guid: bd906497ce3ef4a24a72fd40764ca851, type: 3}
+  quizOpen: {fileID: 8300000, guid: 11af24623a7156d1dbc910a97694f994, type: 3}
+  quizCorrect: {fileID: 8300000, guid: 67c2d041f8d807fb993a9fa4193015b5, type: 3}
+  quizWrong: {fileID: 8300000, guid: 730ac387c9871dd4fa5e7abdd0b50c86, type: 3}
+  swordSlash: {fileID: 8300000, guid: ffb86ab49654db7ef8d76dfe8b1aabc1, type: 3}
+  bowShoot: {fileID: 8300000, guid: 67b3c6c2b1a3b0c1fb5678ac24b6aa32, type: 3}
+  magicCast: {fileID: 8300000, guid: 9ef4366fd0d1e3b5dbda71847882df8f, type: 3}
+  fireballHit: {fileID: 8300000, guid: e677ec4ba7e52e871892146aff9edd0a, type: 3}
+  healChime: {fileID: 8300000, guid: d8f8f67649c141d069136b2ae26ab6de, type: 3}
+  shieldDefend: {fileID: 8300000, guid: a337065f290e3b33697fbd7d3d6c9adb, type: 3}
+  critHit: {fileID: 8300000, guid: ac3505e69f76ecb22a1519ad941c11aa, type: 3}
+  unitHit: {fileID: 8300000, guid: 5b2bc03b964c48ccca485318d9c372dd, type: 3}
+  unitDeath: {fileID: 8300000, guid: cdf1bcc5a27cec900b527d4f17e6d37b, type: 3}
+  victoryFanfare: {fileID: 8300000, guid: 694a86b0e1e8521e2b26c1cc83c6b382, type: 3}
+  defeatSting: {fileID: 8300000, guid: 2c91336425f4a9e12a512de48fe8dea6, type: 3}

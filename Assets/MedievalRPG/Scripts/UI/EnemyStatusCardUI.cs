@@ -6,7 +6,7 @@ using MedievalRPG.Combat;
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// Thẻ thông tin Quái vật / Boss ở góc trên bên phải với thanh HP mượt mà và hiệu ứng tụt máu.
+    /// Thẻ thông tin Quái vật / Boss đang được chọn mục tiêu (kèm trạng thái, Khiên Boss & hiệu ứng HP mượt).
     /// </summary>
     public class EnemyStatusCardUI : MonoBehaviour
     {
@@ -18,6 +18,8 @@ namespace MedievalRPG.UI
         [SerializeField] private Image hpTrailImage;
         [SerializeField] private TextMeshProUGUI hpValueText;
         [SerializeField] private GameObject defeatedBadge;
+        [SerializeField] private GameObject statusPillRoot;
+        [SerializeField] private TextMeshProUGUI statusPillText;
 
         private Unit _boundEnemy;
         private float _displayedHpRatio = 1f;
@@ -28,7 +30,7 @@ namespace MedievalRPG.UI
             Image glowBorder, Image portrait,
             TextMeshProUGUI enemyName, TextMeshProUGUI stats,
             Image hpFill, Image hpTrail, TextMeshProUGUI hpVal,
-            GameObject deadBadge)
+            GameObject deadBadge, GameObject statusRoot = null, TextMeshProUGUI statusTxt = null)
         {
             activeGlowBorder = glowBorder;
             portraitImage = portrait;
@@ -38,10 +40,13 @@ namespace MedievalRPG.UI
             hpTrailImage = hpTrail;
             hpValueText = hpVal;
             defeatedBadge = deadBadge;
+            statusPillRoot = statusRoot;
+            statusPillText = statusTxt;
         }
 
         public void Bind(Unit enemy, Sprite portraitSprite)
         {
+            bool changedTarget = _boundEnemy != enemy;
             _boundEnemy = enemy;
             if (enemy == null)
             {
@@ -53,8 +58,12 @@ namespace MedievalRPG.UI
             if (portraitImage != null && portraitSprite != null) portraitImage.sprite = portraitSprite;
             if (nameText != null) nameText.text = enemy.unitName;
 
-            _displayedHpRatio = enemy.maxHP > 0 ? (float)enemy.currentHP / enemy.maxHP : 0f;
-            _trailHpRatio = _displayedHpRatio;
+            if (changedTarget)
+            {
+                _displayedHpRatio = enemy.maxHP > 0 ? (float)enemy.currentHP / enemy.maxHP : 0f;
+                _trailHpRatio = _displayedHpRatio;
+            }
+
             Refresh(false);
         }
 
@@ -76,7 +85,30 @@ namespace MedievalRPG.UI
             }
             if (statsText != null)
             {
-                statsText.text = $"Cấp {_boundEnemy.unitLevel}  •  ATK {_boundEnemy.damage}  •  DEF {_boundEnemy.EffectiveDefense}";
+                statsText.text = $"Cấp {_boundEnemy.unitLevel} • ATK {_boundEnemy.damage} • DEF {_boundEnemy.EffectiveDefense} • SPD {_boundEnemy.speed}";
+            }
+
+            if (statusPillRoot != null && statusPillText != null)
+            {
+                if (_boundEnemy.ShadowShieldStacks > 0)
+                {
+                    statusPillRoot.SetActive(true);
+                    statusPillText.text = $"KHIÊN TRI THỨC: {_boundEnemy.ShadowShieldStacks}";
+                }
+                else if (_boundEnemy.ActiveStatuses.Count > 0)
+                {
+                    statusPillRoot.SetActive(true);
+                    statusPillText.text = _boundEnemy.ActiveStatuses[0].GetShortBadgeLabel();
+                }
+                else if (_boundEnemy.bonusDefense > 0)
+                {
+                    statusPillRoot.SetActive(true);
+                    statusPillText.text = $"+{_boundEnemy.bonusDefense} GIÁP";
+                }
+                else
+                {
+                    statusPillRoot.SetActive(false);
+                }
             }
         }
 

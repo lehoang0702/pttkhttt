@@ -108,6 +108,12 @@ namespace MedievalRPG.EditorTools
         {
             EnsureTMPEssentials();
             ConfigureAllUISprites();
+            MedievalRPGAssetSetup.EnsureCombatDataSetup();
+            if (!File.Exists("Assets/MedievalRPG/Resources/MedievalAudioBank.asset"))
+            {
+                MedievalAudioGenerator.GenerateAllAudioAndBank();
+            }
+
             UIAssets assets = LoadAndCreateAssets();
 
             BuildMainMenuScene(assets);
@@ -437,15 +443,15 @@ namespace MedievalRPG.EditorTools
             mcRt.anchorMin = new Vector2(0.5f, 0.5f);
             mcRt.anchorMax = new Vector2(0.5f, 0.5f);
             mcRt.pivot = new Vector2(0.5f, 0.5f);
-            mcRt.anchoredPosition = new Vector2(0f, -60f);
-            mcRt.sizeDelta = new Vector2(470f, 380f);
+            mcRt.anchoredPosition = new Vector2(0f, -66f);
+            mcRt.sizeDelta = new Vector2(470f, 392f);
 
             VerticalLayoutGroup vlg = menuCard.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.padding = new RectOffset(32, 32, 32, 32);
-            vlg.spacing = 16f;
+            vlg.padding = new RectOffset(32, 32, 30, 30);
+            vlg.spacing = 14f;
             vlg.childAlignment = TextAnchor.MiddleCenter;
             vlg.childControlWidth = true;
-            vlg.childControlHeight = false;
+            vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
@@ -476,10 +482,11 @@ namespace MedievalRPG.EditorTools
             guideModal.SetActive(false);
 
             // --- Modal Cài Đặt ---
-            GameObject settingsModal = CreateModalOverlay("SettingsModal", canvas.transform, a, new Vector2(620f, 430f),
+            GameObject settingsModal = CreateModalOverlay("SettingsModal", canvas.transform, a, new Vector2(620f, 510f),
                 a.iconGear, "CÀI ĐẶT HỆ THỐNG", out Transform settContent, out UnityEngine.UI.Button closeSettBtn, "LƯU & ĐÓNG");
             BuildSettingsControls(settContent, a,
-                out UnityEngine.UI.Slider volSlider, out TextMeshProUGUI volValue,
+                out UnityEngine.UI.Slider musicSlider, out TextMeshProUGUI musicValue,
+                out UnityEngine.UI.Slider sfxSlider, out TextMeshProUGUI sfxValue,
                 out UnityEngine.UI.Toggle quizToggle, out UnityEngine.UI.Toggle fastToggle);
             settingsModal.SetActive(false);
 
@@ -492,7 +499,7 @@ namespace MedievalRPG.EditorTools
                 btnStart, btnGuide, btnSettings, btnQuit,
                 guideModal, closeGuideBtn,
                 settingsModal, closeSettBtn,
-                volSlider, volValue, quizToggle, fastToggle);
+                musicSlider, musicValue, sfxSlider, sfxValue, quizToggle, fastToggle);
 
             EditorUtility.SetDirty(menuMgr);
             EditorSceneManager.MarkSceneDirty(scene);
@@ -508,19 +515,21 @@ namespace MedievalRPG.EditorTools
             Sprite mid = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Environment/Forest/Layer_02.png");
             Sprite fg  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Environment/Forest/Layer_01.png");
 
-            GameObject skyGo = CreateWorldSprite("Menu_Sky", root.transform, sky, new Vector3(0f, 0.5f, 5f), Vector3.one * 1.85f, -10);
-            GameObject midGo = CreateWorldSprite("Menu_Midground", root.transform, mid, new Vector3(0f, 0.2f, 3f), Vector3.one * 1.85f, -5);
-            GameObject fgGo  = CreateWorldSprite("Menu_Foreground", root.transform, fg, new Vector3(0f, -0.4f, 1f), Vector3.one * 1.75f, -1);
+            GameObject skyGo = CreateWorldSprite("Menu_Sky", root.transform, sky, new Vector3(0f, 0.5f, 5f), new Vector3(2.4f, 1.9f, 1f), -10);
+            GameObject midGo = CreateWorldSprite("Menu_Midground", root.transform, mid, new Vector3(0f, 1.0f, 3f), Vector3.one * 1.85f, -5);
+            GameObject fgGo  = CreateWorldSprite("Menu_Foreground", root.transform, fg, new Vector3(0f, 0.85f, 1f), Vector3.one * 1.75f, -1);
+            TileForestSideExtensions(midGo, "_SideTile");
+            TileForestSideExtensions(fgGo, "_SideTile");
 
             Sprite kSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Knight/Frames/Idle/Knight_Idle_0.png");
             Sprite mSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Mage/Frames/Idle/Mage_Idle_0.png");
             Sprite aSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Archer/Frames/Idle/Archer_Idle_0.png");
             Sprite gSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Enemies/Enemy_01/Frames/Idle/Enemy_Idle_0.png");
 
-            GameObject kGo = CreateWorldSprite("Showcase_Knight", root.transform, kSpr, new Vector3(-3.35f, -1.05f, 0f), Vector3.one, 1);
-            GameObject mGo = CreateWorldSprite("Showcase_Mage",   root.transform, mSpr, new Vector3(-4.65f, -0.95f, 0f), Vector3.one, 1);
-            GameObject aGo = CreateWorldSprite("Showcase_Archer", root.transform, aSpr, new Vector3(-3.95f, -0.10f, 0f), Vector3.one, 0);
-            GameObject gGo = CreateWorldSprite("Showcase_Goblin", root.transform, gSpr, new Vector3(3.95f, -1.05f, 0f), Vector3.one, 1);
+            GameObject kGo = CreateWorldSprite("Showcase_Knight", root.transform, kSpr, new Vector3(-3.65f, -1.40f, 0f), Vector3.one, 1);
+            GameObject mGo = CreateWorldSprite("Showcase_Mage",   root.transform, mSpr, new Vector3(-4.85f, -1.25f, 0f), Vector3.one, 1);
+            GameObject aGo = CreateWorldSprite("Showcase_Archer", root.transform, aSpr, new Vector3(-4.20f, -0.95f, 0f), Vector3.one, 0);
+            GameObject gGo = CreateWorldSprite("Showcase_Goblin", root.transform, gSpr, new Vector3(4.05f, -1.35f, 0f), Vector3.one, 1);
             if (gGo != null)
             {
                 var sr = gGo.GetComponent<SpriteRenderer>();
@@ -530,6 +539,34 @@ namespace MedievalRPG.EditorTools
             backdrop.Configure(
                 skyGo.transform, midGo.transform, fgGo.transform,
                 new[] { kGo.transform, mGo.transform, aGo.transform, gGo.transform });
+        }
+
+        private static void TileForestSideExtensions(GameObject centerObj, string suffix)
+        {
+            if (centerObj == null) return;
+            SpriteRenderer sr = centerObj.GetComponent<SpriteRenderer>();
+            if (sr == null || sr.sprite == null) return;
+            float localWidth = sr.sprite.bounds.size.x;
+            if (localWidth <= 0.1f) return;
+
+            for (int dir = -1; dir <= 1; dir += 2)
+            {
+                string tileName = $"{centerObj.name}{suffix}_{(dir < 0 ? "L" : "R")}";
+                Transform oldChild = centerObj.transform.Find(tileName);
+                if (oldChild != null) UnityEngine.Object.DestroyImmediate(oldChild.gameObject);
+                GameObject oldGlobal = GameObject.Find(tileName);
+                if (oldGlobal != null) UnityEngine.Object.DestroyImmediate(oldGlobal);
+
+                GameObject tile = new GameObject(tileName);
+                tile.transform.SetParent(centerObj.transform, false);
+                tile.transform.localPosition = new Vector3(dir * localWidth, 0f, 0f);
+                tile.transform.localScale = Vector3.one;
+                SpriteRenderer tileSr = tile.AddComponent<SpriteRenderer>();
+                tileSr.sprite = sr.sprite;
+                tileSr.sortingLayerID = sr.sortingLayerID;
+                tileSr.sortingOrder = sr.sortingOrder;
+                tileSr.sharedMaterial = sr.sharedMaterial;
+            }
         }
 
         private static GameObject CreateWorldSprite(string name, Transform parent, Sprite sprite, Vector3 pos, Vector3 scale, int sortOrder)
@@ -557,10 +594,10 @@ namespace MedievalRPG.EditorTools
                 "• Hiệp Sĩ (Knight): Máu cao, giáp dày, bảo vệ đồng đội.\n• Pháp Sư (Mage): Sát thương phép & Hồi máu.\n• Cung Thủ (Archer): Tốc độ nhanh, tỉ lệ chí mạng cao.");
 
             CreateRuleRow(parent, a, a.iconScroll, MedievalUITheme.GoldPrimary, "2. Chiến Đấu & Tri Thức",
-                "Khi chọn Tấn Công, Kỹ Năng hoặc Hồi Phục, bạn sẽ trả lời 1 câu hỏi trắc nghiệm.\n• Trả lời ĐÚNG: Xuất chiêu thành công + nhận thêm Sát thương thưởng!\n• Trả lời SAI: Anh hùng bị mất lượt hành động.");
+                "Khi chọn Tấn Công hoặc Kỹ Năng, bạn cần trả lời 1 câu hỏi trắc nghiệm.\n• ĐÚNG: Xuất chiêu + thưởng sát thương (Chuỗi >= 3 tăng +20% lực đánh!).\n• SAI: Anh hùng mất lượt hành động.");
 
-            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Phòng Thủ Chiến Thuật & Phím Tắt",
-                "• Chọn Phòng Thủ [5]: Giảm 50% sát thương nhận vào và hồi ngay +8 MP (không cần Quiz).\n• Phím tắt: [1-5] chọn hành động, [A/B/C/D] trả lời nhanh, [Esc] mở Cài đặt.");
+            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Chiến Thuật, Túi Đồ & Phím Tắt",
+                "• Túi Đồ [4] (Bình Máu/Mana/Hồi Sinh) & Phòng Thủ [5] không cần trả lời Quiz.\n• Phím tắt: [1-5] hành động, [Tab] hoặc bấm trực tiếp để chọn mục tiêu, [A-D] trả lời, [Esc] tạm dừng.");
         }
 
         private static void CreateRuleRow(Transform parent, UIAssets a, Sprite icon, Color accent, string title, string body)
@@ -627,6 +664,7 @@ namespace MedievalRPG.EditorTools
             if (battleSystem != null)
             {
                 battleSystem.enableLegacyOnGUI = false;
+                WireBattleEncounterAndStations(battleSystem);
                 EditorUtility.SetDirty(battleSystem);
             }
             if (uiMgr == null && battleSystem != null)
@@ -647,8 +685,8 @@ namespace MedievalRPG.EditorTools
             RectTransform worldHudRt = worldHudLayerGo.GetComponent<RectTransform>();
             StretchFull(worldHudRt);
 
-            WorldUnitHUD[] worldHuds = new WorldUnitHUD[4];
-            for (int i = 0; i < 4; i++)
+            WorldUnitHUD[] worldHuds = new WorldUnitHUD[6];
+            for (int i = 0; i < 6; i++)
             {
                 worldHuds[i] = CreateWorldUnitHUD($"WorldUnitHUD_{i}", worldHudRt, a);
                 worldHuds[i].gameObject.SetActive(false);
@@ -734,7 +772,44 @@ namespace MedievalRPG.EditorTools
                 a.fontBold, 14f, MedievalUITheme.GoldPrimary, TextAlignmentOptions.Center);
             StretchFull(quizStatsTMP.rectTransform);
 
-            // Top-Right: Enemy Boss Card + Settings Gear Button
+            // Dải Thứ Tự Lượt (Turn Order Strip) ngay dưới TurnBannerCard
+            GameObject turnStripGo = CreateRect("TurnOrderStrip", topBar.transform);
+            RectTransform tsRt = turnStripGo.GetComponent<RectTransform>();
+            tsRt.anchorMin = new Vector2(0.5f, 1f);
+            tsRt.anchorMax = new Vector2(0.5f, 1f);
+            tsRt.pivot = new Vector2(0.5f, 1f);
+            tsRt.anchoredPosition = new Vector2(0f, -110f);
+            tsRt.sizeDelta = new Vector2(310f, 40f);
+
+            HorizontalLayoutGroup tsHlg = turnStripGo.AddComponent<HorizontalLayoutGroup>();
+            tsHlg.spacing = 6f;
+            tsHlg.childAlignment = TextAnchor.MiddleCenter;
+            tsHlg.childControlWidth = false;
+            tsHlg.childControlHeight = false;
+
+            var turnRoots = new GameObject[6];
+            var turnFrames = new UnityEngine.UI.Image[6];
+            var turnPorts = new UnityEngine.UI.Image[6];
+            for (int i = 0; i < 6; i++)
+            {
+                UnityEngine.UI.Image frame = CreateImage($"TurnSlot_{i}", turnStripGo.transform, a.portraitFrame, MedievalUITheme.SlateBorder);
+                frame.type = UnityEngine.UI.Image.Type.Sliced;
+                frame.pixelsPerUnitMultiplier = 0.7f;
+                frame.raycastTarget = false;
+                frame.rectTransform.sizeDelta = i == 0 ? new Vector2(40f, 40f) : new Vector2(34f, 34f);
+
+                UnityEngine.UI.Image port = CreateImage("Portrait", frame.transform, a.portKnight, Color.white);
+                port.preserveAspect = true;
+                port.raycastTarget = false;
+                StretchWithPadding(port.rectTransform, 4f);
+
+                turnRoots[i] = frame.gameObject;
+                turnFrames[i] = frame;
+                turnPorts[i] = port;
+                frame.gameObject.SetActive(false);
+            }
+
+            // Top-Right: Enemy Boss Card + Settings Gear Button + Wave Badge + Multi-Enemy Tabs
             UnityEngine.UI.Button pauseOpenBtn = CreateIconSquareButton("PauseSettingsButton", topBar.transform, a, a.iconGear,
                 MedievalUITheme.BtnNeutralSlate, new Vector2(56f, 56f));
             RectTransform pbRt = pauseOpenBtn.GetComponent<RectTransform>();
@@ -743,12 +818,84 @@ namespace MedievalRPG.EditorTools
             pbRt.pivot = new Vector2(1f, 1f);
             pbRt.anchoredPosition = Vector2.zero;
 
+            UnityEngine.UI.Image wavePill = CreateImage("WaveBadgePill", topBar.transform, a.badgePill, MedievalUITheme.DeepInset);
+            wavePill.type = UnityEngine.UI.Image.Type.Sliced;
+            wavePill.pixelsPerUnitMultiplier = 0.7f;
+            wavePill.raycastTarget = false;
+            wavePill.rectTransform.anchorMin = new Vector2(1f, 1f);
+            wavePill.rectTransform.anchorMax = new Vector2(1f, 1f);
+            wavePill.rectTransform.pivot = new Vector2(1f, 1f);
+            wavePill.rectTransform.anchoredPosition = new Vector2(0f, -64f);
+            wavePill.rectTransform.sizeDelta = new Vector2(88f, 26f);
+            TextMeshProUGUI waveBadgeTMP = CreateTMP("WaveBadgeText", wavePill.transform, "ĐỢT 1/3",
+                a.fontBold, 12.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
+            StretchFull(waveBadgeTMP.rectTransform);
+
             EnemyStatusCardUI enemyCard = CreateEnemyStatusCard("EnemyStatusCard", topBar.transform, a);
             RectTransform ecRt = enemyCard.GetComponent<RectTransform>();
             ecRt.anchorMin = new Vector2(1f, 1f);
             ecRt.anchorMax = new Vector2(1f, 1f);
             ecRt.pivot = new Vector2(1f, 1f);
-            ecRt.anchoredPosition = new Vector2(-68f, 0f);
+            ecRt.anchoredPosition = new Vector2(-96f, 0f);
+
+            // Tab chọn đa quái khi có >= 2 kẻ địch
+            GameObject enemyTabsRow = CreateRect("EnemyTabsRow", topBar.transform);
+            RectTransform etRt = enemyTabsRow.GetComponent<RectTransform>();
+            etRt.anchorMin = new Vector2(1f, 1f);
+            etRt.anchorMax = new Vector2(1f, 1f);
+            etRt.pivot = new Vector2(1f, 1f);
+            etRt.anchoredPosition = new Vector2(-96f, -118f);
+            etRt.sizeDelta = new Vector2(340f, 34f);
+
+            HorizontalLayoutGroup etHlg = enemyTabsRow.AddComponent<HorizontalLayoutGroup>();
+            etHlg.spacing = 6f;
+            etHlg.childControlWidth = true;
+            etHlg.childControlHeight = true;
+            etHlg.childForceExpandWidth = true;
+            etHlg.childForceExpandHeight = true;
+
+            var enemyTabBtns = new UnityEngine.UI.Button[3];
+            var enemyTabLbls = new TextMeshProUGUI[3];
+            var enemyTabHpFills = new UnityEngine.UI.Image[3];
+            var enemyTabBorders = new UnityEngine.UI.Image[3];
+            for (int i = 0; i < 3; i++)
+            {
+                UnityEngine.UI.Image tabBg = CreateImage($"EnemyTab_{i}", enemyTabsRow.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
+                tabBg.type = UnityEngine.UI.Image.Type.Sliced;
+                tabBg.pixelsPerUnitMultiplier = 0.7f;
+                UnityEngine.UI.Button tabBtn = tabBg.gameObject.AddComponent<UnityEngine.UI.Button>();
+                tabBtn.targetGraphic = tabBg;
+
+                UnityEngine.UI.Image border = CreateImage("Border", tabBg.transform, a.buttonFrame, MedievalUITheme.SlateBorder);
+                border.type = UnityEngine.UI.Image.Type.Sliced;
+                border.pixelsPerUnitMultiplier = 0.7f;
+                border.raycastTarget = false;
+                StretchFull(border.rectTransform);
+
+                UnityEngine.UI.Image hpFill = CreateImage("MiniHP", tabBg.transform, a.barFill, MedievalUITheme.HpCrimson);
+                hpFill.type = UnityEngine.UI.Image.Type.Filled;
+                hpFill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
+                hpFill.raycastTarget = false;
+                hpFill.rectTransform.anchorMin = new Vector2(0f, 0f);
+                hpFill.rectTransform.anchorMax = new Vector2(1f, 0f);
+                hpFill.rectTransform.pivot = new Vector2(0.5f, 0f);
+                hpFill.rectTransform.offsetMin = new Vector2(4f, 3f);
+                hpFill.rectTransform.offsetMax = new Vector2(-4f, 8f);
+
+                TextMeshProUGUI lbl = CreateTMP("Label", tabBg.transform, $"Quái {i + 1}",
+                    a.fontBold, 11.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+                lbl.rectTransform.anchorMin = Vector2.zero;
+                lbl.rectTransform.anchorMax = Vector2.one;
+                lbl.rectTransform.offsetMin = new Vector2(6f, 7f);
+                lbl.rectTransform.offsetMax = new Vector2(-6f, -2f);
+
+                enemyTabBtns[i] = tabBtn;
+                enemyTabLbls[i] = lbl;
+                enemyTabHpFills[i] = hpFill;
+                enemyTabBorders[i] = border;
+                tabBg.gameObject.SetActive(false);
+            }
+            enemyTabsRow.SetActive(false);
 
             // --- Layer 2: Bottom Command Deck (Dialogue + 5 Action Buttons) ---
             UnityEngine.UI.Image bottomDeck = CreateImage("BottomCommandDeck", canvas.transform, a.panelDarkGold, Color.white);
@@ -844,7 +991,7 @@ namespace MedievalRPG.EditorTools
             var actIcons = new UnityEngine.UI.Image[5];
             var actFeedbacks = new UIButtonFeedback[5];
 
-            string[] defaultTitles = { "Tấn Công", "Kỹ Năng 1", "Kỹ Năng 2", "Hồi Phục", "Phòng Thủ" };
+            string[] defaultTitles = { "Tấn Công", "Kỹ Năng 1", "Kỹ Năng 2", "Túi Đồ", "Phòng Thủ" };
             Sprite[] defaultIcons = { a.iconSword, a.iconMagic, a.iconMagic, a.iconHeart, a.iconShield };
             Color[] defaultColors =
             {
@@ -863,27 +1010,129 @@ namespace MedievalRPG.EditorTools
             }
 
             // Locked overlay trên thanh hành động khi không phải lượt người chơi
-            UnityEngine.UI.Image lockedOverlay = CreateImage("ActionLockedOverlay", rightActCol.transform, a.panelInset,
-                new Color(0.05f, 0.07f, 0.10f, 0.78f));
-            lockedOverlay.type = UnityEngine.UI.Image.Type.Sliced;
-            lockedOverlay.pixelsPerUnitMultiplier = 0.65f;
+            UnityEngine.UI.Image lockedOverlay = CreateImage("ActionLockedOverlay", rightActCol.transform, null,
+                new Color(0.043f, 0.055f, 0.082f, 0.94f));
             LayoutElement lockLe = lockedOverlay.gameObject.AddComponent<LayoutElement>();
             lockLe.ignoreLayout = true;
             StretchFull(lockedOverlay.rectTransform);
 
-            TextMeshProUGUI lockedTMP = CreateTMP("LockedStatusText", lockedOverlay.transform, "Đang chuẩn bị trận đấu...",
-                a.fontBold, 21f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
+            UnityEngine.UI.Image lockPill = CreateImage("LockedPill", lockedOverlay.transform, a.badgePill, MedievalUITheme.ObsidianPanel);
+            lockPill.type = UnityEngine.UI.Image.Type.Sliced;
+            lockPill.pixelsPerUnitMultiplier = 0.65f;
+            lockPill.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            lockPill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            lockPill.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            lockPill.rectTransform.sizeDelta = new Vector2(460f, 52f);
+
+            TextMeshProUGUI lockedTMP = CreateTMP("LockedStatusText", lockPill.transform, "Đang chuẩn bị trận đấu...",
+                a.fontBold, 19f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
             StretchFull(lockedTMP.rectTransform);
+
+            // --- Popover Túi Vật Phẩm (trên đáy phải) ---
+            UnityEngine.UI.Image itemBagImg = CreateImage("ItemBagPanel", canvas.transform, a.panelDarkGold, Color.white);
+            itemBagImg.type = UnityEngine.UI.Image.Type.Sliced;
+            itemBagImg.pixelsPerUnitMultiplier = 0.65f;
+            RectTransform bagRt = itemBagImg.rectTransform;
+            bagRt.anchorMin = new Vector2(1f, 0f);
+            bagRt.anchorMax = new Vector2(1f, 0f);
+            bagRt.pivot = new Vector2(1f, 0f);
+            bagRt.anchoredPosition = new Vector2(-72f, 236f);
+            bagRt.sizeDelta = new Vector2(440f, 248f);
+
+            TextMeshProUGUI bagTitle = CreateTMP("BagTitle", itemBagImg.transform, "TÚI VẬT PHẨM CHIẾN ĐẤU [1-3]",
+                a.fontBold, 15.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+            bagTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            bagTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            bagTitle.rectTransform.pivot = new Vector2(0.5f, 1f);
+            bagTitle.rectTransform.offsetMin = new Vector2(16f, -38f);
+            bagTitle.rectTransform.offsetMax = new Vector2(-84f, -8f);
+
+            UnityEngine.UI.Button closeBagBtn = CreateStyledMenuButton("CloseBagBtn", itemBagImg.transform, a, null,
+                "ĐÓNG", MedievalUITheme.BtnDangerSlate, 30f, 12.5f);
+            RectTransform cbbRt = closeBagBtn.GetComponent<RectTransform>();
+            cbbRt.anchorMin = new Vector2(1f, 1f);
+            cbbRt.anchorMax = new Vector2(1f, 1f);
+            cbbRt.pivot = new Vector2(1f, 1f);
+            cbbRt.anchoredPosition = new Vector2(-12f, -9f);
+            cbbRt.sizeDelta = new Vector2(68f, 28f);
+
+            GameObject bagListGo = CreateRect("BagItemsList", itemBagImg.transform);
+            RectTransform blRt = bagListGo.GetComponent<RectTransform>();
+            blRt.anchorMin = Vector2.zero;
+            blRt.anchorMax = Vector2.one;
+            blRt.offsetMin = new Vector2(14f, 14f);
+            blRt.offsetMax = new Vector2(-14f, -44f);
+            VerticalLayoutGroup blVlg = bagListGo.AddComponent<VerticalLayoutGroup>();
+            blVlg.spacing = 8f;
+            blVlg.childControlWidth = true;
+            blVlg.childControlHeight = true;
+            blVlg.childForceExpandWidth = true;
+            blVlg.childForceExpandHeight = true;
+
+            var bagBtns = new UnityEngine.UI.Button[3];
+            var bagTitles = new TextMeshProUGUI[3];
+            var bagCounts = new TextMeshProUGUI[3];
+            string[] itemNames = { "[1] Thảo Dược Máu (+55 HP)", "[2] Bình Mana (+30 MP)", "[3] Lông Phượng Hoàng (Hồi Sinh)" };
+            Sprite[] itemIcons = { a.iconHeart, a.iconMana, a.iconCrown };
+            Color[] itemColors = { MedievalUITheme.BtnHeal, MedievalUITheme.BtnDefend, MedievalUITheme.BtnPrimaryGold };
+
+            for (int i = 0; i < 3; i++)
+            {
+                UnityEngine.UI.Image rowImg = CreateImage($"ItemRow_{i}", bagListGo.transform, a.buttonFill, itemColors[i]);
+                rowImg.type = UnityEngine.UI.Image.Type.Sliced;
+                rowImg.pixelsPerUnitMultiplier = 0.65f;
+                UnityEngine.UI.Button rowBtn = rowImg.gameObject.AddComponent<UnityEngine.UI.Button>();
+                rowBtn.targetGraphic = rowImg;
+                rowBtn.transition = Selectable.Transition.None;
+                UIButtonFeedback fb = rowImg.gameObject.AddComponent<UIButtonFeedback>();
+                fb.SetBaseColor(itemColors[i]);
+
+                UnityEngine.UI.Image border = CreateImage("Frame", rowImg.transform, a.buttonFrame, Color.white);
+                border.type = UnityEngine.UI.Image.Type.Sliced;
+                border.pixelsPerUnitMultiplier = 0.65f;
+                border.raycastTarget = false;
+                StretchFull(border.rectTransform);
+
+                UnityEngine.UI.Image ic = CreateImage("Icon", rowImg.transform, itemIcons[i], Color.white);
+                ic.preserveAspect = true;
+                ic.raycastTarget = false;
+                ic.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                ic.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                ic.rectTransform.pivot = new Vector2(0f, 0.5f);
+                ic.rectTransform.anchoredPosition = new Vector2(12f, 0f);
+                ic.rectTransform.sizeDelta = new Vector2(28f, 28f);
+
+                TextMeshProUGUI iTitle = CreateTMP("Title", rowImg.transform, itemNames[i],
+                    a.fontBold, 15f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                iTitle.rectTransform.anchorMin = Vector2.zero;
+                iTitle.rectTransform.anchorMax = Vector2.one;
+                iTitle.rectTransform.offsetMin = new Vector2(48f, 0f);
+                iTitle.rectTransform.offsetMax = new Vector2(-64f, 0f);
+
+                TextMeshProUGUI iCount = CreateTMP("Count", rowImg.transform, "x1",
+                    a.fontBold, 16f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineRight);
+                iCount.rectTransform.anchorMin = new Vector2(1f, 0f);
+                iCount.rectTransform.anchorMax = new Vector2(1f, 1f);
+                iCount.rectTransform.pivot = new Vector2(1f, 0.5f);
+                iCount.rectTransform.offsetMin = new Vector2(-58f, 0f);
+                iCount.rectTransform.offsetMax = new Vector2(-14f, 0f);
+
+                bagBtns[i] = rowBtn;
+                bagTitles[i] = iTitle;
+                bagCounts[i] = iCount;
+            }
+            itemBagImg.gameObject.SetActive(false);
 
             // --- Layer 3: Quiz Modal ---
             QuizModalUI quizModal = CreateQuizModal(canvas.transform, a);
             quizModal.gameObject.SetActive(false);
 
             // --- Layer 4: Pause & Settings Modal ---
-            GameObject pauseModal = CreateModalOverlay("PauseSettingsModal", canvas.transform, a, new Vector2(620f, 510f),
+            GameObject pauseModal = CreateModalOverlay("PauseSettingsModal", canvas.transform, a, new Vector2(620f, 595f),
                 a.iconGear, "TẠM DỪNG & CÀI ĐẶT", out Transform pauseContent, out UnityEngine.UI.Button resumeBtn, "TIẾP TỤC");
             BuildSettingsControls(pauseContent, a,
-                out UnityEngine.UI.Slider pVolSlider, out TextMeshProUGUI pVolVal,
+                out UnityEngine.UI.Slider pMusicSlider, out TextMeshProUGUI pMusicVal,
+                out UnityEngine.UI.Slider pSfxSlider, out TextMeshProUGUI pSfxVal,
                 out UnityEngine.UI.Toggle pQuizToggle, out UnityEngine.UI.Toggle pFastToggle);
 
             // Thêm nút Chơi lại & Về Menu trong Pause
@@ -929,22 +1178,24 @@ namespace MedievalRPG.EditorTools
                 uiMgr.quizPanel = quizModal.gameObject;
                 uiMgr.victoryScreen = victoryModal;
                 uiMgr.gameOverScreen = gameOverModal;
-                uiMgr.enableInteractiveOnGUI = false;
 
                 uiMgr.ConfigureCanvasUI(
                     canvas, fadeOverlay,
-                    turnBannerTMP, turnSubTMP, quizStatsTMP,
+                    turnBannerTMP, turnSubTMP, quizStatsTMP, waveBadgeTMP,
                     dialogueTMP, activeHeroBannerTMP, skillPreviewTMP,
                     activeHeroPortrait,
+                    turnRoots, turnFrames, turnPorts,
                     partyCards, enemyCard,
+                    enemyTabsRow, enemyTabBtns, enemyTabLbls, enemyTabHpFills, enemyTabBorders,
                     worldHuds, worldHudRt, ftManager,
                     quizModal, pauseModal,
-                    pVolSlider, pVolVal, pQuizToggle, pFastToggle, pauseOpenBtn,
+                    pMusicSlider, pMusicVal, pSfxSlider, pSfxVal, pQuizToggle, pFastToggle, pauseOpenBtn,
                     actBtns, actTitles, actCosts, actIcons, actFeedbacks,
                     lockedOverlay.gameObject, lockedTMP,
+                    itemBagImg.gameObject, bagBtns, bagTitles, bagCounts, closeBagBtn,
                     winSummaryTMP, loseSummaryTMP,
                     a.portKnight, a.portMage, a.portArcher, a.portGoblin, a.portSkeleton, a.portDarkKnight,
-                    a.iconSword, a.iconMagic, a.iconArrow, a.iconHeart, a.iconShield);
+                    a.iconSword, a.iconMagic, a.iconArrow, a.iconHeart, a.iconShield, a.iconMana, a.iconScroll);
 
                 // Gắn persistent UnityEvents cho các nút modal (hoạt động cả khi scene vừa tải)
                 WirePersistentAction(resumeBtn, uiMgr.ResumeBattle);
@@ -987,6 +1238,14 @@ namespace MedievalRPG.EditorTools
             glowBorder.raycastTarget = false;
             StretchWithPadding(glowBorder.rectTransform, -2f);
             glowBorder.enabled = false;
+
+            // Viền xanh lá khi được chọn làm mục tiêu hồi phục / vật phẩm
+            UnityEngine.UI.Image selectedBorder = CreateImage("SelectedAllyBorder", cardBg.transform, a.buttonFrame, MedievalUITheme.SuccessGreen);
+            selectedBorder.type = UnityEngine.UI.Image.Type.Sliced;
+            selectedBorder.pixelsPerUnitMultiplier = 0.65f;
+            selectedBorder.raycastTarget = false;
+            StretchWithPadding(selectedBorder.rectTransform, -2f);
+            selectedBorder.enabled = false;
 
             // Khung chân dung bên trái
             UnityEngine.UI.Image portFrame = CreateImage("PortraitFrame", cardBg.transform, a.portraitFrame, Color.white);
@@ -1081,7 +1340,7 @@ namespace MedievalRPG.EditorTools
             statusBadge.gameObject.SetActive(false);
 
             PartyMemberCardUI card = cardBg.gameObject.AddComponent<PartyMemberCardUI>();
-            card.Configure(cardBg, glowBorder, portImg, classIcon, nameTMP, lvTMP,
+            card.Configure(cardBg, glowBorder, selectedBorder, portImg, classIcon, nameTMP, lvTMP,
                 statusBadge.gameObject, statusTxt, turnBadge.gameObject, deadOverlay.gameObject,
                 hpFill, hpTrail, hpVal, mpFill, mpVal);
 
@@ -1153,8 +1412,23 @@ namespace MedievalRPG.EditorTools
             StretchFull(dbTxt.rectTransform);
             deadBadge.gameObject.SetActive(false);
 
+            UnityEngine.UI.Image statusPill = CreateImage("EnemyStatusPill", cardBg.transform, a.badgePill, MedievalUITheme.BtnSkill);
+            statusPill.type = UnityEngine.UI.Image.Type.Sliced;
+            statusPill.pixelsPerUnitMultiplier = 0.7f;
+            statusPill.raycastTarget = false;
+            statusPill.rectTransform.anchorMin = new Vector2(0f, 0f);
+            statusPill.rectTransform.anchorMax = new Vector2(0f, 0f);
+            statusPill.rectTransform.pivot = new Vector2(0f, 0f);
+            statusPill.rectTransform.anchoredPosition = new Vector2(14f, -14f);
+            statusPill.rectTransform.sizeDelta = new Vector2(160f, 20f);
+            TextMeshProUGUI statusTxt = CreateTMP("StatusTxt", statusPill.transform, "KHIÊN: 2",
+                a.fontBold, 11f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+            StretchFull(statusTxt.rectTransform);
+            statusPill.gameObject.SetActive(false);
+
             EnemyStatusCardUI card = cardBg.gameObject.AddComponent<EnemyStatusCardUI>();
-            card.Configure(glowBorder, portImg, nameTMP, statsTMP, hpFill, hpTrail, hpVal, deadBadge.gameObject);
+            card.Configure(glowBorder, portImg, nameTMP, statsTMP, hpFill, hpTrail, hpVal, deadBadge.gameObject,
+                statusPill.gameObject, statusTxt);
             return card;
         }
 
@@ -1162,10 +1436,37 @@ namespace MedievalRPG.EditorTools
         {
             GameObject root = CreateRect(name, parent);
             RectTransform rt = root.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(124f, 52f);
+            rt.sizeDelta = new Vector2(140f, 76f);
             CanvasGroup cg = root.AddComponent<CanvasGroup>();
             cg.interactable = false;
             cg.blocksRaycasts = false;
+
+            // Vòng chọn mục tiêu khi người chơi nhắm quái
+            UnityEngine.UI.Image reticle = CreateImage("TargetReticle", root.transform, a.buttonFrame, MedievalUITheme.GoldSoft);
+            reticle.type = UnityEngine.UI.Image.Type.Sliced;
+            reticle.pixelsPerUnitMultiplier = 0.7f;
+            reticle.raycastTarget = false;
+            reticle.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            reticle.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            reticle.rectTransform.pivot = new Vector2(0.5f, 0f);
+            reticle.rectTransform.anchoredPosition = new Vector2(0f, 8f);
+            reticle.rectTransform.sizeDelta = new Vector2(106f, 22f);
+            reticle.gameObject.SetActive(false);
+
+            // Pill dự báo hành động quái (Enemy Intent) hoặc trạng thái
+            UnityEngine.UI.Image intentPill = CreateImage("IntentPill", root.transform, a.badgePill, MedievalUITheme.DangerPanel);
+            intentPill.type = UnityEngine.UI.Image.Type.Sliced;
+            intentPill.pixelsPerUnitMultiplier = 0.7f;
+            intentPill.raycastTarget = false;
+            intentPill.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+            intentPill.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            intentPill.rectTransform.pivot = new Vector2(0.5f, 0f);
+            intentPill.rectTransform.anchoredPosition = new Vector2(0f, 2f);
+            intentPill.rectTransform.sizeDelta = new Vector2(126f, 20f);
+            TextMeshProUGUI intentLabel = CreateTMP("IntentText", intentPill.transform, "ĐÁNH ~14",
+                a.fontBold, 11f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+            StretchFull(intentLabel.rectTransform);
+            intentPill.gameObject.SetActive(false);
 
             // Mũi tên chỉ lượt phía trên đầu
             UnityEngine.UI.Image arrow = CreateImage("TurnArrow", root.transform, a.iconTurnArrow, Color.white);
@@ -1174,8 +1475,8 @@ namespace MedievalRPG.EditorTools
             arrow.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             arrow.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             arrow.rectTransform.pivot = new Vector2(0.5f, 0f);
-            arrow.rectTransform.anchoredPosition = new Vector2(0f, 2f);
-            arrow.rectTransform.sizeDelta = new Vector2(26f, 26f);
+            arrow.rectTransform.anchoredPosition = new Vector2(0f, 24f);
+            arrow.rectTransform.sizeDelta = new Vector2(24f, 24f);
 
             TextMeshProUGUI nameTxt = CreateTMP("UnitName", root.transform, "Hero",
                 a.fontBold, 14f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
@@ -1184,7 +1485,7 @@ namespace MedievalRPG.EditorTools
             nameTxt.rectTransform.anchorMin = new Vector2(0f, 1f);
             nameTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
             nameTxt.rectTransform.pivot = new Vector2(0.5f, 1f);
-            nameTxt.rectTransform.anchoredPosition = new Vector2(0f, -2f);
+            nameTxt.rectTransform.anchoredPosition = new Vector2(0f, -22f);
             nameTxt.rectTransform.sizeDelta = new Vector2(0f, 20f);
 
             // Thanh HP mini
@@ -1210,13 +1511,88 @@ namespace MedievalRPG.EditorTools
             shieldBadge.rectTransform.anchorMin = new Vector2(1f, 0f);
             shieldBadge.rectTransform.anchorMax = new Vector2(1f, 0f);
             shieldBadge.rectTransform.pivot = new Vector2(0f, 0.5f);
-            shieldBadge.rectTransform.anchoredPosition = new Vector2(-10f, 19f);
+            shieldBadge.rectTransform.anchoredPosition = new Vector2(-14f, 19f);
             shieldBadge.rectTransform.sizeDelta = new Vector2(20f, 20f);
             shieldBadge.gameObject.SetActive(false);
 
             WorldUnitHUD hud = root.AddComponent<WorldUnitHUD>();
-            hud.Configure(hpFill, nameTxt, arrow.gameObject, shieldBadge.gameObject, cg);
+            hud.Configure(hpFill, nameTxt, arrow.gameObject, shieldBadge.gameObject, cg,
+                reticle.gameObject, intentPill.gameObject, intentLabel, intentPill);
             return hud;
+        }
+
+        private static void WireBattleEncounterAndStations(BattleSystem bs)
+        {
+            if (bs == null) return;
+
+            bs.knightPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/Knight.prefab");
+            bs.magePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/Mage.prefab");
+            bs.archerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/Archer.prefab");
+            bs.enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/GoblinRaider.prefab");
+            bs.skeletonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/Skeleton.prefab");
+            bs.bossPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/DarkKnightBoss.prefab");
+
+            GameObject skyBg = GameObject.Find("Forest_Background_Sky");
+            if (skyBg != null)
+            {
+                skyBg.transform.position = new Vector3(0f, 0.6f, 5f);
+                skyBg.transform.localScale = new Vector3(2.4f, 1.9f, 1f);
+            }
+            GameObject midBg = GameObject.Find("Forest_Background_Midground");
+            if (midBg != null)
+            {
+                midBg.transform.position = new Vector3(0f, 1.05f, 3f);
+                midBg.transform.localScale = new Vector3(1.8f, 1.8f, 1f);
+                TileForestSideExtensions(midBg, "_BattleTile");
+            }
+            GameObject fgBg = GameObject.Find("Forest_Foreground_Trees");
+            if (fgBg != null)
+            {
+                fgBg.transform.position = new Vector3(0f, 0.90f, 1f);
+                fgBg.transform.localScale = new Vector3(1.7f, 1.7f, 1f);
+                TileForestSideExtensions(fgBg, "_BattleTile");
+            }
+
+            if (bs.knightBattleStation != null) bs.knightBattleStation.position = new Vector3(-1.45f, -1.20f, 0f);
+            if (bs.mageBattleStation != null) bs.mageBattleStation.position = new Vector3(-3.05f, -1.00f, 0f);
+            if (bs.archerBattleStation != null) bs.archerBattleStation.position = new Vector3(-4.15f, -1.40f, 0f);
+
+            Transform s0 = bs.enemyBattleStation != null ? bs.enemyBattleStation : GameObject.Find("EnemyStation")?.transform;
+            if (s0 == null) s0 = new GameObject("EnemyStation_0").transform;
+            s0.position = new Vector3(1.85f, -1.25f, 0f);
+            bs.enemyBattleStation = s0;
+
+            Transform s1 = GameObject.Find("EnemyStation_1")?.transform ?? new GameObject("EnemyStation_1").transform;
+            s1.position = new Vector3(3.35f, -0.82f, 0f);
+            Transform s2 = GameObject.Find("EnemyStation_2")?.transform ?? new GameObject("EnemyStation_2").transform;
+            s2.position = new Vector3(4.05f, -1.48f, 0f);
+
+            bs.enemyBattleStations = new List<Transform> { s0, s1, s2 };
+
+            bs.encounterData = AssetDatabase.LoadAssetAtPath<MedievalRPG.Data.EncounterData>(
+                "Assets/MedievalRPG/ScriptableObjects/Encounters/ForestDemoEncounter.asset");
+
+            bs.defaultWaves = new List<MedievalRPG.Data.BattleWave>
+            {
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 1: Toán Quân Goblin",
+                    isBossWave = false,
+                    enemyPrefabs = new List<GameObject> { bs.enemyPrefab, bs.enemyPrefab }
+                },
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 2: Vệ Binh Hầm Ngục",
+                    isBossWave = false,
+                    enemyPrefabs = new List<GameObject> { bs.enemyPrefab, bs.skeletonPrefab }
+                },
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 3: Thủ Lĩnh Bóng Đêm",
+                    isBossWave = true,
+                    enemyPrefabs = new List<GameObject> { bs.bossPrefab }
+                }
+            };
         }
 
         private static void CreateStatusBar(
@@ -1702,55 +2078,61 @@ namespace MedievalRPG.EditorTools
 
         private static void BuildSettingsControls(
             Transform parent, UIAssets a,
-            out UnityEngine.UI.Slider volumeSlider, out TextMeshProUGUI volumeValTMP,
+            out UnityEngine.UI.Slider musicSlider, out TextMeshProUGUI musicValTMP,
+            out UnityEngine.UI.Slider sfxSlider, out TextMeshProUGUI sfxValTMP,
             out UnityEngine.UI.Toggle quizToggle, out UnityEngine.UI.Toggle fastToggle)
         {
             VerticalLayoutGroup vlg = parent.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 14f;
+            vlg.spacing = 12f;
             vlg.childControlWidth = true;
             vlg.childControlHeight = false;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            // 1. Volume Slider Row
-            UnityEngine.UI.Image volRow = CreateImage("VolumeRow", parent, a.panelInset, Color.white);
-            volRow.type = UnityEngine.UI.Image.Type.Sliced;
-            volRow.pixelsPerUnitMultiplier = 0.65f;
-            volRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 82f;
+            CreateSliderRow("MusicVolumeRow", parent, a, "Nhạc nền (Music Volume)", out musicSlider, out musicValTMP);
+            CreateSliderRow("SfxVolumeRow", parent, a, "Hiệu ứng âm thanh (SFX Volume)", out sfxSlider, out sfxValTMP);
 
-            TextMeshProUGUI volLabel = CreateTMP("Label", volRow.transform, "Âm lượng tổng (Master Volume)",
-                a.fontBold, 17f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
-            volLabel.rectTransform.anchorMin = new Vector2(0f, 1f);
-            volLabel.rectTransform.anchorMax = new Vector2(0.75f, 1f);
-            volLabel.rectTransform.pivot = new Vector2(0f, 1f);
-            volLabel.rectTransform.offsetMin = new Vector2(18f, -34f);
-            volLabel.rectTransform.offsetMax = new Vector2(0f, -8f);
-
-            volumeValTMP = CreateTMP("Percent", volRow.transform, "100%",
-                a.fontBold, 17f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineRight);
-            volumeValTMP.rectTransform.anchorMin = new Vector2(0.75f, 1f);
-            volumeValTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
-            volumeValTMP.rectTransform.pivot = new Vector2(1f, 1f);
-            volumeValTMP.rectTransform.offsetMin = new Vector2(0f, -34f);
-            volumeValTMP.rectTransform.offsetMax = new Vector2(-18f, -8f);
-
-            volumeSlider = CreateStyledSlider("VolumeSlider", volRow.transform, a);
-            RectTransform slRt = volumeSlider.GetComponent<RectTransform>();
-            slRt.anchorMin = new Vector2(0f, 0f);
-            slRt.anchorMax = new Vector2(1f, 0f);
-            slRt.pivot = new Vector2(0.5f, 0f);
-            slRt.anchoredPosition = new Vector2(0f, 14f);
-            slRt.sizeDelta = new Vector2(-36f, 26f);
-
-            // 2. Toggle Quiz
             quizToggle = CreateToggleRow("QuizModeToggleRow", parent, a,
                 "Bật câu hỏi Trắc nghiệm Giáo dục",
                 "Yêu cầu trả lời đúng câu hỏi trước khi tung chiêu & nhận thưởng sát thương.");
 
-            // 3. Toggle Fast Mode
             fastToggle = CreateToggleRow("FastSpeedToggleRow", parent, a,
                 "Tốc độ chiến đấu nhanh (1.5x)",
                 "Tăng tốc độ hoạt ảnh và chuyển lượt trong trận đấu.");
+        }
+
+        private static void CreateSliderRow(
+            string name, Transform parent, UIAssets a, string title,
+            out UnityEngine.UI.Slider slider, out TextMeshProUGUI valTMP)
+        {
+            UnityEngine.UI.Image row = CreateImage(name, parent, a.panelInset, Color.white);
+            row.type = UnityEngine.UI.Image.Type.Sliced;
+            row.pixelsPerUnitMultiplier = 0.65f;
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
+
+            TextMeshProUGUI lbl = CreateTMP("Label", row.transform, title,
+                a.fontBold, 16.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+            lbl.rectTransform.anchorMin = new Vector2(0f, 1f);
+            lbl.rectTransform.anchorMax = new Vector2(0.75f, 1f);
+            lbl.rectTransform.pivot = new Vector2(0f, 1f);
+            lbl.rectTransform.offsetMin = new Vector2(18f, -32f);
+            lbl.rectTransform.offsetMax = new Vector2(0f, -6f);
+
+            valTMP = CreateTMP("Percent", row.transform, "85%",
+                a.fontBold, 16.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineRight);
+            valTMP.rectTransform.anchorMin = new Vector2(0.75f, 1f);
+            valTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
+            valTMP.rectTransform.pivot = new Vector2(1f, 1f);
+            valTMP.rectTransform.offsetMin = new Vector2(0f, -32f);
+            valTMP.rectTransform.offsetMax = new Vector2(-18f, -6f);
+
+            slider = CreateStyledSlider("Slider", row.transform, a);
+            RectTransform slRt = slider.GetComponent<RectTransform>();
+            slRt.anchorMin = new Vector2(0f, 0f);
+            slRt.anchorMax = new Vector2(1f, 0f);
+            slRt.pivot = new Vector2(0.5f, 0f);
+            slRt.anchoredPosition = new Vector2(0f, 12f);
+            slRt.sizeDelta = new Vector2(-36f, 24f);
         }
 
         private static UnityEngine.UI.Slider CreateStyledSlider(string name, Transform parent, UIAssets a)

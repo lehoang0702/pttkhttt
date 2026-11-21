@@ -1,9 +1,11 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using MedievalRPG.Audio;
 using MedievalRPG.Combat;
 using MedievalRPG.Data;
 using MedievalRPG.Quiz;
@@ -11,13 +13,10 @@ using MedievalRPG.Quiz;
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// [Quản Lý Giao Diện Trận Đấu - BattleUIManager]
-    /// Điều khiển toàn bộ giao diện uGUI + TextMeshPro hiện đại:
-    /// 1. Thẻ trạng thái 3 Anh hùng (góc trên trái) & Thẻ Quái vật (góc trên phải).
-    /// 2. Thanh máu mini & mũi tên lượt trực tiếp trên nhân vật (WorldUnitHUD) + Chữ nổi sát thương.
-    /// 3. Bảng diễn biến trận đấu & xem trước kỹ năng + 5 nút hành động có phím tắt [1-5].
-    /// 4. Bảng Câu hỏi Trắc nghiệm Giáo dục (QuizModalUI) hiển thị kết quả & giải thích đầy đủ.
-    /// 5. Bảng Tạm dừng / Cài đặt (Esc) và Màn hình Chiến thắng / Thất bại kèm thống kê.
+    /// Điều khiển toàn bộ giao diện trận chiến (uGUI + TMP Tiếng Việt):
+    /// - Thẻ 3 Anh hùng (bấm để chọn đồng đội), thẻ Quái vật đang nhắm mục tiêu & tab chọn đa quái.
+    /// - Dải thứ tự lượt theo Speed (Turn Order Strip), WorldUnitHUD (máu, mũi tên lượt, vòng mục tiêu, Enemy Intent).
+    /// - Bộ nút hành động [1-5] có hiển thị Cooldown, Túi Vật Phẩm (Popover) và Bảng Quiz / Tạm dừng (Music + SFX).
     /// </summary>
     public class BattleUIManager : MonoBehaviour
     {
@@ -26,7 +25,7 @@ namespace MedievalRPG.UI
         [Header("Tham chiếu Hệ Thống Chiến Đấu")]
         public BattleSystem battleSystem;
 
-        [Header("Giao diện uGUI cơ bản (Tương thích ngược)")]
+        [Header("Giao diện uGUI cơ bản")]
         public GameObject actionPanel;
         public GameObject quizPanel;
         public Text questionCategoryText;
@@ -40,23 +39,31 @@ namespace MedievalRPG.UI
         public GameObject victoryScreen;
         public GameObject gameOverScreen;
 
-        [Header("Cấu hình Giao Diện OnGUI Nhanh")]
-        public bool enableInteractiveOnGUI = false;
-
-        [Header("Giao diện uGUI Nâng Cao (Canvas + TMP)")]
+        [Header("Giao diện Canvas + TMP")]
         [SerializeField] private Canvas rootCanvas;
         [SerializeField] private CanvasGroup fadeOverlay;
         [SerializeField] private TextMeshProUGUI turnBannerTMP;
         [SerializeField] private TextMeshProUGUI turnSubTMP;
         [SerializeField] private TextMeshProUGUI quizStatsTMP;
+        [SerializeField] private TextMeshProUGUI waveBadgeTMP;
         [SerializeField] private TextMeshProUGUI dialogueTMP;
         [SerializeField] private TextMeshProUGUI activeHeroBannerTMP;
         [SerializeField] private TextMeshProUGUI skillPreviewTMP;
         [SerializeField] private UnityEngine.UI.Image activeHeroPortrait;
 
-        [Header("Thẻ Nhân Vật & Trên Chiến Trường")]
+        [Header("Dải Thứ Tự Lượt (Turn Order Strip)")]
+        [SerializeField] private GameObject[] turnOrderSlotRoots = new GameObject[6];
+        [SerializeField] private UnityEngine.UI.Image[] turnOrderSlotFrames = new UnityEngine.UI.Image[6];
+        [SerializeField] private UnityEngine.UI.Image[] turnOrderSlotPortraits = new UnityEngine.UI.Image[6];
+
+        [Header("Thẻ Nhân Vật, Tab Đa Quái & World HUD")]
         [SerializeField] private PartyMemberCardUI[] partyCards;
         [SerializeField] private EnemyStatusCardUI enemyCard;
+        [SerializeField] private GameObject enemyTabsRow;
+        [SerializeField] private UnityEngine.UI.Button[] enemyTabButtons = new UnityEngine.UI.Button[3];
+        [SerializeField] private TextMeshProUGUI[] enemyTabLabels = new TextMeshProUGUI[3];
+        [SerializeField] private UnityEngine.UI.Image[] enemyTabHpFills = new UnityEngine.UI.Image[3];
+        [SerializeField] private UnityEngine.UI.Image[] enemyTabBorders = new UnityEngine.UI.Image[3];
         [SerializeField] private WorldUnitHUD[] worldUnitHUDs;
         [SerializeField] private RectTransform worldHudLayer;
         [SerializeField] private FloatingTextManager floatingTextManager;
@@ -64,13 +71,15 @@ namespace MedievalRPG.UI
         [Header("Bảng Câu Hỏi & Tạm Dừng")]
         [SerializeField] private QuizModalUI quizModal;
         [SerializeField] private GameObject pausePanel;
-        [SerializeField] private UnityEngine.UI.Slider pauseVolumeSlider;
-        [SerializeField] private TextMeshProUGUI pauseVolumeValueTMP;
+        [SerializeField] private UnityEngine.UI.Slider pauseMusicSlider;
+        [SerializeField] private TextMeshProUGUI pauseMusicValueTMP;
+        [SerializeField] private UnityEngine.UI.Slider pauseSfxSlider;
+        [SerializeField] private TextMeshProUGUI pauseSfxValueTMP;
         [SerializeField] private UnityEngine.UI.Toggle pauseQuizToggle;
         [SerializeField] private UnityEngine.UI.Toggle pauseFastModeToggle;
         [SerializeField] private UnityEngine.UI.Button settingsOpenButton;
 
-        [Header("5 Nút Hành Động (1: Đánh, 2: Skill1, 3: Skill2, 4: Hồi, 5: Thủ)")]
+        [Header("5 Nút Hành Động (1: Đánh, 2: Skill1, 3: Skill2, 4: Túi Đồ, 5: Thủ)")]
         [SerializeField] private UnityEngine.UI.Button[] actionButtons = new UnityEngine.UI.Button[5];
         [SerializeField] private TextMeshProUGUI[] actionTitleTMPs = new TextMeshProUGUI[5];
         [SerializeField] private TextMeshProUGUI[] actionCostTMPs = new TextMeshProUGUI[5];
@@ -78,6 +87,13 @@ namespace MedievalRPG.UI
         [SerializeField] private UIButtonFeedback[] actionFeedbacks = new UIButtonFeedback[5];
         [SerializeField] private GameObject actionLockedOverlay;
         [SerializeField] private TextMeshProUGUI actionLockedTMP;
+
+        [Header("Túi Vật Phẩm (Popover)")]
+        [SerializeField] private GameObject itemBagPanel;
+        [SerializeField] private UnityEngine.UI.Button[] itemButtons = new UnityEngine.UI.Button[3];
+        [SerializeField] private TextMeshProUGUI[] itemTitleTMPs = new TextMeshProUGUI[3];
+        [SerializeField] private TextMeshProUGUI[] itemCountTMPs = new TextMeshProUGUI[3];
+        [SerializeField] private UnityEngine.UI.Button closeItemBagButton;
 
         [Header("Tóm Tắt Kết Quả Trận Đấu")]
         [SerializeField] private TextMeshProUGUI victorySummaryTMP;
@@ -95,48 +111,66 @@ namespace MedievalRPG.UI
         [SerializeField] private Sprite arrowIcon;
         [SerializeField] private Sprite heartIcon;
         [SerializeField] private Sprite shieldIcon;
+        [SerializeField] private Sprite manaIcon;
+        [SerializeField] private Sprite scrollIcon;
 
         private bool _isTransitioning;
-        private string _lastDialogue = "";
 
         public bool HasCanvasUI => rootCanvas != null && (partyCards != null && partyCards.Length > 0);
 
         public void ConfigureCanvasUI(
             Canvas canvas, CanvasGroup fade,
-            TextMeshProUGUI turnBanner, TextMeshProUGUI turnSub, TextMeshProUGUI quizStats,
+            TextMeshProUGUI turnBanner, TextMeshProUGUI turnSub, TextMeshProUGUI quizStats, TextMeshProUGUI waveBadge,
             TextMeshProUGUI diagTMP, TextMeshProUGUI heroBanner, TextMeshProUGUI skillPreview,
             UnityEngine.UI.Image heroPortrait,
+            GameObject[] turnRoots, UnityEngine.UI.Image[] turnFrames, UnityEngine.UI.Image[] turnPorts,
             PartyMemberCardUI[] pCards, EnemyStatusCardUI eCard,
+            GameObject eTabsRow, UnityEngine.UI.Button[] eTabBtns, TextMeshProUGUI[] eTabLbls,
+            UnityEngine.UI.Image[] eTabHp, UnityEngine.UI.Image[] eTabBorders,
             WorldUnitHUD[] wHuds, RectTransform wHudLayer, FloatingTextManager ftManager,
             QuizModalUI qModal, GameObject pPanel,
-            UnityEngine.UI.Slider pVolSlider, TextMeshProUGUI pVolVal,
+            UnityEngine.UI.Slider pMusicSlider, TextMeshProUGUI pMusicVal,
+            UnityEngine.UI.Slider pSfxSlider, TextMeshProUGUI pSfxVal,
             UnityEngine.UI.Toggle pQuizToggle, UnityEngine.UI.Toggle pFastToggle,
             UnityEngine.UI.Button settingsBtn,
             UnityEngine.UI.Button[] actBtns, TextMeshProUGUI[] actTitles, TextMeshProUGUI[] actCosts,
             UnityEngine.UI.Image[] actIcons, UIButtonFeedback[] actFeedbacks,
             GameObject lockedOverlay, TextMeshProUGUI lockedText,
+            GameObject bagPanel, UnityEngine.UI.Button[] bagItemBtns,
+            TextMeshProUGUI[] bagItemTitles, TextMeshProUGUI[] bagItemCounts, UnityEngine.UI.Button closeBagBtn,
             TextMeshProUGUI winSummary, TextMeshProUGUI loseSummary,
             Sprite kPort, Sprite mPort, Sprite aPort, Sprite gPort, Sprite sPort, Sprite dkPort,
-            Sprite icSword, Sprite icMagic, Sprite icArrow, Sprite icHeart, Sprite icShield)
+            Sprite icSword, Sprite icMagic, Sprite icArrow, Sprite icHeart, Sprite icShield, Sprite icMana, Sprite icScroll)
         {
             rootCanvas = canvas;
             fadeOverlay = fade;
             turnBannerTMP = turnBanner;
             turnSubTMP = turnSub;
             quizStatsTMP = quizStats;
+            waveBadgeTMP = waveBadge;
             dialogueTMP = diagTMP;
             activeHeroBannerTMP = heroBanner;
             skillPreviewTMP = skillPreview;
             activeHeroPortrait = heroPortrait;
+            turnOrderSlotRoots = turnRoots;
+            turnOrderSlotFrames = turnFrames;
+            turnOrderSlotPortraits = turnPorts;
             partyCards = pCards;
             enemyCard = eCard;
+            enemyTabsRow = eTabsRow;
+            enemyTabButtons = eTabBtns;
+            enemyTabLabels = eTabLbls;
+            enemyTabHpFills = eTabHp;
+            enemyTabBorders = eTabBorders;
             worldUnitHUDs = wHuds;
             worldHudLayer = wHudLayer;
             floatingTextManager = ftManager;
             quizModal = qModal;
             pausePanel = pPanel;
-            pauseVolumeSlider = pVolSlider;
-            pauseVolumeValueTMP = pVolVal;
+            pauseMusicSlider = pMusicSlider;
+            pauseMusicValueTMP = pMusicVal;
+            pauseSfxSlider = pSfxSlider;
+            pauseSfxValueTMP = pSfxVal;
             pauseQuizToggle = pQuizToggle;
             pauseFastModeToggle = pFastToggle;
             settingsOpenButton = settingsBtn;
@@ -147,6 +181,11 @@ namespace MedievalRPG.UI
             actionFeedbacks = actFeedbacks;
             actionLockedOverlay = lockedOverlay;
             actionLockedTMP = lockedText;
+            itemBagPanel = bagPanel;
+            itemButtons = bagItemBtns;
+            itemTitleTMPs = bagItemTitles;
+            itemCountTMPs = bagItemCounts;
+            closeItemBagButton = closeBagBtn;
             victorySummaryTMP = winSummary;
             gameOverSummaryTMP = loseSummary;
             knightPortrait = kPort;
@@ -160,6 +199,8 @@ namespace MedievalRPG.UI
             arrowIcon = icArrow;
             heartIcon = icHeart;
             shieldIcon = icShield;
+            manaIcon = icMana;
+            scrollIcon = icScroll;
         }
 
         private void Awake()
@@ -173,15 +214,8 @@ namespace MedievalRPG.UI
             }
         }
 
-        private void OnEnable()
-        {
-            SubscribeEvents();
-        }
-
-        private void OnDisable()
-        {
-            UnsubscribeEvents();
-        }
+        private void OnEnable() => SubscribeEvents();
+        private void OnDisable() => UnsubscribeEvents();
 
         private void Start()
         {
@@ -196,6 +230,8 @@ namespace MedievalRPG.UI
             }
 
             WireActionButtons();
+            WireItemBagButtons();
+            WireEnemyTabButtons();
             WirePauseControls();
 
             if (victoryScreen != null) victoryScreen.SetActive(false);
@@ -203,6 +239,7 @@ namespace MedievalRPG.UI
             if (quizPanel != null) quizPanel.SetActive(false);
             if (quizModal != null) quizModal.Hide();
             if (pausePanel != null) pausePanel.SetActive(false);
+            if (itemBagPanel != null) itemBagPanel.SetActive(false);
 
             if (fadeOverlay != null)
             {
@@ -214,8 +251,11 @@ namespace MedievalRPG.UI
         {
             if (battleSystem == null) return;
             battleSystem.OnBattleInitialized += HandleBattleInitialized;
+            battleSystem.OnWaveChanged += HandleWaveChanged;
             battleSystem.OnStateChanged += HandleStateChanged;
             battleSystem.OnHeroTurnChanged += HandleHeroTurnChanged;
+            battleSystem.OnTurnQueueChanged += HandleTurnQueueChanged;
+            battleSystem.OnTargetsChanged += HandleTargetsChanged;
             battleSystem.OnDialogueChanged += HandleDialogueChanged;
             battleSystem.OnQuizStarted += HandleQuizStarted;
             battleSystem.OnQuizResultShown += HandleQuizResultShown;
@@ -224,14 +264,18 @@ namespace MedievalRPG.UI
             battleSystem.OnUnitHealed += HandleUnitHealed;
             battleSystem.OnUnitStatusPop += HandleUnitStatusPop;
             battleSystem.OnBattleEnded += HandleBattleEnded;
+            battleSystem.Inventory.OnInventoryChanged += RefreshItemBagUI;
         }
 
         private void UnsubscribeEvents()
         {
             if (battleSystem == null) return;
             battleSystem.OnBattleInitialized -= HandleBattleInitialized;
+            battleSystem.OnWaveChanged -= HandleWaveChanged;
             battleSystem.OnStateChanged -= HandleStateChanged;
             battleSystem.OnHeroTurnChanged -= HandleHeroTurnChanged;
+            battleSystem.OnTurnQueueChanged -= HandleTurnQueueChanged;
+            battleSystem.OnTargetsChanged -= HandleTargetsChanged;
             battleSystem.OnDialogueChanged -= HandleDialogueChanged;
             battleSystem.OnQuizStarted -= HandleQuizStarted;
             battleSystem.OnQuizResultShown -= HandleQuizResultShown;
@@ -240,17 +284,29 @@ namespace MedievalRPG.UI
             battleSystem.OnUnitHealed -= HandleUnitHealed;
             battleSystem.OnUnitStatusPop -= HandleUnitStatusPop;
             battleSystem.OnBattleEnded -= HandleBattleEnded;
+            battleSystem.Inventory.OnInventoryChanged -= RefreshItemBagUI;
+
+            if (partyCards != null)
+            {
+                foreach (PartyMemberCardUI card in partyCards)
+                {
+                    if (card != null) card.OnCardClicked -= HandlePartyCardClicked;
+                }
+            }
 
             if (battleSystem.partyUnits != null)
             {
-                foreach (var u in battleSystem.partyUnits)
+                foreach (Unit u in battleSystem.partyUnits)
                 {
                     if (u != null) u.OnStatsChanged -= HandleUnitStatsChanged;
                 }
             }
-            if (battleSystem.enemyUnit != null)
+            if (battleSystem.enemyUnits != null)
             {
-                battleSystem.enemyUnit.OnStatsChanged -= HandleUnitStatsChanged;
+                foreach (Unit u in battleSystem.enemyUnits)
+                {
+                    if (u != null) u.OnStatsChanged -= HandleUnitStatsChanged;
+                }
             }
         }
 
@@ -275,6 +331,44 @@ namespace MedievalRPG.UI
             }
         }
 
+        private void WireItemBagButtons()
+        {
+            if (itemButtons != null)
+            {
+                for (int i = 0; i < itemButtons.Length; i++)
+                {
+                    if (itemButtons[i] == null) continue;
+                    int idx = i;
+                    itemButtons[i].onClick.RemoveAllListeners();
+                    itemButtons[i].onClick.AddListener(() => UseItemByIndex(idx));
+                }
+            }
+
+            if (closeItemBagButton != null)
+            {
+                closeItemBagButton.onClick.RemoveAllListeners();
+                closeItemBagButton.onClick.AddListener(() => SetItemBagOpen(false));
+            }
+        }
+
+        private void WireEnemyTabButtons()
+        {
+            if (enemyTabButtons == null) return;
+            for (int i = 0; i < enemyTabButtons.Length; i++)
+            {
+                if (enemyTabButtons[i] == null) continue;
+                int idx = i;
+                enemyTabButtons[i].onClick.RemoveAllListeners();
+                enemyTabButtons[i].onClick.AddListener(() =>
+                {
+                    if (battleSystem != null && idx < battleSystem.enemyUnits.Count)
+                    {
+                        battleSystem.SelectEnemyTarget(battleSystem.enemyUnits[idx]);
+                    }
+                });
+            }
+        }
+
         private void WirePauseControls()
         {
             if (settingsOpenButton != null)
@@ -283,26 +377,39 @@ namespace MedievalRPG.UI
                 settingsOpenButton.onClick.AddListener(TogglePauseMenu);
             }
 
-            if (pauseVolumeSlider != null)
+            AudioManager audio = AudioManager.EnsureExists();
+
+            if (pauseMusicSlider != null)
             {
-                pauseVolumeSlider.minValue = 0f;
-                pauseVolumeSlider.maxValue = 1f;
-                pauseVolumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 1f);
-                UpdateVolumeLabel(pauseVolumeSlider.value);
-                pauseVolumeSlider.onValueChanged.RemoveAllListeners();
-                pauseVolumeSlider.onValueChanged.AddListener(val =>
+                pauseMusicSlider.minValue = 0f;
+                pauseMusicSlider.maxValue = 1f;
+                pauseMusicSlider.value = audio.MusicVolume;
+                UpdatePercentLabel(pauseMusicValueTMP, pauseMusicSlider.value);
+                pauseMusicSlider.onValueChanged.RemoveAllListeners();
+                pauseMusicSlider.onValueChanged.AddListener(val =>
                 {
-                    PlayerPrefs.SetFloat("MasterVolume", val);
-                    PlayerPrefs.Save();
-                    AudioListener.volume = val;
-                    UpdateVolumeLabel(val);
+                    AudioManager.EnsureExists().SetMusicVolume(val);
+                    UpdatePercentLabel(pauseMusicValueTMP, val);
+                });
+            }
+
+            if (pauseSfxSlider != null)
+            {
+                pauseSfxSlider.minValue = 0f;
+                pauseSfxSlider.maxValue = 1f;
+                pauseSfxSlider.value = audio.SFXVolume;
+                UpdatePercentLabel(pauseSfxValueTMP, pauseSfxSlider.value);
+                pauseSfxSlider.onValueChanged.RemoveAllListeners();
+                pauseSfxSlider.onValueChanged.AddListener(val =>
+                {
+                    AudioManager.EnsureExists().SetSFXVolume(val);
+                    UpdatePercentLabel(pauseSfxValueTMP, val);
                 });
             }
 
             if (pauseQuizToggle != null)
             {
-                bool quizOn = PlayerPrefs.GetInt("QuizEnabled", 1) == 1;
-                pauseQuizToggle.isOn = quizOn;
+                pauseQuizToggle.isOn = PlayerPrefs.GetInt("QuizEnabled", 1) == 1;
                 pauseQuizToggle.onValueChanged.RemoveAllListeners();
                 pauseQuizToggle.onValueChanged.AddListener(isOn =>
                 {
@@ -315,8 +422,7 @@ namespace MedievalRPG.UI
 
             if (pauseFastModeToggle != null)
             {
-                bool fastOn = PlayerPrefs.GetFloat("BattleSpeed", 1f) > 1.1f;
-                pauseFastModeToggle.isOn = fastOn;
+                pauseFastModeToggle.isOn = PlayerPrefs.GetFloat("BattleSpeed", 1f) > 1.1f;
                 pauseFastModeToggle.onValueChanged.RemoveAllListeners();
                 pauseFastModeToggle.onValueChanged.AddListener(isOn =>
                 {
@@ -327,14 +433,14 @@ namespace MedievalRPG.UI
             }
         }
 
-        private void UpdateVolumeLabel(float vol)
+        private static void UpdatePercentLabel(TextMeshProUGUI label, float val)
         {
-            if (pauseVolumeValueTMP != null)
-            {
-                pauseVolumeValueTMP.text = $"{Mathf.RoundToInt(vol * 100f)}%";
-            }
+            if (label != null) label.text = $"{Mathf.RoundToInt(val * 100f)}%";
         }
 
+        // =====================================================================
+        // EVENT HANDLERS
+        // =====================================================================
         private void HandleBattleInitialized()
         {
             if (battleSystem == null) return;
@@ -351,6 +457,8 @@ namespace MedievalRPG.UI
                 if (partyCards != null && i < partyCards.Length && partyCards[i] != null)
                 {
                     partyCards[i].Bind(hero, GetPortraitForUnit(hero), GetClassIconForUnit(hero));
+                    partyCards[i].OnCardClicked -= HandlePartyCardClicked;
+                    partyCards[i].OnCardClicked += HandlePartyCardClicked;
                 }
 
                 if (worldUnitHUDs != null && i < worldUnitHUDs.Length && worldUnitHUDs[i] != null)
@@ -359,35 +467,91 @@ namespace MedievalRPG.UI
                 }
             }
 
-            Unit enemy = battleSystem.enemyUnit;
-            if (enemy != null)
-            {
-                enemy.OnStatsChanged -= HandleUnitStatsChanged;
-                enemy.OnStatsChanged += HandleUnitStatsChanged;
+            BindCurrentEnemyWaveUI();
+            RefreshAllStatusDisplays();
+            RefreshQuizStatsBadge();
+            RefreshItemBagUI();
+        }
 
-                if (enemyCard != null)
+        private void HandleWaveChanged()
+        {
+            BindCurrentEnemyWaveUI();
+            RefreshAllStatusDisplays();
+            RefreshWaveBadge();
+        }
+
+        private void BindCurrentEnemyWaveUI()
+        {
+            if (battleSystem == null) return;
+
+            for (int i = 0; i < battleSystem.enemyUnits.Count; i++)
+            {
+                Unit e = battleSystem.enemyUnits[i];
+                if (e != null)
                 {
-                    enemyCard.Bind(enemy, GetPortraitForUnit(enemy));
+                    e.OnStatsChanged -= HandleUnitStatsChanged;
+                    e.OnStatsChanged += HandleUnitStatsChanged;
                 }
 
-                if (worldUnitHUDs != null && worldUnitHUDs.Length > 3 && worldUnitHUDs[3] != null)
+                int worldIdx = 3 + i;
+                if (worldUnitHUDs != null && worldIdx < worldUnitHUDs.Length && worldUnitHUDs[worldIdx] != null)
                 {
-                    worldUnitHUDs[3].Bind(enemy, worldHudLayer, 0.72f);
+                    worldUnitHUDs[worldIdx].Bind(e, worldHudLayer, GetWorldOffsetForUnit(e));
                 }
             }
 
+            // Ẩn các slot WorldHUD quái dư thừa nếu wave ít quái hơn 3
+            if (worldUnitHUDs != null)
+            {
+                for (int idx = 3 + battleSystem.enemyUnits.Count; idx < worldUnitHUDs.Length; idx++)
+                {
+                    if (worldUnitHUDs[idx] != null) worldUnitHUDs[idx].Bind(null, worldHudLayer, 0.8f);
+                }
+            }
+
+            Unit selected = battleSystem.SelectedEnemyTarget ?? (battleSystem.enemyUnits.Count > 0 ? battleSystem.enemyUnits[0] : null);
+            if (enemyCard != null)
+            {
+                enemyCard.Bind(selected, GetPortraitForUnit(selected));
+            }
+
+            RefreshEnemyTargetTabs();
+            RefreshWaveBadge();
+        }
+
+        private void HandlePartyCardClicked(Unit hero)
+        {
+            if (battleSystem == null || hero == null) return;
+            battleSystem.SelectAllyTarget(hero);
+        }
+
+        private void HandleTargetsChanged(Unit selectedEnemy, Unit selectedAlly)
+        {
+            if (enemyCard != null)
+            {
+                enemyCard.Bind(selectedEnemy, GetPortraitForUnit(selectedEnemy));
+            }
+            RefreshEnemyTargetTabs();
             RefreshAllStatusDisplays();
-            RefreshQuizStatsBadge();
+        }
+
+        private void HandleTurnQueueChanged(IReadOnlyList<Unit> queue, Unit active)
+        {
+            RefreshTurnOrderStrip(queue, active);
+            RefreshAllStatusDisplays();
         }
 
         private void HandleUnitStatsChanged(Unit unit)
         {
             RefreshAllStatusDisplays();
+            RefreshEnemyTargetTabs();
             RefreshActionButtons();
+            RefreshItemBagUI();
         }
 
         private void HandleStateChanged(BattleState newState)
         {
+            if (newState != BattleState.PLAYERTURN) SetItemBagOpen(false);
             UpdateTurnBanner(newState);
             RefreshAllStatusDisplays();
             RefreshActionButtons();
@@ -402,13 +566,13 @@ namespace MedievalRPG.UI
 
         private void HandleDialogueChanged(string message)
         {
-            _lastDialogue = message;
             if (dialogueTMP != null) dialogueTMP.text = message;
             if (dialogueBoxText != null) dialogueBoxText.text = message;
         }
 
         private void HandleQuizStarted(QuizQuestion q, string actionContext)
         {
+            SetItemBagOpen(false);
             if (quizModal != null)
             {
                 quizModal.ShowQuestion(
@@ -422,7 +586,6 @@ namespace MedievalRPG.UI
             {
                 ShowQuizPrompt(q);
             }
-
             RefreshActionButtons();
         }
 
@@ -437,14 +600,8 @@ namespace MedievalRPG.UI
 
         private void HandleQuizEnded()
         {
-            if (quizModal != null)
-            {
-                quizModal.Hide();
-            }
-            else
-            {
-                HideQuizPrompt();
-            }
+            if (quizModal != null) quizModal.Hide();
+            else HideQuizPrompt();
         }
 
         private void HandleDamageDealt(Unit target, int amount, bool isCrit)
@@ -470,15 +627,21 @@ namespace MedievalRPG.UI
 
         private void HandleBattleEnded(BattleState finalState)
         {
+            SetItemBagOpen(false);
             if (finalState == BattleState.WON) ShowVictory();
             else if (finalState == BattleState.LOST) ShowGameOver();
         }
 
+        // =====================================================================
+        // REFRESH UI HELPERS
+        // =====================================================================
         private void UpdateTurnBanner(BattleState st)
         {
             if (turnBannerTMP == null) return;
 
             int round = battleSystem != null ? battleSystem.TurnCount : 1;
+            int wave = battleSystem != null ? battleSystem.CurrentWaveNumber : 1;
+            int totalWaves = battleSystem != null ? battleSystem.TotalWaves : 1;
             string heroName = (battleSystem != null && battleSystem.CurrentHero != null)
                 ? MedievalUITheme.FormatHeroDisplayName(battleSystem.CurrentHero.unitName)
                 : "Anh Hùng";
@@ -487,41 +650,120 @@ namespace MedievalRPG.UI
             {
                 case BattleState.START:
                     turnBannerTMP.text = "CHUẨN BỊ CHIẾN ĐẤU";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Hiệp {round}  •  Sắp xếp đội hình";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Đợt {wave}/{totalWaves} • Hiệp {round}";
                     break;
                 case BattleState.PLAYERTURN:
                     turnBannerTMP.text = $"LƯỢT CỦA {heroName.ToUpperInvariant()}";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Hiệp {round}  •  Chọn hành động [1-5]";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Đợt {wave}/{totalWaves} • Hiệp {round} • [1-5] & [Tab] đổi mục tiêu";
                     break;
                 case BattleState.WAITING_FOR_QUIZ:
                     turnBannerTMP.text = "THỬ THÁCH TRI THỨC";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Hiệp {round}  •  Trả lời đúng để xuất chiêu";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Hiệp {round} • Trả lời đúng để xuất chiêu";
                     break;
                 case BattleState.ENEMYTURN:
-                    turnBannerTMP.text = "LƯỢT QUÁI VẬT";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Hiệp {round}  •  Kẻ địch đang phản công";
+                    string enemyLabel = battleSystem != null && battleSystem.ActiveUnit != null ? battleSystem.ActiveUnit.unitName : "QUÁI VẬT";
+                    turnBannerTMP.text = $"LƯỢT {enemyLabel.ToUpperInvariant()}";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Đợt {wave}/{totalWaves} • Hiệp {round} • Kẻ địch phản công";
                     break;
                 case BattleState.WON:
                     turnBannerTMP.text = "CHIẾN THẮNG!";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Hoàn thành sau {round} hiệp";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Vượt qua {totalWaves} đợt sau {round} hiệp";
                     break;
                 case BattleState.LOST:
                     turnBannerTMP.text = "THẤT BẠI";
-                    if (turnSubTMP != null) turnSubTMP.text = $"Gục ngã ở hiệp {round}";
+                    if (turnSubTMP != null) turnSubTMP.text = $"Gục ngã ở Đợt {wave}/{totalWaves} • Hiệp {round}";
                     break;
             }
+        }
+
+        private void RefreshWaveBadge()
+        {
+            if (waveBadgeTMP == null || battleSystem == null) return;
+            waveBadgeTMP.text = $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}";
         }
 
         private void RefreshQuizStatsBadge()
         {
             if (quizStatsTMP == null || battleSystem == null) return;
-            quizStatsTMP.text = $"Đúng: {battleSystem.CorrectAnswersCount}/{battleSystem.TotalQuestionsAnswered}  •  Chuỗi: {battleSystem.CurrentQuizStreak}";
+            string comboTag = battleSystem.CurrentQuizStreak >= 3 ? " (x1.2 ST!)" : "";
+            quizStatsTMP.text = $"Đúng: {battleSystem.CorrectAnswersCount}/{battleSystem.TotalQuestionsAnswered} • Chuỗi: {battleSystem.CurrentQuizStreak}{comboTag}";
+        }
+
+        private void RefreshTurnOrderStrip(IReadOnlyList<Unit> queue, Unit active)
+        {
+            if (turnOrderSlotRoots == null || turnOrderSlotRoots.Length == 0) return;
+
+            List<Unit> ordered = new List<Unit>();
+            if (active != null && active.IsAlive) ordered.Add(active);
+            if (queue != null)
+            {
+                for (int i = 0; i < queue.Count && ordered.Count < turnOrderSlotRoots.Length; i++)
+                {
+                    if (queue[i] != null && queue[i].IsAlive) ordered.Add(queue[i]);
+                }
+            }
+
+            for (int i = 0; i < turnOrderSlotRoots.Length; i++)
+            {
+                if (turnOrderSlotRoots[i] == null) continue;
+                bool visible = i < ordered.Count;
+                turnOrderSlotRoots[i].SetActive(visible);
+                if (!visible) continue;
+
+                Unit u = ordered[i];
+                if (turnOrderSlotPortraits != null && i < turnOrderSlotPortraits.Length && turnOrderSlotPortraits[i] != null)
+                {
+                    turnOrderSlotPortraits[i].sprite = GetPortraitForUnit(u);
+                }
+                if (turnOrderSlotFrames != null && i < turnOrderSlotFrames.Length && turnOrderSlotFrames[i] != null)
+                {
+                    turnOrderSlotFrames[i].color = i == 0
+                        ? MedievalUITheme.GoldSoft
+                        : (u.isEnemy ? MedievalUITheme.DangerRed : MedievalUITheme.SlateBorder);
+                }
+            }
+        }
+
+        private void RefreshEnemyTargetTabs()
+        {
+            if (enemyTabsRow == null || battleSystem == null || enemyTabButtons == null) return;
+
+            int enemyCount = battleSystem.enemyUnits.Count;
+            enemyTabsRow.SetActive(enemyCount > 1);
+            if (enemyCount <= 1) return;
+
+            for (int i = 0; i < enemyTabButtons.Length; i++)
+            {
+                if (enemyTabButtons[i] == null) continue;
+                bool activeSlot = i < enemyCount && battleSystem.enemyUnits[i] != null;
+                enemyTabButtons[i].gameObject.SetActive(activeSlot);
+                if (!activeSlot) continue;
+
+                Unit e = battleSystem.enemyUnits[i];
+                bool alive = e.IsAlive;
+                bool isSelected = e == battleSystem.SelectedEnemyTarget;
+                enemyTabButtons[i].interactable = alive;
+
+                if (enemyTabLabels != null && i < enemyTabLabels.Length && enemyTabLabels[i] != null)
+                {
+                    enemyTabLabels[i].text = alive ? $"{e.unitName}" : $"{e.unitName} (Hạ)";
+                    enemyTabLabels[i].color = alive ? MedievalUITheme.IvoryText : MedievalUITheme.SlateMuted;
+                }
+                if (enemyTabHpFills != null && i < enemyTabHpFills.Length && enemyTabHpFills[i] != null)
+                {
+                    enemyTabHpFills[i].fillAmount = e.maxHP > 0 ? Mathf.Clamp01((float)e.currentHP / e.maxHP) : 0f;
+                }
+                if (enemyTabBorders != null && i < enemyTabBorders.Length && enemyTabBorders[i] != null)
+                {
+                    enemyTabBorders[i].color = isSelected ? MedievalUITheme.GoldSoft : MedievalUITheme.SlateBorder;
+                }
+            }
         }
 
         private void RefreshAllStatusDisplays()
         {
             if (battleSystem == null) return;
-            Unit activeHero = battleSystem.state == BattleState.PLAYERTURN || battleSystem.state == BattleState.WAITING_FOR_QUIZ
+            Unit activeHero = (battleSystem.state == BattleState.PLAYERTURN || battleSystem.state == BattleState.WAITING_FOR_QUIZ)
                 ? battleSystem.CurrentHero
                 : null;
 
@@ -529,33 +771,42 @@ namespace MedievalRPG.UI
             {
                 Unit u = battleSystem.partyUnits[i];
                 bool isTurn = u != null && u == activeHero;
+                bool isSelectedAlly = u != null && u == battleSystem.SelectedAllyTarget;
 
                 if (partyCards != null && i < partyCards.Length && partyCards[i] != null)
                 {
-                    partyCards[i].RefreshImmediate(isTurn);
+                    partyCards[i].RefreshImmediate(isTurn, isSelectedAlly);
                 }
                 if (worldUnitHUDs != null && i < worldUnitHUDs.Length && worldUnitHUDs[i] != null)
                 {
-                    worldUnitHUDs[i].Refresh(isTurn);
+                    worldUnitHUDs[i].Refresh(isTurn, false);
                 }
             }
 
             bool isEnemyTurn = battleSystem.state == BattleState.ENEMYTURN;
             if (enemyCard != null) enemyCard.Refresh(isEnemyTurn);
-            if (worldUnitHUDs != null && worldUnitHUDs.Length > 3 && worldUnitHUDs[3] != null)
+
+            for (int i = 0; i < battleSystem.enemyUnits.Count; i++)
             {
-                worldUnitHUDs[3].Refresh(isEnemyTurn);
+                int worldIdx = 3 + i;
+                Unit e = battleSystem.enemyUnits[i];
+                if (worldUnitHUDs != null && worldIdx < worldUnitHUDs.Length && worldUnitHUDs[worldIdx] != null)
+                {
+                    bool enemyIsActing = isEnemyTurn && e == battleSystem.ActiveUnit;
+                    bool isTargeted = e != null && e == battleSystem.SelectedEnemyTarget;
+                    worldUnitHUDs[worldIdx].Refresh(enemyIsActing, isTargeted);
+                }
             }
 
             if (activeHeroBannerTMP != null)
             {
                 if (activeHero != null)
                 {
-                    activeHeroBannerTMP.text = $"{MedievalUITheme.FormatHeroDisplayName(activeHero.unitName)}  •  ATK {activeHero.damage}  |  MAG {activeHero.magicDamage}  |  DEF {activeHero.EffectiveDefense}";
+                    activeHeroBannerTMP.text = $"{MedievalUITheme.FormatHeroDisplayName(activeHero.unitName)} • ATK {activeHero.damage} | MAG {activeHero.magicDamage} | DEF {activeHero.EffectiveDefense} | SPD {activeHero.speed}";
                 }
-                else if (battleSystem.state == BattleState.ENEMYTURN && battleSystem.enemyUnit != null)
+                else if (battleSystem.state == BattleState.ENEMYTURN && battleSystem.ActiveUnit != null)
                 {
-                    activeHeroBannerTMP.text = $"Đang tới lượt {battleSystem.enemyUnit.unitName}";
+                    activeHeroBannerTMP.text = $"Đang tới lượt {battleSystem.ActiveUnit.unitName}";
                 }
                 else
                 {
@@ -580,7 +831,7 @@ namespace MedievalRPG.UI
                           && !battleSystem.IsActionInProgress
                           && !battleSystem.IsPaused
                           && hero != null
-                          && hero.currentHP > 0;
+                          && hero.IsAlive;
 
             string quizTag = battleSystem.enableQuizSystem ? "Quiz" : "Tự do";
 
@@ -606,38 +857,59 @@ namespace MedievalRPG.UI
                 return;
             }
 
-            // 0: Đánh thường (dùng skill[0] nếu có để lấy tên đẹp, mặc định Tấn Công)
+            // 0: Đánh thường (skills[0])
             SkillData basicSkill = (hero.skills != null && hero.skills.Count > 0) ? hero.skills[0] : null;
             string atkTitle = basicSkill != null ? basicSkill.skillName : "Tấn Công";
+            int baseStat = (basicSkill != null && basicSkill.damageType == DamageType.Magical) ? hero.magicDamage : hero.damage;
             string atkDesc = basicSkill != null
-                ? $"{basicSkill.description} (Sát thương cơ bản ~{hero.damage} + thưởng {quizTag})"
-                : $"Tấn công vật lý cơ bản gây ~{hero.damage} sát thương.";
+                ? $"{basicSkill.description} (Sát thương cơ bản ~{baseStat} + thưởng {quizTag})"
+                : $"Tấn công cơ bản gây ~{baseStat} sát thương.";
             SetActionButton(0, true, canAct, atkTitle, $"Miễn phí • {quizTag}", GetAttackIconForHero(hero), MedievalUITheme.BtnAttack, atkDesc);
 
             // 1: Skill 1
-            bool hasS1 = hero.skills != null && hero.skills.Count > 1 && hero.skills[1] != null;
-            SkillData s1 = hasS1 ? hero.skills[1] : null;
-            bool s1CanCast = canAct && hasS1 && hero.currentMP >= s1.manaCost;
-            string s1Cost = hasS1 ? $"{s1.manaCost} MP • {quizTag}" : "Không có";
-            string s1Desc = hasS1 ? $"{s1.description} (Tiêu hao: {s1.manaCost} MP)" : "Kỹ năng chưa mở khóa.";
-            SetActionButton(1, hasS1, s1CanCast, hasS1 ? s1.skillName : "Kỹ Năng 1", s1Cost, magicIcon, MedievalUITheme.BtnSkill, s1Desc);
+            ConfigureSkillButton(1, hero, canAct, quizTag);
 
             // 2: Skill 2
-            bool hasS2 = hero.skills != null && hero.skills.Count > 2 && hero.skills[2] != null;
-            SkillData s2 = hasS2 ? hero.skills[2] : null;
-            bool s2CanCast = canAct && hasS2 && hero.currentMP >= s2.manaCost;
-            Sprite s2Icon = hasS2 && s2.baseHealAmount > 0 ? heartIcon : (hasS2 && s2.defenseBonus > 0 ? shieldIcon : magicIcon);
-            string s2Cost = hasS2 ? $"{s2.manaCost} MP • {quizTag}" : "Không có";
-            string s2Desc = hasS2 ? $"{s2.description} (Tiêu hao: {s2.manaCost} MP)" : "Kỹ năng chưa mở khóa.";
-            SetActionButton(2, hasS2, s2CanCast, hasS2 ? s2.skillName : "Kỹ Năng 2", s2Cost, s2Icon, MedievalUITheme.BtnSkill, s2Desc);
+            ConfigureSkillButton(2, hero, canAct, quizTag);
 
-            // 3: Hồi phục cơ bản
-            SetActionButton(3, true, canAct, "Hồi Phục", $"Thảo dược • {quizTag}", heartIcon, MedievalUITheme.BtnHeal,
-                "Dùng thảo dược hồi +25 HP (+ thưởng Quiz) cho đồng đội mất nhiều máu nhất.");
+            // 3: Túi Đồ (Consumables Bag)
+            int itemCount = battleSystem.Inventory.TotalItems;
+            SetActionButton(3, true, canAct && itemCount > 0, "Túi Đồ", $"Còn {itemCount} món • Nhanh", heartIcon, MedievalUITheme.BtnHeal,
+                "Mở túi đồ sử dụng Bình Máu (+55 HP), Bình Mana (+30 MP) hoặc Lông Phượng Hoàng (Hồi sinh). Không mất Quiz!");
 
-            // 4: Phòng thủ
-            SetActionButton(4, true, canAct, "Phòng Thủ", "Miễn phí • +8 MP", shieldIcon, MedievalUITheme.BtnDefend,
-                "Giảm 50% sát thương nhận vào ở lượt quái vật và hồi ngay +8 MP (không cần trả lời Quiz).");
+            // 4: Phòng Thủ
+            string tauntHint = hero.characterClass == CharacterClassType.Knight ? " + Khiêu Khích" : "";
+            SetActionButton(4, true, canAct, "Phòng Thủ", $"Miễn phí • +8 MP", shieldIcon, MedievalUITheme.BtnDefend,
+                $"Giảm 50% sát thương nhận vào, hồi ngay +8 MP{tauntHint} (không cần trả lời Quiz).");
+        }
+
+        private void ConfigureSkillButton(int slotIndex, Unit hero, bool canAct, string quizTag)
+        {
+            bool hasSkill = hero.skills != null && hero.skills.Count > slotIndex && hero.skills[slotIndex] != null;
+            SkillData s = hasSkill ? hero.skills[slotIndex] : null;
+            int cd = hasSkill ? hero.GetSkillCooldown(s) : 0;
+            bool enoughMana = hasSkill && hero.currentMP >= s.manaCost;
+            bool canCast = canAct && hasSkill && cd == 0 && enoughMana;
+
+            Sprite icon = magicIcon;
+            if (hasSkill)
+            {
+                if (s.IsHealSkill) icon = heartIcon;
+                else if (s.defenseBonus > 0 || s.IsSelfSupport) icon = shieldIcon;
+                else if (hero.characterClass == CharacterClassType.Archer) icon = arrowIcon;
+                else if (hero.characterClass == CharacterClassType.Knight) icon = swordIcon;
+            }
+
+            string costText;
+            if (!hasSkill) costText = "Không có";
+            else if (cd > 0) costText = $"Hồi: {cd} lượt";
+            else costText = $"{s.manaCost} MP • {quizTag}";
+
+            string desc = hasSkill
+                ? $"{s.description} (Tiêu hao: {s.manaCost} MP{(s.cooldownTurns > 0 ? $", Hồi chiêu {s.cooldownTurns} lượt" : "")})"
+                : "Kỹ năng chưa mở khóa.";
+
+            SetActionButton(slotIndex, hasSkill, canCast, hasSkill ? s.skillName : $"Kỹ Năng {slotIndex}", costText, icon, MedievalUITheme.BtnSkill, desc);
         }
 
         private void SetActionButton(int idx, bool visible, bool interactable, string title, string cost, Sprite icon, Color baseColor, string previewDesc)
@@ -667,6 +939,54 @@ namespace MedievalRPG.UI
             }
         }
 
+        private void SetItemBagOpen(bool open)
+        {
+            if (itemBagPanel == null) return;
+            itemBagPanel.SetActive(open);
+            if (open) RefreshItemBagUI();
+        }
+
+        private void RefreshItemBagUI()
+        {
+            if (battleSystem == null || itemButtons == null) return;
+
+            ConsumableItemType[] types =
+            {
+                ConsumableItemType.HealthPotion,
+                ConsumableItemType.ManaElixir,
+                ConsumableItemType.PhoenixFeather
+            };
+
+            for (int i = 0; i < types.Length && i < itemButtons.Length; i++)
+            {
+                ConsumableItemType item = types[i];
+                int count = battleSystem.Inventory.GetCount(item);
+                bool canUse = battleSystem.CanUseConsumable(item);
+
+                if (itemButtons[i] != null) itemButtons[i].interactable = canUse;
+                if (itemTitleTMPs != null && i < itemTitleTMPs.Length && itemTitleTMPs[i] != null)
+                {
+                    itemTitleTMPs[i].text = BattleInventory.GetDisplayName(item);
+                }
+                if (itemCountTMPs != null && i < itemCountTMPs.Length && itemCountTMPs[i] != null)
+                {
+                    itemCountTMPs[i].text = $"x{count}";
+                }
+            }
+        }
+
+        private void UseItemByIndex(int index)
+        {
+            if (battleSystem == null) return;
+            ConsumableItemType item = index == 0
+                ? ConsumableItemType.HealthPotion
+                : (index == 1 ? ConsumableItemType.ManaElixir : ConsumableItemType.PhoenixFeather);
+
+            if (!battleSystem.CanUseConsumable(item)) return;
+            SetItemBagOpen(false);
+            battleSystem.UseConsumableItem(item);
+        }
+
         private void HandleActionHoverChanged(UIButtonFeedback feedback, bool isHovering)
         {
             if (skillPreviewTMP == null) return;
@@ -676,7 +996,7 @@ namespace MedievalRPG.UI
             }
             else
             {
-                skillPreviewTMP.text = "Di chuột vào nút hành động để xem chi tiết hiệu ứng & chi phí MP.";
+                skillPreviewTMP.text = "Bấm vào quái hoặc [Tab] để đổi mục tiêu • Bấm thẻ anh hùng để chọn người hồi phục.";
             }
         }
 
@@ -685,11 +1005,26 @@ namespace MedievalRPG.UI
             if (battleSystem == null) return;
             switch (index)
             {
-                case 0: battleSystem.OnAttackButton(); break;
-                case 1: battleSystem.OnSkill1Button(); break;
-                case 2: battleSystem.OnSkill2Button(); break;
-                case 3: battleSystem.OnHealButton(); break;
-                case 4: battleSystem.OnDefendButton(); break;
+                case 0:
+                    SetItemBagOpen(false);
+                    battleSystem.OnAttackButton();
+                    break;
+                case 1:
+                    SetItemBagOpen(false);
+                    battleSystem.OnSkill1Button();
+                    break;
+                case 2:
+                    SetItemBagOpen(false);
+                    battleSystem.OnSkill2Button();
+                    break;
+                case 3:
+                    if (itemBagPanel != null) SetItemBagOpen(!itemBagPanel.activeSelf);
+                    else battleSystem.OnHealButton();
+                    break;
+                case 4:
+                    SetItemBagOpen(false);
+                    battleSystem.OnDefendButton();
+                    break;
             }
         }
 
@@ -697,7 +1032,7 @@ namespace MedievalRPG.UI
         {
             if (u == null) return knightPortrait;
             string n = u.unitName ?? "";
-            if (n.Contains("Dark") || n.Contains("Boss")) return darkKnightPortrait != null ? darkKnightPortrait : knightPortrait;
+            if (u.isBoss || n.Contains("Dark") || n.Contains("Boss")) return darkKnightPortrait != null ? darkKnightPortrait : knightPortrait;
             if (n.Contains("Skeleton")) return skeletonPortrait != null ? skeletonPortrait : goblinPortrait;
             if (u.isEnemy || n.Contains("Goblin")) return goblinPortrait;
             if (u.characterClass == CharacterClassType.Mage || n.Contains("Mage")) return magePortrait;
@@ -713,17 +1048,12 @@ namespace MedievalRPG.UI
             return swordIcon;
         }
 
-        private Sprite GetAttackIconForHero(Unit u)
-        {
-            if (u == null) return swordIcon;
-            if (u.characterClass == CharacterClassType.Mage) return magicIcon;
-            if (u.characterClass == CharacterClassType.Archer) return arrowIcon;
-            return swordIcon;
-        }
+        private Sprite GetAttackIconForHero(Unit u) => GetClassIconForUnit(u);
 
         private float GetWorldOffsetForUnit(Unit u)
         {
             if (u == null) return 0.9f;
+            if (u.isBoss) return 1.15f;
             if (u.characterClass == CharacterClassType.Mage) return 0.95f;
             if (u.characterClass == CharacterClassType.Archer) return 0.92f;
             return 0.90f;
@@ -736,15 +1066,22 @@ namespace MedievalRPG.UI
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
-                if (battleSystem != null && (battleSystem.state == BattleState.WON || battleSystem.state == BattleState.LOST))
+                if (itemBagPanel != null && itemBagPanel.activeSelf)
                 {
+                    SetItemBagOpen(false);
                     return;
                 }
-                if (battleSystem != null && battleSystem.state == BattleState.WAITING_FOR_QUIZ)
-                {
-                    return;
-                }
+                if (battleSystem != null && (battleSystem.state == BattleState.WON || battleSystem.state == BattleState.LOST)) return;
+                if (battleSystem != null && battleSystem.state == BattleState.WAITING_FOR_QUIZ) return;
                 TogglePauseMenu();
+                return;
+            }
+
+            if (itemBagPanel != null && itemBagPanel.activeSelf)
+            {
+                if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) UseItemByIndex(0);
+                else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) UseItemByIndex(1);
+                else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) UseItemByIndex(2);
                 return;
             }
 
@@ -774,9 +1111,6 @@ namespace MedievalRPG.UI
             RefreshActionButtons();
         }
 
-        /// <summary>
-        /// Mở bảng câu hỏi trắc nghiệm khi nhân vật chuẩn bị tấn công (tương thích ngược)
-        /// </summary>
         public void ShowQuizPrompt(QuizQuestion q)
         {
             if (quizModal != null)
@@ -790,23 +1124,10 @@ namespace MedievalRPG.UI
                 quizPanel.SetActive(true);
                 if (questionCategoryText != null) questionCategoryText.text = $"[Chủ đề: {q.category}]";
                 if (questionContentText != null) questionContentText.text = q.questionText;
-
-                for (int i = 0; i < 4; i++)
-                {
-                    if (answerButtonTexts != null && i < answerButtonTexts.Length && answerButtonTexts[i] != null)
-                    {
-                        char prefix = (char)('A' + i);
-                        answerButtonTexts[i].text = $"{prefix}. {q.answers[i]}";
-                    }
-                }
             }
-
             if (actionPanel != null) actionPanel.SetActive(false);
         }
 
-        /// <summary>
-        /// Đóng bảng câu hỏi sau khi có kết quả
-        /// </summary>
         public void HideQuizPrompt()
         {
             if (quizModal != null) quizModal.Hide();
@@ -814,33 +1135,18 @@ namespace MedievalRPG.UI
             if (actionPanel != null) actionPanel.SetActive(true);
         }
 
-        /// <summary>
-        /// Xử lý khi người chơi bấm chọn đáp án A, B, C hoặc D
-        /// </summary>
         public void OnSubmitAnswerClicked(int answerIndex)
         {
-            if (battleSystem != null)
-            {
-                battleSystem.ProcessQuizAnswer(answerIndex);
-            }
-            if (quizModal == null)
-            {
-                HideQuizPrompt();
-            }
+            if (battleSystem != null) battleSystem.ProcessQuizAnswer(answerIndex);
+            if (quizModal == null) HideQuizPrompt();
         }
 
-        /// <summary>
-        /// Hiển thị màn hình chiến thắng
-        /// </summary>
         public void ShowVictory()
         {
             if (victoryScreen != null) victoryScreen.SetActive(true);
             if (victorySummaryTMP != null) victorySummaryTMP.text = BuildEndSummaryText(true);
         }
 
-        /// <summary>
-        /// Hiển thị màn hình thất bại
-        /// </summary>
         public void ShowGameOver()
         {
             if (gameOverScreen != null) gameOverScreen.SetActive(true);
@@ -854,25 +1160,23 @@ namespace MedievalRPG.UI
             int correct = battleSystem.CorrectAnswersCount;
             int pct = total > 0 ? Mathf.RoundToInt((float)correct / total * 100f) : 0;
             int aliveCount = 0;
-            foreach (var u in battleSystem.partyUnits)
+            foreach (Unit u in battleSystem.partyUnits)
             {
-                if (u != null && u.currentHP > 0) aliveCount++;
+                if (u != null && u.IsAlive) aliveCount++;
             }
 
             string headline = won
-                ? "Đội hình anh hùng đã đánh bại quái vật hầm ngục!"
+                ? "Đội hình anh hùng đã chinh phục toàn bộ thử thách!"
                 : "Hãy ôn tập thêm kiến thức và quay lại phục thù!";
 
             return $"{headline}\n\n" +
-                   $"• Số hiệp chiến đấu: <b>{battleSystem.TurnCount}</b>\n" +
-                   $"• Câu hỏi trả lời đúng: <b>{correct}/{total}</b> ({pct}%)\n" +
+                   $"• Tiến độ đợt quái: <b>Đợt {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}</b>\n" +
+                   $"• Tổng số hiệp: <b>{battleSystem.TurnCount}</b>\n" +
+                   $"• Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)\n" +
                    $"• Chuỗi trả lời đúng dài nhất: <b>{battleSystem.BestQuizStreak}</b>\n" +
-                   $"• Thành viên còn sống: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>";
+                   $"• Thành viên sống sót: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>";
         }
 
-        /// <summary>
-        /// Chơi lại trận đấu từ đầu
-        /// </summary>
         public void RestartBattle()
         {
             if (_isTransitioning) return;
@@ -880,9 +1184,6 @@ namespace MedievalRPG.UI
             StartCoroutine(TransitionAndLoadSceneIndex(SceneManager.GetActiveScene().buildIndex));
         }
 
-        /// <summary>
-        /// Trở về Menu chính
-        /// </summary>
         public void ReturnToMainMenu()
         {
             if (_isTransitioning) return;

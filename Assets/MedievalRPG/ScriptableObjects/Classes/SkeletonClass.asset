@@ -9,12 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1131e5014917b0a5a38a26e87b812f31, type: 3}
+  m_Script: {fileID: 11500000, guid: 42610554debfc54de55ea110ef79e23b, type: 3}
   m_Name: SkeletonClass
   m_EditorClassIdentifier: 
   classType: 0
-  className: "Skeleton Warrior"
-  loreDescription: "Chiến binh bộ xương sống lại từ hầm ngục cổ xưa, sở hữu giáp phòng ngự cao."
+  className: Skeleton Warrior
+  baseLevel: 2
+  isBoss: 0
+  loreDescription: "Chi\u1EBFn binh b\u1ED9 x\u01B0\u01A1ng s\u1ED1ng l\u1EA1i t\u1EEB h\u1EA7m ng\u1EE5c c\u1ED5 x\u01B0a, s\u1EDF h\u1EEFu gi\xE1p ph\xF2ng ng\u1EF1 cao."
   maxHealth: 130
   maxMana: 30
   physicalAttack: 22
@@ -28,4 +30,6 @@ MonoBehaviour:
   idleSpriteAlt: {fileID: 21300000, guid: 28a4ca5db2b174876d1b30db77d39927, type: 3}
   actionSprite: {fileID: 21300000, guid: 916faf13a9b939314ca424d64207b6b4, type: 3}
   hitSprite: {fileID: 21300000, guid: 4e23e5ffaa4b2988d642b52b1bc60172, type: 3}
-  skills: []
+  skills:
+  - {fileID: 11400000, guid: 16a8f926d591a5174b78467ef948a280, type: 2}
+  - {fileID: 11400000, guid: c27aa04ff7912a6608ceb23511a249cf, type: 2}

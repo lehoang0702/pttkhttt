@@ -27,28 +27,74 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1000000001}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.35, y: 1.35, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2120000001
 SpriteRenderer:
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1000000001}
   m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 2ca7565ab70a08dff1862a970fc11a8f, type: 3}
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: 956a133e9eb239d5a9b2aad613516da5, type: 3}
   m_Color: {r: 0.85, g: 0.35, b: 0.35, a: 1}
   m_FlipX: 1
   m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 2, y: 2}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!114 &1140000001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -58,45 +104,53 @@ MonoBehaviour:
   m_GameObject: {fileID: 1000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e826e67f063c9cb98b98628da4cb9fcc, type: 3}
+  m_Script: {fileID: 11500000, guid: 837d3ab106647877065b2baef25583d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   spriteRenderer: {fileID: 2120000001}
   idleFrames:
-  - {fileID: 21300000, guid: 2ca7565ab70a08dff1862a970fc11a8f, type: 3}
-  - {fileID: 21300000, guid: 11b35dc0d1fa89cb4550dd39dac3219b, type: 3}
-  - {fileID: 21300000, guid: d77444ba835cd47884a473dedb749ed1, type: 3}
-  - {fileID: 21300000, guid: 96ac1371829f505f638604f2baa2cd6a, type: 3}
-  - {fileID: 21300000, guid: 60858a7b3c6b1a032035ea5c866b911b, type: 3}
-  - {fileID: 21300000, guid: d92cf4837dd4cabbcf129453163400dd, type: 3}
-  - {fileID: 21300000, guid: 4be83b07de6cd627ccc389ab9f80ddfb, type: 3}
-  - {fileID: 21300000, guid: dfb922f0330e7bc4920ecfe77972e481, type: 3}
-  - {fileID: 21300000, guid: cfbc3eed238fbd1447a98955dfc6f310, type: 3}
-  - {fileID: 21300000, guid: 854b9c0892ed560b3c9f8c9cc842bba6, type: 3}
-  - {fileID: 21300000, guid: 3dc5a32c84edb7cff49be9d97d0f7461, type: 3}
-  runFrames: []
+  - {fileID: 21300000, guid: 956a133e9eb239d5a9b2aad613516da5, type: 3}
+  - {fileID: 21300000, guid: f9642bbe9461758c3e0809bcea2ec041, type: 3}
+  - {fileID: 21300000, guid: 1ab552d9d0e8e0bdad265585ce9dbbb8, type: 3}
+  - {fileID: 21300000, guid: 073c70916be2ab62975a82dcce631df0, type: 3}
+  - {fileID: 21300000, guid: 2b55bedd7fae4dbaf35e44ef31ac5629, type: 3}
+  - {fileID: 21300000, guid: 40dabb6059a890616be2e73252a7bba5, type: 3}
+  - {fileID: 21300000, guid: 4e7527012bf70f1f3f869b3e908c195b, type: 3}
+  - {fileID: 21300000, guid: bf1fd4777ad18ab457bf23f353450c2a, type: 3}
+  - {fileID: 21300000, guid: 3bc3982f979f0326eb8eab85547704e8, type: 3}
+  - {fileID: 21300000, guid: 22f6800278a758d7627619b511688b51, type: 3}
+  - {fileID: 21300000, guid: 48a17d212b5934a11d1e735f45444af2, type: 3}
+  runFrames:
+  - {fileID: 21300000, guid: e09fe43024056ec6cf9b2c2add68df7f, type: 3}
+  - {fileID: 21300000, guid: 90622e5a950a215e7d6d9114f525c2d8, type: 3}
+  - {fileID: 21300000, guid: e4f7b5c70799a83a899f2a9ee17fea39, type: 3}
+  - {fileID: 21300000, guid: e1c78de527c50a54bece4a044b9433b7, type: 3}
+  - {fileID: 21300000, guid: ca2b9e4b9d8b863de34130864cf8e5c2, type: 3}
+  - {fileID: 21300000, guid: 13943f29dfd5f9cd1030b57a56b06c19, type: 3}
+  - {fileID: 21300000, guid: 0fc8b50159c12e9c1cbde27b4211a09b, type: 3}
+  - {fileID: 21300000, guid: 38eb182167bbcf7666213f868ee0d928, type: 3}
   attackFrames:
-  - {fileID: 21300000, guid: 5164fbfebe85f7040dfcf859372f7728, type: 3}
-  - {fileID: 21300000, guid: 7466c5aceda9297646fd9214dc94d5b2, type: 3}
-  - {fileID: 21300000, guid: 32e7e820cb09fb5230a8409e27ca499c, type: 3}
-  - {fileID: 21300000, guid: f2ac90b240b7cedf954d2db9d0d625c6, type: 3}
-  - {fileID: 21300000, guid: ea5b79a44f323b19f944562ecbe2bf19, type: 3}
-  - {fileID: 21300000, guid: f687b2661564fdad63cdefbd9da779c4, type: 3}
+  - {fileID: 21300000, guid: 8e54f3901574837064ce59a90e6be9d7, type: 3}
+  - {fileID: 21300000, guid: 1918e648365f7ac5ac8d7dd2ed43c41b, type: 3}
+  - {fileID: 21300000, guid: f7bf55b3cc39bb18a654f5d16a715061, type: 3}
+  - {fileID: 21300000, guid: 8e5e8de7da87ede906217bc7afcea592, type: 3}
+  - {fileID: 21300000, guid: fad3974298f588bb2590af8d599c4e94, type: 3}
+  - {fileID: 21300000, guid: fb93fe8f01e3bb9cda6d11182a3b8ae9, type: 3}
   hitFrames:
-  - {fileID: 21300000, guid: 0818ebc1e580149d28ef4d800e09824a, type: 3}
-  - {fileID: 21300000, guid: b86eb996639bf8d3c303b199104cf009, type: 3}
-  - {fileID: 21300000, guid: de59e37ff31b97885e68203fb42f7557, type: 3}
-  - {fileID: 21300000, guid: 182aa0a19af7cdaa96ee07c289b8e78d, type: 3}
+  - {fileID: 21300000, guid: 9023fa227ebbc721b2723e205592ec11, type: 3}
+  - {fileID: 21300000, guid: 08579d5903602fc821d1634440e7aab7, type: 3}
+  - {fileID: 21300000, guid: ce8d58af9803e3002d13bee1be8e8e33, type: 3}
+  - {fileID: 21300000, guid: b75e60f8df0ced91d04a1fd5813d3cb6, type: 3}
   deathFrames:
-  - {fileID: 21300000, guid: 65dada913ef9198dd073f7f45735ccb2, type: 3}
-  - {fileID: 21300000, guid: 7351c718da8228f7d1071a4ce6c4be0c, type: 3}
-  - {fileID: 21300000, guid: 4e3d33444287267e80cc7e274b76eb09, type: 3}
-  - {fileID: 21300000, guid: dca1358a41ee506ebc0d58a334b3dea9, type: 3}
-  - {fileID: 21300000, guid: 2e181879187277ad11301ddc5915fbc8, type: 3}
-  - {fileID: 21300000, guid: bf221abf4502dde8d44d5d4ad732f51e, type: 3}
-  - {fileID: 21300000, guid: 1d1709487ffd59f4943a8a00f094fced, type: 3}
-  - {fileID: 21300000, guid: 3786643d3386a2434205675c39c5c0e2, type: 3}
-  - {fileID: 21300000, guid: 2c08d9cc90b355cd8fdd832826b7a192, type: 3}
+  - {fileID: 21300000, guid: b011addf3301d263cdf148e64bd2c00c, type: 3}
+  - {fileID: 21300000, guid: 3640a26259cf93705535da932f4051c4, type: 3}
+  - {fileID: 21300000, guid: 49428ca2f5c08cf1942dccaa41763dda, type: 3}
+  - {fileID: 21300000, guid: 54bbf10ee5c5b91f87359b1686021525, type: 3}
+  - {fileID: 21300000, guid: 69360dabd2c22f8e6847c9889c8e3497, type: 3}
+  - {fileID: 21300000, guid: 08a56ba1a696e890cb90d054a7f9b113, type: 3}
+  - {fileID: 21300000, guid: c86190fe3a6026e68f32526124044835, type: 3}
+  - {fileID: 21300000, guid: 4e8c65fbc6df4bfbe67619523c386497, type: 3}
+  - {fileID: 21300000, guid: d162ec7ab445fa1713d51d3edf925464, type: 3}
   frameRate: 10
   attackStepDistance: -0.9
   hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}
@@ -109,19 +163,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 1000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3a1e82401b8dd2cd99f6ac371a28b2f, type: 3}
+  m_Script: {fileID: 11500000, guid: 599a6c9ae2ae109577a4d4b1dd425bd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitName: "Dark Knight Boss"
+  unitName: Dark Knight Boss
   unitLevel: 5
   damage: 32
   maxHP: 320
   currentHP: 320
+  characterClass: 0
+  maxMP: 100
+  currentMP: 100
+  defense: 20
+  magicDefense: 16
+  magicDamage: 18
+  speed: 11
+  critRate: 0.15
+  critMultiplier: 1.6
+  isBoss: 1
   isDefending: 0
+  bonusDefense: 0
+  defenseBuffTurns: 0
   isEnemy: 1
-  classData: {fileID: 11400000, guid: 51af132f6586e1488b77e279d9f49004, type: 3}
-  visual: {fileID: 0}
+  classData: {fileID: 11400000, guid: 51af132f6586e1488b77e279d9f49004, type: 2}
   pixelAnimator: {fileID: 1140000001}
+  skills:
+  - {fileID: 11400000, guid: 05f7f865649abce0b8e6adc22f460692, type: 2}
+  - {fileID: 11400000, guid: 98c6eedaacaa14cc8ad2b5004e08f62d, type: 2}
+  - {fileID: 11400000, guid: c299d7044cd506fb5b40987484e9e808, type: 2}
 --- !u!61 &6100000001
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130,5 +199,41 @@ BoxCollider2D:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1000000001}
   m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   m_IsTrigger: 0
-  m_Size: {x: 1.2, y: 1.4}
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.35}
+    oldSize: {x: 2, y: 2}
+    newSize: {x: 2, y: 2}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1.45, y: 1.75}
+  m_EdgeRadius: 0

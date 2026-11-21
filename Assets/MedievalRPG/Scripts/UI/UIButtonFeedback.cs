@@ -2,12 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using MedievalRPG.Audio;
 
 namespace MedievalRPG.UI
 {
     /// <summary>
-    /// Hiệu ứng phản hồi mượt mà khi di chuột và bấm nút (chạy theo unscaledDeltaTime).
-    /// Hỗ trợ callback hover để hiển thị mô tả kỹ năng / hành động rõ ràng.
+    /// Hiệu ứng phản hồi mượt mà khi di chuột, bấm nút và phát âm thanh UI (chạy theo unscaledDeltaTime).
     /// </summary>
     public class UIButtonFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
     {
@@ -16,6 +16,7 @@ namespace MedievalRPG.UI
         [SerializeField] private float hoverScale = 1.035f;
         [SerializeField] private float pressScale = 0.96f;
         [SerializeField] private float lerpSpeed = 16f;
+        [SerializeField] private bool playAudioFeedback = true;
 
         private Color _baseColor = Color.white;
         private bool _hasBaseColor;
@@ -97,6 +98,10 @@ namespace MedievalRPG.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             _isHovered = true;
+            if (playAudioFeedback && (targetButton == null || targetButton.interactable))
+            {
+                AudioManager.Instance?.PlayButtonHover();
+            }
             OnHoverChanged?.Invoke(this, true);
         }
 
@@ -111,6 +116,10 @@ namespace MedievalRPG.UI
         {
             if (targetButton != null && !targetButton.interactable) return;
             _isPressed = true;
+            if (playAudioFeedback)
+            {
+                AudioManager.Instance?.PlayButtonClick();
+            }
         }
 
         public void OnPointerUp(PointerEventData eventData)

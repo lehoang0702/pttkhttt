@@ -1,0 +1,27 @@
+{
+  "name": "MedievalRPG.Editor",
+  "rootNamespace": "MedievalRPG.EditorTools",
+  "references": [
+    "MedievalRPG.Runtime",
+    "Unity.TextMeshPro",
+    "Unity.TextMeshPro.Editor",
+    "Unity.InputSystem",
+    "UnityEngine.UI",
+    "UnityEditor.UI",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.RenderPipelines.Universal.2D.Runtime",
+    "Unity.Pipeline",
+    "Unity.Pipeline.Attributes"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

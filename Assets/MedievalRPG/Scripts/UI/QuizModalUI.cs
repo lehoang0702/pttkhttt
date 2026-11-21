@@ -9,7 +9,7 @@ namespace MedievalRPG.UI
 {
     /// <summary>
     /// Bảng câu hỏi trắc nghiệm giáo dục (Quiz Modal).
-    /// Khắc phục lỗi cũ: khóa bấm đúp sau khi chọn, tô màu đáp án Đúng/Sai và hiển thị giải thích kiến thức rõ ràng trước khi xuất chiêu.
+    /// Dùng unscaledDeltaTime cho thanh thời gian đọc giải thích để không bị Fast Mode làm trôi nhanh.
     /// </summary>
     public class QuizModalUI : MonoBehaviour
     {
@@ -225,9 +225,14 @@ namespace MedievalRPG.UI
         {
             if (!gameObject.activeInHierarchy) return;
 
+            bool isPaused = BattleUIManager.Instance != null
+                            && BattleUIManager.Instance.battleSystem != null
+                            && BattleUIManager.Instance.battleSystem.IsPaused;
+            if (isPaused) return;
+
             if (_isShowingFeedback)
             {
-                _feedbackElapsed += Time.deltaTime;
+                _feedbackElapsed += Time.unscaledDeltaTime;
                 if (feedbackTimerFill != null)
                 {
                     feedbackTimerFill.fillAmount = Mathf.Clamp01(1f - (_feedbackElapsed / _feedbackDuration));

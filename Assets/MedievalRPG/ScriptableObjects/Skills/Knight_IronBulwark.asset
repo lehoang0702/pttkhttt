@@ -12,17 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
   m_Name: Knight_IronBulwark
   m_EditorClassIdentifier: 
-  skillName: "Iron Bulwark"
-  description: "Kích hoạt thế thủ vững chắc, tăng mạnh giáp (+15 Defense) trong 2 lượt."
+  skillName: Iron Bulwark
+  description: "D\u1EF1ng khi\xEAn th\xE9p (+15 Gi\xE1p) v\xE0 Khi\xEAu Kh\xEDch thu h\xFAt \u0111\xF2n \u0111\xE1nh k\u1EBB \u0111\u1ECBch trong 2 l\u01B0\u1EE3t."
   requiredClass: 0
   icon: {fileID: 0}
   manaCost: 8
   cooldownTurns: 2
   targetType: 4
   damageType: 0
-  powerMultiplier: 0.0
+  powerMultiplier: 0
   flatBonusDamage: 0
   baseHealAmount: 0
   defenseBonus: 15
   bonusCritRate: 0
   effectDurationTurns: 2
+  statusEffect: 3
+  statusDurationTurns: 2
+  statusPotency: 0
+  applyStatusToSelf: 1

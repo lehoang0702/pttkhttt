@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
+  m_Name: DarkKnight_AbyssalWave
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.SkillData
+  skillName: Abyssal Wave
+  description: "Gi\u1EA3i ph\xF3ng s\xF3ng h\u1EAFc \xE1m qu\xE9t qua to\xE0n b\u1ED9 \u0111\u1ED9i h\xECnh anh h\xF9ng."
+  requiredClass: 0
+  icon: {fileID: 0}
+  manaCost: 16
+  cooldownTurns: 2
+  targetType: 1
+  damageType: 1
+  powerMultiplier: 1.15
+  flatBonusDamage: 4
+  baseHealAmount: 0
+  defenseBonus: 0
+  bonusCritRate: 0
+  effectDurationTurns: 0
+  statusEffect: 2
+  statusDurationTurns: 2
+  statusPotency: 6
+  applyStatusToSelf: 0

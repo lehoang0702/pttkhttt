@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
   m_Name: Knight_ShieldSlam
   m_EditorClassIdentifier: 
-  skillName: "Shield Slam"
-  description: "Dùng khiên thép đập mạnh gây sát thương cao và làm choáng váng mục tiêu."
+  skillName: Shield Slam
+  description: "D\xF9ng khi\xEAn th\xE9p \u0111\u1EADp m\u1EA1nh g\xE2y s\xE1t th\u01B0\u01A1ng cao v\xE0 l\xE0m cho\xE1ng v\xE1ng m\u1EE5c ti\xEAu."
   requiredClass: 0
   icon: {fileID: 0}
   manaCost: 12
@@ -26,3 +26,7 @@ MonoBehaviour:
   defenseBonus: 0
   bonusCritRate: 0
   effectDurationTurns: 0
+  statusEffect: 1
+  statusDurationTurns: 1
+  statusPotency: 0
+  applyStatusToSelf: 0

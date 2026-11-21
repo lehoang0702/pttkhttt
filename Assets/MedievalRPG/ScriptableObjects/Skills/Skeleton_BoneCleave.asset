@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
+  m_Name: Skeleton_BoneCleave
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.SkillData
+  skillName: Bone Cleave
+  description: "Vung r\xECu x\u01B0\u01A1ng ch\xE9m m\u1EA1nh v\xE0o m\u1ED9t m\u1EE5c ti\xEAu."
+  requiredClass: 0
+  icon: {fileID: 0}
+  manaCost: 0
+  cooldownTurns: 0
+  targetType: 0
+  damageType: 0
+  powerMultiplier: 1
+  flatBonusDamage: 2
+  baseHealAmount: 0
+  defenseBonus: 0
+  bonusCritRate: 0.05
+  effectDurationTurns: 0
+  statusEffect: 0
+  statusDurationTurns: 0
+  statusPotency: 0
+  applyStatusToSelf: 0

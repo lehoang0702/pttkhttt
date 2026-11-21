@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
   m_Name: Mage_Fireball
   m_EditorClassIdentifier: 
-  skillName: "Fireball"
-  description: "Triệu hồi cầu lửa bùng nổ, thiêu đốt toàn bộ kẻ địch trên chiến trường."
+  skillName: Fireball
+  description: "Tri\u1EC7u h\u1ED3i c\u1EA7u l\u1EEDa b\xF9ng n\u1ED5, thi\xEAu \u0111\u1ED1t to\xE0n b\u1ED9 k\u1EBB \u0111\u1ECBch tr\xEAn chi\u1EBFn tr\u01B0\u1EDDng."
   requiredClass: 1
   icon: {fileID: 0}
   manaCost: 24
@@ -26,3 +26,7 @@ MonoBehaviour:
   defenseBonus: 0
   bonusCritRate: 0
   effectDurationTurns: 0
+  statusEffect: 2
+  statusDurationTurns: 2
+  statusPotency: 8
+  applyStatusToSelf: 0
