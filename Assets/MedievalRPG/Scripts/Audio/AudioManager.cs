@@ -450,5 +450,29 @@ namespace MedievalRPG.Audio
             StopMusic(0.35f);
             PlaySFX(audioBank.defeatSting, 0.90f, 0f);
         }
+
+        public void PlayLootDropSfx(ItemRarity rarity)
+        {
+            if (audioBank == null) return;
+            if (rarity >= ItemRarity.Epic && audioBank.lootLegendary != null)
+            {
+                PlaySFX(audioBank.lootLegendary, rarity == ItemRarity.Legendary ? 0.96f : 0.84f, 0.02f);
+            }
+            else if (audioBank.lootDrop != null)
+            {
+                PlaySFX(audioBank.lootDrop, rarity == ItemRarity.Rare ? 0.84f : 0.72f, 0.06f);
+            }
+            else if (audioBank.quizCorrect != null)
+            {
+                PlaySFX(audioBank.quizCorrect, 0.7f, 0.05f);
+            }
+        }
+
+        public void PlayLootPickupSfx()
+        {
+            if (audioBank == null) return;
+            AudioClip clip = audioBank.lootPickup != null ? audioBank.lootPickup : audioBank.uiClick;
+            if (clip != null) PlaySFX(clip, 0.82f, 0.05f);
+        }
     }
 }

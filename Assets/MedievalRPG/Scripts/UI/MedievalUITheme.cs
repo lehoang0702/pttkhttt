@@ -1,4 +1,5 @@
 using UnityEngine;
+using MedievalRPG.Data;
 
 namespace MedievalRPG.UI
 {
@@ -61,6 +62,15 @@ namespace MedievalRPG.UI
             if (lower.Contains("khoa") || lower.Contains("science")) return CategoryScience;
             return BtnSkill;
         }
+
+        // --- Màu độ hiếm trang bị (Loot Rarity) ---
+        public static readonly Color RarityCommon    = new Color(0.840f, 0.870f, 0.910f, 1.00f); // #D6DEE8 Thường
+        public static readonly Color RarityRare      = new Color(0.290f, 0.640f, 1.000f, 1.00f); // #4AA3FF Hiếm
+        public static readonly Color RarityEpic      = new Color(0.710f, 0.420f, 1.000f, 1.00f); // #B56BFF Sử Thi
+        public static readonly Color RarityLegendary = new Color(1.000f, 0.690f, 0.130f, 1.00f); // #FFB020 Huyền Thoại
+
+        public static Color GetRarityColor(ItemRarity rarity) => EquipmentItemData.GetRarityColor(rarity);
+        public static string GetRarityHex(ItemRarity rarity) => EquipmentItemData.GetRarityHex(rarity);
 
         public static string FormatHeroDisplayName(string rawName)
         {

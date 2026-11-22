@@ -76,6 +76,16 @@ namespace MedievalRPG.Visuals
             transform.position = homePos;
         }
 
+        public void SetBaseColor(Color tint)
+        {
+            _baseColor = tint;
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null && !_isDead)
+            {
+                RefreshIdleTint();
+            }
+        }
+
         public void SetTargetHighlight(bool highlighted)
         {
             _isTargetHighlighted = highlighted;

@@ -24,11 +24,13 @@ namespace MedievalRPG.UI
         [SerializeField] private Canvas rootCanvas;
         [SerializeField] private CanvasGroup fadeOverlay;
         [SerializeField] private UnityEngine.UI.Button startButton;
+        [SerializeField] private UnityEngine.UI.Button equipmentButton;
         [SerializeField] private UnityEngine.UI.Button instructionsButton;
         [SerializeField] private UnityEngine.UI.Button settingsButton;
         [SerializeField] private UnityEngine.UI.Button quitButton;
         [SerializeField] private UnityEngine.UI.Button closeInstructionsButton;
         [SerializeField] private UnityEngine.UI.Button closeSettingsButton;
+        [SerializeField] private EquipmentModalUI equipmentModal;
 
         [Header("Điều khiển Cài đặt")]
         [SerializeField] private UnityEngine.UI.Slider musicVolumeSlider;
@@ -70,6 +72,12 @@ namespace MedievalRPG.UI
             fastSpeedToggle = speedToggle;
         }
 
+        public void ConfigureEquipmentUI(UnityEngine.UI.Button btnEquip, EquipmentModalUI modal)
+        {
+            equipmentButton = btnEquip;
+            equipmentModal = modal;
+        }
+
         private void Start()
         {
             Time.timeScale = 1f;
@@ -79,6 +87,7 @@ namespace MedievalRPG.UI
 
             if (instructionsPanel != null) instructionsPanel.SetActive(false);
             if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (equipmentModal != null) equipmentModal.gameObject.SetActive(false);
 
             WireButtons();
             WireSettings();
@@ -100,6 +109,11 @@ namespace MedievalRPG.UI
             {
                 startButton.onClick.RemoveAllListeners();
                 startButton.onClick.AddListener(OnNewGameClicked);
+            }
+            if (equipmentButton != null)
+            {
+                equipmentButton.onClick.RemoveAllListeners();
+                equipmentButton.onClick.AddListener(OpenEquipmentModal);
             }
             if (instructionsButton != null)
             {
@@ -198,9 +212,17 @@ namespace MedievalRPG.UI
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
-                if (instructionsPanel != null && instructionsPanel.activeSelf) ToggleInstructions(false);
+                if (equipmentModal != null && equipmentModal.IsOpen) equipmentModal.Hide();
+                else if (instructionsPanel != null && instructionsPanel.activeSelf) ToggleInstructions(false);
                 else if (settingsPanel != null && settingsPanel.activeSelf) ToggleSettings(false);
             }
+        }
+
+        public void OpenEquipmentModal()
+        {
+            if (instructionsPanel != null) instructionsPanel.SetActive(false);
+            if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (equipmentModal != null) equipmentModal.Show();
         }
 
         public void OnNewGameClicked()

@@ -55,6 +55,11 @@ namespace MedievalRPG.EditorTools
             WriteWav($"{SfxDir}/SFX_VictoryFanfare.wav", SynthVictoryFanfare());
             WriteWav($"{SfxDir}/SFX_DefeatSting.wav", SynthDefeatSting());
 
+            // 5. Loot & Equipment SFX
+            WriteWav($"{SfxDir}/SFX_LootDrop.wav", SynthLootDrop());
+            WriteWav($"{SfxDir}/SFX_LootLegendary.wav", SynthLootLegendary());
+            WriteWav($"{SfxDir}/SFX_LootPickup.wav", SynthLootPickup());
+
             AssetDatabase.Refresh();
 
             ConfigureImporter($"{MusicDir}/BGM_MainMenu.wav", AudioClipLoadType.Streaming, true);
@@ -99,10 +104,14 @@ namespace MedievalRPG.EditorTools
             bank.victoryFanfare = LoadClip($"{SfxDir}/SFX_VictoryFanfare.wav");
             bank.defeatSting = LoadClip($"{SfxDir}/SFX_DefeatSting.wav");
 
+            bank.lootDrop = LoadClip($"{SfxDir}/SFX_LootDrop.wav");
+            bank.lootLegendary = LoadClip($"{SfxDir}/SFX_LootLegendary.wav");
+            bank.lootPickup = LoadClip($"{SfxDir}/SFX_LootPickup.wav");
+
             EditorUtility.SetDirty(bank);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[MedievalAudioGenerator] Đã sinh 20 tệp âm thanh WAV và cấu hình Resources/MedievalAudioBank.asset!");
+            Debug.Log("[MedievalAudioGenerator] Đã sinh 23 tệp âm thanh WAV và cấu hình Resources/MedievalAudioBank.asset!");
             return bank;
         }
 
@@ -629,6 +638,70 @@ namespace MedievalRPG.EditorTools
         private static void ApplyLoopFade(float[] buf, float fadeSec)
         {
             ApplyEdgeFades(buf, fadeSec);
+        }
+
+        private static float[] SynthLootDrop()
+        {
+            float duration = 0.34f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            float[] freqs = { 784f, 1174.66f };
+            float[] starts = { 0f, 0.08f };
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float s = 0f;
+                for (int n = 0; n < freqs.Length; n++)
+                {
+                    float lt = t - starts[n];
+                    if (lt < 0f) continue;
+                    float env = Mathf.Exp(-lt * 13f) * Mathf.Clamp01(lt / 0.005f);
+                    s += (Mathf.Sin(2f * Mathf.PI * freqs[n] * lt) * 0.65f +
+                          Mathf.Sin(2f * Mathf.PI * freqs[n] * 2f * lt) * 0.25f) * env;
+                }
+                buf[i] = s;
+            }
+            NormalizePeak(buf, 0.85f);
+            return buf;
+        }
+
+        private static float[] SynthLootLegendary()
+        {
+            float duration = 0.95f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            float[] freqs = { 523.25f, 659.25f, 783.99f, 1046.50f, 1318.51f };
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float s = 0f;
+                for (int n = 0; n < freqs.Length; n++)
+                {
+                    float lt = t - n * 0.075f;
+                    if (lt < 0f) continue;
+                    float env = Mathf.Exp(-lt * 4.5f) * Mathf.Clamp01(lt / 0.008f);
+                    float shimmer = 1f + 0.08f * Mathf.Sin(2f * Mathf.PI * 14f * lt);
+                    s += (Mathf.Sin(2f * Mathf.PI * freqs[n] * lt) * 0.6f +
+                          Mathf.Sin(2f * Mathf.PI * freqs[n] * 2f * lt) * 0.28f +
+                          Mathf.Sin(2f * Mathf.PI * freqs[n] * 3f * lt) * 0.12f) * env * shimmer;
+                }
+                buf[i] = s;
+            }
+            NormalizePeak(buf, 0.90f);
+            return buf;
+        }
+
+        private static float[] SynthLootPickup()
+        {
+            float duration = 0.22f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float f = Mathf.Lerp(587.33f, 1174.66f, t / duration);
+                float env = Mathf.Exp(-t * 14f) * Mathf.Clamp01(t / 0.004f);
+                buf[i] = (Mathf.Sin(2f * Mathf.PI * f * t) * 0.7f + Mathf.Sin(2f * Mathf.PI * f * 1.5f * t) * 0.3f) * env;
+            }
+            NormalizePeak(buf, 0.82f);
+            return buf;
         }
 
         private static void NormalizePeak(float[] buf, float targetPeak)

@@ -16,6 +16,9 @@ namespace MedievalRPG.EditorTools
         private const string SkillsRoot = "Assets/MedievalRPG/ScriptableObjects/Skills";
         private const string ClassesRoot = "Assets/MedievalRPG/ScriptableObjects/Classes";
         private const string EncountersRoot = "Assets/MedievalRPG/ScriptableObjects/Encounters";
+        private const string EquipmentRoot = "Assets/MedievalRPG/ScriptableObjects/Equipment";
+        private const string ResourcesRoot = "Assets/MedievalRPG/Resources";
+        private const string EquipmentCatalogPath = ResourcesRoot + "/MedievalEquipmentCatalog.asset";
 
         [MenuItem("MedievalRPG/Setup RPG Skills & Waves")]
         public static void EnsureCombatDataSetup()
@@ -131,7 +134,10 @@ namespace MedievalRPG.EditorTools
             // 4. Đồng bộ ClassData, Material, Sprites & BoxCollider2D trên toàn bộ 6 Prefab nhân vật/quái
             SyncAllUnitPrefabs();
 
-            // 5. Tạo Encounter 3 Wave Demo
+            // 5. Sinh 36 món Trang Bị (3 Class x 3 Slot x 4 Độ hiếm) và Resources/MedievalEquipmentCatalog.asset
+            GenerateEquipmentAssetsAndCatalog();
+
+            // 6. Tạo Bản Đồ 6 Đợt Leo Thang (Yếu -> Thành Đàn -> Mạnh Hơn -> Đàn Mạnh -> Tinh Anh -> Boss)
             EncounterData demoEncounter = AssetDatabase.LoadAssetAtPath<EncounterData>($"{EncountersRoot}/ForestDemoEncounter.asset");
             if (demoEncounter == null)
             {
@@ -143,30 +149,126 @@ namespace MedievalRPG.EditorTools
             GameObject skeletonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/Skeleton.prefab");
             GameObject bossPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/MedievalRPG/Prefabs/DarkKnightBoss.prefab");
 
-            demoEncounter.encounterTitle = "Rừng Sương Mù - Thử Thách Tri Thức";
+            demoEncounter.encounterTitle = "Rừng Sương Mù - Chinh Phục 6 Đợt Quái";
             demoEncounter.waves = new List<BattleWave>
             {
                 new BattleWave
                 {
-                    waveTitle = "Đợt 1: Toán Quân Goblin",
+                    waveTitle = "Đợt 1: Trinh Sát Rừng Sâu",
+                    waveSubtitle = "Quái yếu đơn lẻ • Khởi động",
                     isBossWave = false,
-                    enemyPrefabs = new List<GameObject> { goblinPrefab, goblinPrefab }
+                    enemyStatMultiplier = 0.80f,
+                    dropChanceBonus = 0f,
+                    rarityLuckBonus = 0f,
+                    enemyPrefabs = new List<GameObject> { goblinPrefab }
                 },
                 new BattleWave
                 {
-                    waveTitle = "Đợt 2: Vệ Binh Hầm Ngục",
+                    waveTitle = "Đợt 2: Đàn Goblin Phục Kích",
+                    waveSubtitle = "Thành đàn 3 Goblin • Ưu tiên chiêu diện rộng",
                     isBossWave = false,
+                    enemyStatMultiplier = 0.90f,
+                    dropChanceBonus = 0.02f,
+                    rarityLuckBonus = 0.03f,
+                    enemyPrefabs = new List<GameObject> { goblinPrefab, goblinPrefab, goblinPrefab }
+                },
+                new BattleWave
+                {
+                    waveTitle = "Đợt 3: Vệ Binh Xương Khô",
+                    waveSubtitle = "Quái mạnh hơn • Giáp cứng",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.00f,
+                    dropChanceBonus = 0.05f,
+                    rarityLuckBonus = 0.06f,
                     enemyPrefabs = new List<GameObject> { goblinPrefab, skeletonPrefab }
                 },
                 new BattleWave
                 {
-                    waveTitle = "Đợt 3: Thủ Lĩnh Bóng Đêm",
+                    waveTitle = "Đợt 4: Tiểu Đội Hầm Ngục",
+                    waveSubtitle = "Đàn quái hạng nặng (3 con)",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.08f,
+                    dropChanceBonus = 0.08f,
+                    rarityLuckBonus = 0.10f,
+                    enemyPrefabs = new List<GameObject> { skeletonPrefab, goblinPrefab, skeletonPrefab }
+                },
+                new BattleWave
+                {
+                    waveTitle = "Đợt 5: Cận Vệ Tinh Anh",
+                    waveSubtitle = "Tinh Anh áp sát Boss • Rớt đồ Sử Thi cao",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.25f,
+                    dropChanceBonus = 0.12f,
+                    rarityLuckBonus = 0.16f,
+                    enemyPrefabs = new List<GameObject> { skeletonPrefab, skeletonPrefab }
+                },
+                new BattleWave
+                {
+                    waveTitle = "Đợt 6: Thủ Lĩnh Bóng Đêm",
+                    waveSubtitle = "BOSS CUỐI MAP • Chắc chắn rớt 2 trang bị cao cấp",
                     isBossWave = true,
+                    enemyStatMultiplier = 1.05f,
+                    dropChanceBonus = 0f,
+                    rarityLuckBonus = 0.15f,
                     enemyPrefabs = new List<GameObject> { bossPrefab }
                 }
             };
             EditorUtility.SetDirty(demoEncounter);
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("MedievalRPG/Generate Equipment Catalog (36 Items)")]
+        public static EquipmentCatalog GenerateEquipmentAssetsAndCatalog()
+        {
+            if (!AssetDatabase.IsValidFolder(EquipmentRoot))
+            {
+                AssetDatabase.CreateFolder("Assets/MedievalRPG/ScriptableObjects", "Equipment");
+            }
+            if (!AssetDatabase.IsValidFolder(ResourcesRoot))
+            {
+                AssetDatabase.CreateFolder("Assets/MedievalRPG", "Resources");
+            }
+
+            Sprite iconSword  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Sprites/UI/Icons/Icon_Sword.png");
+            Sprite iconMagic  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Sprites/UI/Icons/Icon_Magic.png");
+            Sprite iconArrow  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Sprites/UI/Icons/Icon_Arrow.png");
+            Sprite iconShield = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Sprites/UI/Icons/Icon_Shield.png");
+            Sprite iconCrown  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Sprites/UI/Icons/Icon_Crown.png");
+
+            EquipmentCatalog catalog = AssetDatabase.LoadAssetAtPath<EquipmentCatalog>(EquipmentCatalogPath);
+            if (catalog == null)
+            {
+                catalog = ScriptableObject.CreateInstance<EquipmentCatalog>();
+                AssetDatabase.CreateAsset(catalog, EquipmentCatalogPath);
+            }
+
+            catalog.allItems = new List<EquipmentItemData>();
+            EquipmentCatalog.EquipmentBlueprint[] blueprints = EquipmentCatalog.GetDefaultBlueprints();
+            for (int i = 0; i < blueprints.Length; i++)
+            {
+                EquipmentCatalog.EquipmentBlueprint bp = blueprints[i];
+                string assetPath = $"{EquipmentRoot}/{bp.id}.asset";
+                EquipmentItemData item = AssetDatabase.LoadAssetAtPath<EquipmentItemData>(assetPath);
+                if (item == null)
+                {
+                    item = ScriptableObject.CreateInstance<EquipmentItemData>();
+                    AssetDatabase.CreateAsset(item, assetPath);
+                }
+
+                EquipmentCatalog.ApplyBlueprint(item, bp);
+                if (bp.slot == EquipmentSlot.Armor) item.icon = iconShield;
+                else if (bp.slot == EquipmentSlot.Accessory) item.icon = iconCrown;
+                else item.icon = bp.cls == CharacterClassType.Mage ? iconMagic : (bp.cls == CharacterClassType.Archer ? iconArrow : iconSword);
+
+                EditorUtility.SetDirty(item);
+                catalog.allItems.Add(item);
+            }
+
+            catalog.RebuildLookup();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[MedievalRPGAssetSetup] Đã sinh {catalog.allItems.Count} trang bị cho đủ 3 Class x 4 Độ hiếm tại {EquipmentCatalogPath}.");
+            return catalog;
         }
 
         private static SkillData CreateOrUpdateSkill(

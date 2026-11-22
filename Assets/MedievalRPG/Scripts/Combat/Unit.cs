@@ -47,6 +47,20 @@ namespace MedievalRPG.Combat
         private readonly Dictionary<SkillData, int> _skillCooldowns = new Dictionary<SkillData, int>();
         private readonly List<StatusEffectInstance> _activeStatuses = new List<StatusEffectInstance>();
 
+        // Base stats dùng làm gốc tính lại khi mặc/tháo trang bị hoặc scale theo đợt quái
+        private bool _baseStatsCaptured;
+        private int _baseMaxHP;
+        private int _baseMaxMP;
+        private int _baseDamage;
+        private int _baseMagicDamage;
+        private int _baseDefense;
+        private int _baseMagicDefense;
+        private int _baseSpeed;
+        private float _baseCritRate;
+        private EquipmentStatBonus _appliedEquipmentBonus;
+
+        public EquipmentStatBonus AppliedEquipmentBonus => _appliedEquipmentBonus;
+
         public int EffectiveDefense => defense + bonusDefense + GetStatusPotency(StatusEffectType.DefenseUp);
         public int EffectiveMagicDefense => magicDefense + (bonusDefense / 2) + (GetStatusPotency(StatusEffectType.DefenseUp) / 2);
         public int AttackBonusPercent => GetStatusPotency(StatusEffectType.AttackUp);
@@ -75,10 +89,95 @@ namespace MedievalRPG.Combat
             {
                 InitializeFromClass(classData);
             }
-            else if (!string.IsNullOrEmpty(unitName) && unitName.Contains("Boss"))
+            else
             {
-                isBoss = true;
+                if (!string.IsNullOrEmpty(unitName) && unitName.Contains("Boss"))
+                {
+                    isBoss = true;
+                }
+                CaptureBaseStats();
             }
+        }
+
+        private void CaptureBaseStats()
+        {
+            _baseMaxHP = maxHP;
+            _baseMaxMP = maxMP;
+            _baseDamage = damage;
+            _baseMagicDamage = magicDamage;
+            _baseDefense = defense;
+            _baseMagicDefense = magicDefense;
+            _baseSpeed = speed;
+            _baseCritRate = critRate;
+            _baseStatsCaptured = true;
+        }
+
+        public void ApplyEquipmentBonuses(EquipmentStatBonus bonus)
+        {
+            if (!_baseStatsCaptured) CaptureBaseStats();
+
+            int oldMaxHP = maxHP;
+            int oldMaxMP = maxMP;
+            _appliedEquipmentBonus = bonus;
+
+            maxHP = Mathf.Max(1, _baseMaxHP + bonus.maxHP);
+            maxMP = Mathf.Max(0, _baseMaxMP + bonus.maxMP);
+            damage = Mathf.Max(1, _baseDamage + bonus.physicalAttack);
+            magicDamage = Mathf.Max(0, _baseMagicDamage + bonus.magicAttack);
+            defense = Mathf.Max(0, _baseDefense + bonus.physicalDefense);
+            magicDefense = Mathf.Max(0, _baseMagicDefense + bonus.magicDefense);
+            speed = Mathf.Max(1, _baseSpeed + bonus.speed);
+            critRate = Mathf.Clamp(_baseCritRate + bonus.critRate, 0f, 0.85f);
+
+            if (currentHP > 0)
+            {
+                int hpDelta = maxHP - oldMaxHP;
+                if (hpDelta > 0) currentHP += hpDelta;
+                currentHP = Mathf.Clamp(currentHP, 1, maxHP);
+            }
+
+            int mpDelta = maxMP - oldMaxMP;
+            if (mpDelta > 0 && currentHP > 0) currentMP += mpDelta;
+            currentMP = Mathf.Clamp(currentMP, 0, maxMP);
+
+            OnStatsChanged?.Invoke(this);
+        }
+
+        public void ApplyWaveScale(float multiplier, bool isElite = false)
+        {
+            if (!_baseStatsCaptured) CaptureBaseStats();
+            float mult = Mathf.Clamp(multiplier, 0.5f, 3.0f);
+
+            maxHP = Mathf.Max(15, Mathf.RoundToInt(_baseMaxHP * mult));
+            currentHP = maxHP;
+            damage = Mathf.Max(4, Mathf.RoundToInt(_baseDamage * mult));
+            magicDamage = Mathf.Max(0, Mathf.RoundToInt(_baseMagicDamage * mult));
+            defense = Mathf.Max(0, Mathf.RoundToInt(_baseDefense * (0.5f + 0.5f * mult)));
+            magicDefense = Mathf.Max(0, Mathf.RoundToInt(_baseMagicDefense * (0.5f + 0.5f * mult)));
+
+            if (isElite && !isBoss)
+            {
+                if (!unitName.StartsWith("Tinh Anh"))
+                {
+                    unitName = $"Tinh Anh {unitName}";
+                }
+                unitLevel += 1;
+                transform.localScale = transform.localScale * 1.12f;
+                Color eliteTint = new Color(0.88f, 0.72f, 1f, 1f);
+                if (pixelAnimator == null) pixelAnimator = GetComponent<PixelCharacterAnimator>();
+                if (pixelAnimator != null)
+                {
+                    pixelAnimator.SetBaseColor(eliteTint);
+                }
+                else
+                {
+                    SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+                    if (sr != null) sr.color = eliteTint;
+                }
+            }
+
+            CaptureBaseStats();
+            OnStatsChanged?.Invoke(this);
         }
 
         public void InitializeFromClass(CharacterClassData data)
@@ -112,6 +211,7 @@ namespace MedievalRPG.Combat
             HasTriggeredPhase2 = false;
             ShadowShieldStacks = 0;
             ClearPlannedIntent();
+            CaptureBaseStats();
 
             OnStatsChanged?.Invoke(this);
         }

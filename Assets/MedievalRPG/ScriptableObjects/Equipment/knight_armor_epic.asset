@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_armor_epic
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_armor_epic
+  itemName: "Gi\xE1p Chi\u1EBFn Ho\xE0ng Kim"
+  description: "Chi\u1EBFn gi\xE1p m\u1EA1 v\xE0ng kh\u1EAFc c\u1ED5 ng\u1EEF t\u0103ng s\u1EE9c b\u1EC1n v\u01B0\u1EE3t tr\u1ED9i."
+  requiredClass: 0
+  slot: 1
+  rarity: 2
+  icon: {fileID: 21300000, guid: 2d03d6b6b19c75a57914df1696904203, type: 3}
+  bonusMaxHP: 68
+  bonusMaxMP: 5
+  bonusPhysicalAttack: 4
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 14
+  bonusMagicDefense: 8
+  bonusSpeed: 1
+  bonusCritRate: 0

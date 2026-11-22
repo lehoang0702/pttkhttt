@@ -99,6 +99,20 @@ namespace MedievalRPG.UI
         [SerializeField] private TextMeshProUGUI victorySummaryTMP;
         [SerializeField] private TextMeshProUGUI gameOverSummaryTMP;
 
+        [Header("Kho Trang Bị & Chiến Lợi Phẩm (Loot UI)")]
+        [SerializeField] private UnityEngine.UI.Button equipmentOpenButton;
+        [SerializeField] private TextMeshProUGUI equipmentOpenLabelTMP;
+        [SerializeField] private EquipmentModalUI equipmentModal;
+        [SerializeField] private UnityEngine.UI.Button collectLootButton;
+        [SerializeField] private TextMeshProUGUI collectLootLabelTMP;
+        [SerializeField] private GameObject lootToastRoot;
+        [SerializeField] private UnityEngine.UI.Image lootToastBorder;
+        [SerializeField] private TextMeshProUGUI lootToastTitleTMP;
+        [SerializeField] private TextMeshProUGUI lootToastDetailTMP;
+
+        private Coroutine _lootToastCoroutine;
+        private bool _pausedByEquipmentModal;
+
         [Header("Sprites Chân Dung & Biểu Tượng")]
         [SerializeField] private Sprite knightPortrait;
         [SerializeField] private Sprite magePortrait;
@@ -203,6 +217,23 @@ namespace MedievalRPG.UI
             scrollIcon = icScroll;
         }
 
+        public void ConfigureLootAndEquipmentUI(
+            UnityEngine.UI.Button equipBtn, TextMeshProUGUI equipLbl, EquipmentModalUI equipModal,
+            UnityEngine.UI.Button collectBtn, TextMeshProUGUI collectLbl,
+            GameObject toastRoot, UnityEngine.UI.Image toastBorder,
+            TextMeshProUGUI toastTitle, TextMeshProUGUI toastDetail)
+        {
+            equipmentOpenButton = equipBtn;
+            equipmentOpenLabelTMP = equipLbl;
+            equipmentModal = equipModal;
+            collectLootButton = collectBtn;
+            collectLootLabelTMP = collectLbl;
+            lootToastRoot = toastRoot;
+            lootToastBorder = toastBorder;
+            lootToastTitleTMP = toastTitle;
+            lootToastDetailTMP = toastDetail;
+        }
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -233,6 +264,7 @@ namespace MedievalRPG.UI
             WireItemBagButtons();
             WireEnemyTabButtons();
             WirePauseControls();
+            WireLootAndEquipmentControls();
 
             if (victoryScreen != null) victoryScreen.SetActive(false);
             if (gameOverScreen != null) gameOverScreen.SetActive(false);
@@ -240,6 +272,11 @@ namespace MedievalRPG.UI
             if (quizModal != null) quizModal.Hide();
             if (pausePanel != null) pausePanel.SetActive(false);
             if (itemBagPanel != null) itemBagPanel.SetActive(false);
+            if (equipmentModal != null) equipmentModal.gameObject.SetActive(false);
+            if (collectLootButton != null) collectLootButton.gameObject.SetActive(false);
+            if (lootToastRoot != null) lootToastRoot.SetActive(false);
+
+            RefreshEquipmentButtonBadge();
 
             if (fadeOverlay != null)
             {
@@ -264,11 +301,15 @@ namespace MedievalRPG.UI
             battleSystem.OnUnitHealed += HandleUnitHealed;
             battleSystem.OnUnitStatusPop += HandleUnitStatusPop;
             battleSystem.OnBattleEnded += HandleBattleEnded;
+            battleSystem.OnLootPickedUp += HandleLootPickedUp;
+            battleSystem.OnGroundLootCountChanged += HandleGroundLootCountChanged;
             battleSystem.Inventory.OnInventoryChanged += RefreshItemBagUI;
+            PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += RefreshEquipmentButtonBadge;
         }
 
         private void UnsubscribeEvents()
         {
+            PlayerEquipmentManager.Instance.OnEquipmentChanged -= RefreshEquipmentButtonBadge;
             if (battleSystem == null) return;
             battleSystem.OnBattleInitialized -= HandleBattleInitialized;
             battleSystem.OnWaveChanged -= HandleWaveChanged;
@@ -284,6 +325,8 @@ namespace MedievalRPG.UI
             battleSystem.OnUnitHealed -= HandleUnitHealed;
             battleSystem.OnUnitStatusPop -= HandleUnitStatusPop;
             battleSystem.OnBattleEnded -= HandleBattleEnded;
+            battleSystem.OnLootPickedUp -= HandleLootPickedUp;
+            battleSystem.OnGroundLootCountChanged -= HandleGroundLootCountChanged;
             battleSystem.Inventory.OnInventoryChanged -= RefreshItemBagUI;
 
             if (partyCards != null)
@@ -628,8 +671,143 @@ namespace MedievalRPG.UI
         private void HandleBattleEnded(BattleState finalState)
         {
             SetItemBagOpen(false);
+            if (collectLootButton != null) collectLootButton.gameObject.SetActive(false);
             if (finalState == BattleState.WON) ShowVictory();
             else if (finalState == BattleState.LOST) ShowGameOver();
+        }
+
+        private void WireLootAndEquipmentControls()
+        {
+            if (equipmentOpenButton != null)
+            {
+                equipmentOpenButton.onClick.RemoveAllListeners();
+                equipmentOpenButton.onClick.AddListener(ToggleEquipmentModal);
+            }
+
+            if (collectLootButton != null)
+            {
+                collectLootButton.onClick.RemoveAllListeners();
+                collectLootButton.onClick.AddListener(() =>
+                {
+                    battleSystem?.CollectAllGroundLoot();
+                });
+            }
+        }
+
+        public void ToggleEquipmentModal()
+        {
+            if (equipmentModal == null) return;
+            if (battleSystem != null && battleSystem.state == BattleState.WAITING_FOR_QUIZ) return;
+
+            if (equipmentModal.IsOpen)
+            {
+                equipmentModal.Hide();
+            }
+            else
+            {
+                SetItemBagOpen(false);
+                if (pausePanel != null && pausePanel.activeSelf)
+                {
+                    pausePanel.SetActive(false);
+                }
+
+                bool wasPaused = battleSystem != null && battleSystem.IsPaused;
+                _pausedByEquipmentModal = !wasPaused;
+                if (battleSystem != null && _pausedByEquipmentModal)
+                {
+                    battleSystem.SetPaused(true);
+                }
+
+                CharacterClassType? focus = battleSystem != null && battleSystem.CurrentHero != null
+                    ? battleSystem.CurrentHero.characterClass
+                    : (CharacterClassType?)null;
+
+                equipmentModal.Show(HandleEquipmentModalClosed, focus);
+                RefreshActionButtons();
+            }
+        }
+
+        private void HandleEquipmentModalClosed()
+        {
+            if (battleSystem != null && _pausedByEquipmentModal)
+            {
+                bool pauseStillOpen = pausePanel != null && pausePanel.activeSelf;
+                if (!pauseStillOpen) battleSystem.SetPaused(false);
+            }
+            _pausedByEquipmentModal = false;
+            RefreshEquipmentButtonBadge();
+            RefreshAllStatusDisplays();
+            RefreshActionButtons();
+        }
+
+        private void RefreshEquipmentButtonBadge()
+        {
+            if (equipmentOpenLabelTMP == null) return;
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            int unseen = mgr.UnseenNewCount;
+            equipmentOpenLabelTMP.text = unseen > 0
+                ? $"KHO ĐỒ [I] (+{unseen})"
+                : $"KHO ĐỒ [I] ({mgr.OwnedCount})";
+        }
+
+        private void HandleGroundLootCountChanged(int count)
+        {
+            if (collectLootButton == null) return;
+            collectLootButton.gameObject.SetActive(count > 0);
+            if (count > 0 && collectLootLabelTMP != null)
+            {
+                collectLootLabelTMP.text = $"NHẶT TẤT CẢ [E] ({count})";
+            }
+        }
+
+        private void HandleLootPickedUp(LootDropResult drop, OwnedEquipmentInstance inst)
+        {
+            RefreshEquipmentButtonBadge();
+            ShowLootToast(drop);
+        }
+
+        private void ShowLootToast(LootDropResult drop)
+        {
+            if (lootToastRoot == null) return;
+            Color rColor = EquipmentItemData.GetRarityColor(drop.DisplayRarity);
+            if (lootToastBorder != null) lootToastBorder.color = rColor;
+
+            if (lootToastTitleTMP != null)
+            {
+                if (drop.equipment != null)
+                {
+                    string rName = EquipmentItemData.GetRarityDisplayName(drop.equipment.rarity).ToUpperInvariant();
+                    string cName = EquipmentItemData.GetClassDisplayName(drop.equipment.requiredClass);
+                    lootToastTitleTMP.text = $"NHẶT ĐƯỢC [{rName}] {drop.equipment.itemName} ({cName})";
+                }
+                else
+                {
+                    lootToastTitleTMP.text = $"NHẶT ĐƯỢC +1 {drop.DisplayName}";
+                }
+                lootToastTitleTMP.color = rColor;
+            }
+
+            if (lootToastDetailTMP != null)
+            {
+                lootToastDetailTMP.text = drop.equipment != null
+                    ? $"{drop.equipment.GetStatsSummary()}  •  Bấm [I] để mở Kho Đồ"
+                    : "Đã thêm vào Túi Vật Phẩm chiến đấu [4]";
+            }
+
+            lootToastRoot.SetActive(true);
+            if (_lootToastCoroutine != null) StopCoroutine(_lootToastCoroutine);
+            _lootToastCoroutine = StartCoroutine(HideLootToastAfterDelay(2.6f));
+        }
+
+        private IEnumerator HideLootToastAfterDelay(float seconds)
+        {
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            if (lootToastRoot != null) lootToastRoot.SetActive(false);
         }
 
         // =====================================================================
@@ -679,7 +857,11 @@ namespace MedievalRPG.UI
         private void RefreshWaveBadge()
         {
             if (waveBadgeTMP == null || battleSystem == null) return;
-            waveBadgeTMP.text = $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}";
+            int dropPct = Mathf.RoundToInt(battleSystem.CurrentWaveDropChance * 100f);
+            bool isBoss = battleSystem.CurrentWaveNumber >= battleSystem.TotalWaves;
+            waveBadgeTMP.text = isBoss
+                ? $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves} • BOSS 100%"
+                : $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves} • RỚT {dropPct}%";
         }
 
         private void RefreshQuizStatsBadge()
@@ -1066,6 +1248,11 @@ namespace MedievalRPG.UI
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
+                if (equipmentModal != null && equipmentModal.IsOpen)
+                {
+                    equipmentModal.Hide();
+                    return;
+                }
                 if (itemBagPanel != null && itemBagPanel.activeSelf)
                 {
                     SetItemBagOpen(false);
@@ -1076,6 +1263,14 @@ namespace MedievalRPG.UI
                 TogglePauseMenu();
                 return;
             }
+
+            if (kb.iKey.wasPressedThisFrame && battleSystem != null && battleSystem.state != BattleState.WAITING_FOR_QUIZ)
+            {
+                ToggleEquipmentModal();
+                return;
+            }
+
+            if (equipmentModal != null && equipmentModal.IsOpen) return;
 
             if (itemBagPanel != null && itemBagPanel.activeSelf)
             {
@@ -1169,12 +1364,47 @@ namespace MedievalRPG.UI
                 ? "Đội hình anh hùng đã chinh phục toàn bộ thử thách!"
                 : "Hãy ôn tập thêm kiến thức và quay lại phục thù!";
 
+            int eqTotal = 0, cCount = 0, rCount = 0, eCount = 0, lCount = 0;
+            List<EquipmentItemData> bestFound = new List<EquipmentItemData>();
+            if (battleSystem.SessionLootCollected != null)
+            {
+                foreach (LootDropResult drop in battleSystem.SessionLootCollected)
+                {
+                    if (drop.equipment == null) continue;
+                    eqTotal++;
+                    bestFound.Add(drop.equipment);
+                    switch (drop.equipment.rarity)
+                    {
+                        case ItemRarity.Common: cCount++; break;
+                        case ItemRarity.Rare: rCount++; break;
+                        case ItemRarity.Epic: eCount++; break;
+                        case ItemRarity.Legendary: lCount++; break;
+                    }
+                }
+            }
+            bestFound.Sort((a, b) => b.GetPowerScore().CompareTo(a.GetPowerScore()));
+
+            string lootLine = eqTotal > 0
+                ? $"• Trang bị thu được: <b>{eqTotal} món</b> (<color=#FFB020>{lCount} Huyền Thoại</color> • <color=#B56BFF>{eCount} Sử Thi</color> • <color=#4AA3FF>{rCount} Hiếm</color> • {cCount} Thường)"
+                : "• Trang bị thu được: <b>0 món</b> (Hãy tiến sâu hơn để tăng tỉ lệ rớt đồ!)";
+
+            string highlightLine = "";
+            if (bestFound.Count > 0)
+            {
+                List<string> topNames = new List<string>();
+                for (int i = 0; i < Mathf.Min(2, bestFound.Count); i++)
+                {
+                    string hex = EquipmentItemData.GetRarityHex(bestFound[i].rarity);
+                    topNames.Add($"<color={hex}><b>{bestFound[i].itemName}</b></color>");
+                }
+                highlightLine = $"\n• Nổi bật: {string.Join(", ", topNames)}";
+            }
+
             return $"{headline}\n\n" +
-                   $"• Tiến độ đợt quái: <b>Đợt {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}</b>\n" +
-                   $"• Tổng số hiệp: <b>{battleSystem.TurnCount}</b>\n" +
-                   $"• Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)\n" +
-                   $"• Chuỗi trả lời đúng dài nhất: <b>{battleSystem.BestQuizStreak}</b>\n" +
-                   $"• Thành viên sống sót: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>";
+                   $"• Tiến độ bản đồ: <b>Đợt {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}</b>  |  Tổng hiệp: <b>{battleSystem.TurnCount}</b>\n" +
+                   $"• Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)  |  Chuỗi cao nhất: <b>{battleSystem.BestQuizStreak}</b>\n" +
+                   $"• Thành viên sống sót: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>\n" +
+                   $"{lootLine}{highlightLine}";
         }
 
         public void RestartBattle()

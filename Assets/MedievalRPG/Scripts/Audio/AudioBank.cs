@@ -39,5 +39,10 @@ namespace MedievalRPG.Audio
         [Header("Outcome Stings")]
         public AudioClip victoryFanfare;
         public AudioClip defeatSting;
+
+        [Header("Loot & Equipment SFX")]
+        public AudioClip lootDrop;
+        public AudioClip lootLegendary;
+        public AudioClip lootPickup;
     }
 }

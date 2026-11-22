@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_acc_legendary
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_acc_legendary
+  itemName: "Tr\xE1i Tim Ph\u01B0\u1EE3ng Ho\xE0ng"
+  description: "B\xE1u v\u1EADt b\u1EA5t t\u1EED ban sinh l\u1EF1c d\u1ED3i d\xE0o v\xE0 uy th\u1EBF \xE1p \u0111\u1EA3o."
+  requiredClass: 0
+  slot: 2
+  rarity: 3
+  icon: {fileID: 21300000, guid: ee476b3ddbb13497f90693f6095f26fb, type: 3}
+  bonusMaxHP: 80
+  bonusMaxMP: 18
+  bonusPhysicalAttack: 12
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 15
+  bonusMagicDefense: 10
+  bonusSpeed: 3
+  bonusCritRate: 0.06

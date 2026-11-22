@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -67,8 +68,12 @@ namespace MedievalRPG.Combat
         [Header("--- Trạng Thái Trận Đấu ---")]
         public BattleState state;
         public bool enableLegacyOnGUI = false;
+        public TMP_FontAsset lootLabelFont;
 
         private readonly List<Unit> _turnQueue = new List<Unit>();
+        private readonly List<WorldLootDrop> _groundLootDrops = new List<WorldLootDrop>();
+        private readonly List<LootDropResult> _sessionLootCollected = new List<LootDropResult>();
+        private readonly HashSet<Unit> _lootDroppedUnits = new HashSet<Unit>();
         private Unit _activeUnit;
         private Unit _selectedEnemyTarget;
         private Unit _selectedAllyTarget;
@@ -102,6 +107,31 @@ namespace MedievalRPG.Combat
         public Unit SelectedEnemyTarget => _selectedEnemyTarget;
         public Unit SelectedAllyTarget => _selectedAllyTarget;
         public IReadOnlyList<Unit> TurnQueue => _turnQueue;
+        public IReadOnlyList<LootDropResult> SessionLootCollected => _sessionLootCollected;
+        public int PendingGroundLootCount => _groundLootDrops.Count;
+
+        public float CurrentWaveDropChance
+        {
+            get
+            {
+                List<BattleWave> waves = GetActiveWaveList();
+                float bonus = (_currentWaveIndex >= 0 && _currentWaveIndex < waves.Count) ? waves[_currentWaveIndex].dropChanceBonus : 0f;
+                return LootSystem.CalculateEquipmentDropChance(_currentWaveIndex, Mathf.Max(1, waves.Count), IsCurrentWaveBoss(), bonus);
+            }
+        }
+
+        public string CurrentWaveSubtitle
+        {
+            get
+            {
+                List<BattleWave> waves = GetActiveWaveList();
+                if (_currentWaveIndex >= 0 && _currentWaveIndex < waves.Count && !string.IsNullOrEmpty(waves[_currentWaveIndex].waveSubtitle))
+                {
+                    return waves[_currentWaveIndex].waveSubtitle;
+                }
+                return "";
+            }
+        }
 
         // Sự kiện đồng bộ giao diện
         public event Action OnBattleInitialized;
@@ -118,6 +148,9 @@ namespace MedievalRPG.Combat
         public event Action<Unit, int> OnUnitHealed;
         public event Action<Unit, string, Color> OnUnitStatusPop;
         public event Action<BattleState> OnBattleEnded;
+        public event Action<LootDropResult, WorldLootDrop> OnLootDropped;
+        public event Action<LootDropResult, OwnedEquipmentInstance> OnLootPickedUp;
+        public event Action<int> OnGroundLootCountChanged;
 
         private void Start()
         {
@@ -129,6 +162,7 @@ namespace MedievalRPG.Combat
 
         private void OnDestroy()
         {
+            PlayerEquipmentManager.Instance.OnEquipmentChanged -= ApplyPartyEquipment;
             if (Time.timeScale != 1f)
             {
                 Time.timeScale = 1f;
@@ -137,38 +171,66 @@ namespace MedievalRPG.Combat
 
         private void Update()
         {
-            if (state != BattleState.PLAYERTURN || _isActionInProgress || IsPaused) return;
+            if (IsPaused) return;
 
             Mouse mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            Keyboard kb = Keyboard.current;
+
+            // Cho phép nhặt đồ dưới đất bất cứ lúc nào (trừ khi đang trả lời Quiz hoặc tạm dừng)
+            if (state != BattleState.WAITING_FOR_QUIZ)
             {
-                bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-                if (!pointerOverUI && Camera.main != null)
+                if (kb != null && kb.eKey.wasPressedThisFrame && _groundLootDrops.Count > 0)
                 {
-                    Vector2 screenPos = mouse.position.ReadValue();
-                    Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, -Camera.main.transform.position.z));
-                    Collider2D[] hits = Physics2D.OverlapPointAll(new Vector2(worldPos.x, worldPos.y));
-                    for (int i = 0; i < hits.Length; i++)
+                    CollectAllGroundLoot();
+                    return;
+                }
+
+                if (mouse != null && mouse.leftButton.wasPressedThisFrame && Camera.main != null)
+                {
+                    bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                    if (!pointerOverUI)
                     {
-                        Unit clicked = hits[i].GetComponent<Unit>();
-                        if (clicked == null) continue;
-                        if (clicked.isEnemy && clicked.IsAlive)
+                        Vector2 screenPos = mouse.position.ReadValue();
+                        Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, -Camera.main.transform.position.z));
+                        Collider2D[] hits = Physics2D.OverlapPointAll(new Vector2(worldPos.x, worldPos.y));
+
+                        // Ưu tiên nhặt vật phẩm rơi trước khi chọn mục tiêu quái
+                        for (int i = 0; i < hits.Length; i++)
                         {
-                            SelectEnemyTarget(clicked);
-                            AudioManager.Instance?.PlayButtonHover();
-                            break;
+                            WorldLootDrop drop = hits[i].GetComponent<WorldLootDrop>();
+                            if (drop != null && !drop.IsCollected)
+                            {
+                                CollectLootDrop(drop);
+                                return;
+                            }
                         }
-                        if (!clicked.isEnemy)
+
+                        if (state == BattleState.PLAYERTURN && !_isActionInProgress)
                         {
-                            SelectAllyTarget(clicked);
-                            AudioManager.Instance?.PlayButtonHover();
-                            break;
+                            for (int i = 0; i < hits.Length; i++)
+                            {
+                                Unit clicked = hits[i].GetComponent<Unit>();
+                                if (clicked == null) continue;
+                                if (clicked.isEnemy && clicked.IsAlive)
+                                {
+                                    SelectEnemyTarget(clicked);
+                                    AudioManager.Instance?.PlayButtonHover();
+                                    break;
+                                }
+                                if (!clicked.isEnemy)
+                                {
+                                    SelectAllyTarget(clicked);
+                                    AudioManager.Instance?.PlayButtonHover();
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            Keyboard kb = Keyboard.current;
+            if (state != BattleState.PLAYERTURN || _isActionInProgress) return;
+
             if (kb != null && kb.tabKey.wasPressedThisFrame)
             {
                 CycleEnemyTarget();
@@ -214,6 +276,13 @@ namespace MedievalRPG.Combat
             Inventory.Reset(3, 2, 1);
             TurnCount = 1;
             _currentWaveIndex = 0;
+            _sessionLootCollected.Clear();
+            _lootDroppedUnits.Clear();
+            _groundLootDrops.Clear();
+
+            PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
+            equipMgr.OnEquipmentChanged -= ApplyPartyEquipment;
+            equipMgr.OnEquipmentChanged += ApplyPartyEquipment;
 
             EnsureEnemyStationsExist();
             SpawnPartyIfEmpty();
@@ -229,18 +298,34 @@ namespace MedievalRPG.Combat
                 }
             }
 
+            ApplyPartyEquipment();
+
             yield return SpawnWaveRoutine(_currentWaveIndex, animateEntrance: false);
 
             EnsureValidTargets();
             OnBattleInitialized?.Invoke();
             OnWaveChanged?.Invoke();
+            OnGroundLootCountChanged?.Invoke(0);
 
             bool isBossWave = IsCurrentWaveBoss();
             AudioManager.Instance?.PlayBattleMusic(isBossWave);
-            SetDialogue($"Đợt 1/{TotalWaves}: Kẻ địch chặn đường trong rừng sâu! Hãy chọn mục tiêu và hành động!");
+            int dropPct = Mathf.RoundToInt(CurrentWaveDropChance * 100f);
+            SetDialogue($"Đợt 1/{TotalWaves}: Tiến sâu vào rừng để săn trang bị (Tỉ lệ rớt đồ: <b>{dropPct}%</b>)!");
 
             yield return new WaitForSeconds(0.9f);
             StartNewRound();
+        }
+
+        public void ApplyPartyEquipment()
+        {
+            PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                Unit hero = partyUnits[i];
+                if (hero == null) continue;
+                EquipmentStatBonus bonus = equipMgr.GetTotalBonusesForClass(hero.characterClass);
+                hero.ApplyEquipmentBonuses(bonus);
+            }
         }
 
         private void EnsureEnemyStationsExist()
@@ -286,32 +371,74 @@ namespace MedievalRPG.Combat
                 return defaultWaves;
             }
 
-            // Tự tạo 3 đợt mặc định từ prefab sẵn có nếu Scene chưa cấu hình
+            // Tự tạo bản đồ 6 đợt leo thang (Yếu -> Thành đàn -> Mạnh hơn -> Đàn mạnh -> Tinh Anh -> Boss)
             List<BattleWave> fallback = new List<BattleWave>();
             if (enemyPrefab != null)
             {
                 fallback.Add(new BattleWave
                 {
-                    waveTitle = "Đợt 1: Toán Quân Goblin",
+                    waveTitle = "Đợt 1: Trinh Sát Rừng Sâu",
+                    waveSubtitle = "Quái yếu đơn lẻ",
                     isBossWave = false,
-                    enemyPrefabs = new List<GameObject> { enemyPrefab, enemyPrefab }
+                    enemyStatMultiplier = 0.80f,
+                    dropChanceBonus = 0f,
+                    rarityLuckBonus = 0f,
+                    enemyPrefabs = new List<GameObject> { enemyPrefab }
+                });
+                fallback.Add(new BattleWave
+                {
+                    waveTitle = "Đợt 2: Đàn Goblin Phục Kích",
+                    waveSubtitle = "Quái kéo đến thành đàn (3 con)",
+                    isBossWave = false,
+                    enemyStatMultiplier = 0.90f,
+                    dropChanceBonus = 0.02f,
+                    rarityLuckBonus = 0.03f,
+                    enemyPrefabs = new List<GameObject> { enemyPrefab, enemyPrefab, enemyPrefab }
                 });
             }
             if (skeletonPrefab != null && enemyPrefab != null)
             {
                 fallback.Add(new BattleWave
                 {
-                    waveTitle = "Đợt 2: Vệ Binh Hầm Ngục",
+                    waveTitle = "Đợt 3: Vệ Binh Xương Khô",
+                    waveSubtitle = "Quái mạnh hơn • Giáp dày",
                     isBossWave = false,
+                    enemyStatMultiplier = 1.00f,
+                    dropChanceBonus = 0.05f,
+                    rarityLuckBonus = 0.06f,
                     enemyPrefabs = new List<GameObject> { enemyPrefab, skeletonPrefab }
+                });
+                fallback.Add(new BattleWave
+                {
+                    waveTitle = "Đợt 4: Tiểu Đội Hầm Ngục",
+                    waveSubtitle = "Đàn quái hạng nặng (3 con)",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.08f,
+                    dropChanceBonus = 0.08f,
+                    rarityLuckBonus = 0.10f,
+                    enemyPrefabs = new List<GameObject> { skeletonPrefab, enemyPrefab, skeletonPrefab }
+                });
+                fallback.Add(new BattleWave
+                {
+                    waveTitle = "Đợt 5: Cận Vệ Tinh Anh",
+                    waveSubtitle = "Tinh Anh áp sát Boss • Rớt đồ Sử Thi cao",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.25f,
+                    dropChanceBonus = 0.12f,
+                    rarityLuckBonus = 0.16f,
+                    enemyPrefabs = new List<GameObject> { skeletonPrefab, skeletonPrefab }
                 });
             }
             if (bossPrefab != null)
             {
                 fallback.Add(new BattleWave
                 {
-                    waveTitle = "Đợt 3: Thủ Lĩnh Bóng Đêm",
+                    waveTitle = "Đợt 6: Thủ Lĩnh Bóng Đêm",
+                    waveSubtitle = "BOSS CUỐI MAP • Chắc chắn rớt 2 trang bị cao cấp",
                     isBossWave = true,
+                    enemyStatMultiplier = 1.05f,
+                    dropChanceBonus = 0f,
+                    rarityLuckBonus = 0.15f,
                     enemyPrefabs = new List<GameObject> { bossPrefab }
                 });
             }
@@ -350,12 +477,15 @@ namespace MedievalRPG.Combat
                 if (enemyUnits[i] != null) Destroy(enemyUnits[i].gameObject);
             }
             enemyUnits.Clear();
+            _lootDroppedUnits.Clear();
 
             List<BattleWave> waves = GetActiveWaveList();
             if (waveIndex < 0 || waveIndex >= waves.Count) yield break;
 
             BattleWave wave = waves[waveIndex];
             int count = wave.enemyPrefabs != null ? wave.enemyPrefabs.Count : 0;
+            float statMult = wave.enemyStatMultiplier > 0.05f ? wave.enemyStatMultiplier : 1f;
+            bool isEliteWave = !wave.isBossWave && statMult >= 1.20f;
 
             for (int i = 0; i < count; i++)
             {
@@ -370,6 +500,10 @@ namespace MedievalRPG.Combat
                 if (eUnit != null)
                 {
                     eUnit.isEnemy = true;
+                    if (Mathf.Abs(statMult - 1f) > 0.01f || isEliteWave)
+                    {
+                        eUnit.ApplyWaveScale(statMult, isEliteWave);
+                    }
                     eUnit.PlanNextIntent(TurnCount);
                     if (animateEntrance && eUnit.pixelAnimator != null)
                     {
@@ -554,6 +688,7 @@ namespace MedievalRPG.Combat
                 if (diedFromBurn)
                 {
                     AudioManager.Instance?.PlayDeathSfx();
+                    if (unit.isEnemy) TriggerEnemyLootDrop(unit);
                     yield return new WaitForSeconds(0.55f);
                     _isActionInProgress = false;
                     AdvanceTurn();
@@ -950,6 +1085,7 @@ namespace MedievalRPG.Combat
                     if (targetDied)
                     {
                         AudioManager.Instance?.PlayDeathSfx();
+                        if (target.isEnemy) TriggerEnemyLootDrop(target);
                     }
                 }
 
@@ -1253,21 +1389,30 @@ namespace MedievalRPG.Combat
         private IEnumerator TransitionToNextWaveRoutine()
         {
             _isActionInProgress = true;
+
+            // Tự động gom các vật phẩm còn nằm trên mặt đất trước khi sang đợt mới để không bao giờ mất đồ
+            if (_groundLootDrops.Count > 0)
+            {
+                CollectAllGroundLoot();
+                yield return new WaitForSeconds(0.35f);
+            }
+
             _currentWaveIndex++;
 
-            // Hồi phục nhẹ giữa các Wave (15% HP & 15 MP cho người còn sống)
+            // Hồi phục nhẹ giữa các Wave (18% HP & 18 MP cho người còn sống)
             foreach (Unit h in partyUnits)
             {
                 if (h == null || !h.IsAlive) continue;
-                int hpHeal = Mathf.Max(10, Mathf.RoundToInt(h.maxHP * 0.15f));
+                int hpHeal = Mathf.Max(12, Mathf.RoundToInt(h.maxHP * 0.18f));
                 int gained = h.Heal(hpHeal);
-                h.RestoreMana(15);
+                h.RestoreMana(18);
                 if (gained > 0) OnUnitHealed?.Invoke(h, gained);
             }
 
             List<BattleWave> waves = GetActiveWaveList();
-            string title = waves[_currentWaveIndex].waveTitle;
-            SetDialogue($"<color=#F2CA6B><b>CHIẾN THẮNG ĐỢT {_currentWaveIndex}!</b></color> Đội hình hồi sức chuẩn bị cho <b>{title}</b>...");
+            BattleWave nextWave = waves[_currentWaveIndex];
+            string title = nextWave.waveTitle;
+            SetDialogue($"<color=#F2CA6B><b>VƯỢT QUA ĐỢT {_currentWaveIndex}!</b></color> Đội hình hồi sức chuẩn bị cho <b>{title}</b>...");
             yield return new WaitForSeconds(0.85f);
 
             yield return SpawnWaveRoutine(_currentWaveIndex, animateEntrance: true);
@@ -1276,26 +1421,133 @@ namespace MedievalRPG.Combat
             AudioManager.Instance?.PlayBattleMusic(isBossWave);
             OnWaveChanged?.Invoke();
 
+            int dropPct = Mathf.RoundToInt(CurrentWaveDropChance * 100f);
             SetDialogue(isBossWave
-                ? "<color=#FF7043><b>CẢNH BÁO BOSS!</b></color> Thủ lĩnh bóng đêm xuất hiện!"
-                : $"<b>{title}</b> đã áp sát! Trận chiến tiếp tục!");
+                ? "<color=#FFB020><b>CẢNH BÁO BOSS CUỐI MAP!</b></color> Thủ lĩnh bóng đêm xuất hiện — Chắc chắn rớt <b>2 trang bị cao cấp</b>!"
+                : $"<b>{title}</b> đã áp sát! Tỉ lệ rớt đồ tăng lên <color=#F2CA6B><b>{dropPct}%</b></color>!");
 
             yield return new WaitForSeconds(0.75f);
             _isActionInProgress = false;
             StartNewRound();
         }
 
+        // =====================================================================
+        // HỆ THỐNG RỚT ĐỒ & NHẶT ĐỒ TRÊN CHIẾN TRƯỜNG (LOOT DROP & PICKUP)
+        // =====================================================================
+        public void TriggerEnemyLootDrop(Unit deadEnemy)
+        {
+            if (deadEnemy == null || !deadEnemy.isEnemy) return;
+            if (!_lootDroppedUnits.Add(deadEnemy)) return;
+
+            List<BattleWave> waves = GetActiveWaveList();
+            BattleWave wave = (_currentWaveIndex >= 0 && _currentWaveIndex < waves.Count) ? waves[_currentWaveIndex] : null;
+            float dropBonus = wave != null ? wave.dropChanceBonus : 0f;
+            float luckBonus = wave != null ? wave.rarityLuckBonus : 0f;
+
+            PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
+            List<LootDropResult> drops = LootSystem.RollDropsForDefeatedEnemy(
+                equipMgr.Catalog,
+                _currentWaveIndex,
+                Mathf.Max(1, waves.Count),
+                deadEnemy.isBoss,
+                dropBonus,
+                luckBonus,
+                enableQuizSystem ? CurrentQuizStreak : 0);
+
+            if (drops.Count == 0) return;
+
+            ItemRarity highestRarity = ItemRarity.Common;
+            Vector3 origin = deadEnemy.transform.position + new Vector3(0f, 0.25f, 0f);
+
+            for (int i = 0; i < drops.Count; i++)
+            {
+                LootDropResult drop = drops[i];
+                if (drop.DisplayRarity > highestRarity) highestRarity = drop.DisplayRarity;
+
+                // Phân bố vị trí rơi trên nền cỏ rừng xung quanh vị trí quái chết (không chồng lên nhau)
+                float spreadX = (i - (drops.Count - 1) * 0.5f) * 1.15f + UnityEngine.Random.Range(-0.18f, 0.18f);
+                float groundX = Mathf.Clamp(deadEnemy.transform.position.x + spreadX - 0.35f, -0.4f, 4.35f);
+                float groundY = Mathf.Clamp(-1.46f + (i % 2) * 0.24f + UnityEngine.Random.Range(-0.08f, 0.08f), -1.64f, -1.12f);
+                Vector3 groundPos = new Vector3(groundX, groundY, -0.05f);
+
+                WorldLootDrop worldDrop = WorldLootDrop.Spawn(drop, origin, groundPos, lootLabelFont);
+                _groundLootDrops.Add(worldDrop);
+                OnLootDropped?.Invoke(drop, worldDrop);
+            }
+
+            AudioManager.Instance?.PlayLootDropSfx(highestRarity);
+
+            string rarityTag = highestRarity switch
+            {
+                ItemRarity.Legendary => "RỚT HUYỀN THOẠI!",
+                ItemRarity.Epic => "RỚT SỬ THI!",
+                ItemRarity.Rare => "RỚT ĐỒ HIẾM!",
+                _ => "RỚT CHIẾN LỢI PHẨM!"
+            };
+            OnUnitStatusPop?.Invoke(deadEnemy, rarityTag, EquipmentItemData.GetRarityColor(highestRarity));
+            OnGroundLootCountChanged?.Invoke(_groundLootDrops.Count);
+        }
+
+        public void CollectLootDrop(WorldLootDrop drop)
+        {
+            if (drop == null || drop.IsCollected) return;
+
+            _groundLootDrops.Remove(drop);
+            LootDropResult data = drop.DropData;
+            _sessionLootCollected.Add(data);
+
+            OwnedEquipmentInstance addedEquip = null;
+            if (!data.isConsumableOnly && data.equipment != null)
+            {
+                addedEquip = PlayerEquipmentManager.EnsureLoaded().AddItem(data.equipment, data.waveNumber);
+            }
+            else if (data.isConsumableOnly)
+            {
+                Inventory.AddItem(data.consumableType, 1);
+            }
+
+            AudioManager.Instance?.PlayLootPickupSfx();
+
+            Vector3 flyTarget = Camera.main != null
+                ? Camera.main.ViewportToWorldPoint(new Vector3(0.92f, 0.90f, -Camera.main.transform.position.z))
+                : new Vector3(4.5f, 2.6f, 0f);
+            flyTarget.z = -0.1f;
+
+            drop.PlayCollectAndDestroy(flyTarget);
+            OnLootPickedUp?.Invoke(data, addedEquip);
+            OnGroundLootCountChanged?.Invoke(_groundLootDrops.Count);
+        }
+
+        public int CollectAllGroundLoot()
+        {
+            if (_groundLootDrops.Count == 0) return 0;
+            List<WorldLootDrop> snapshot = new List<WorldLootDrop>(_groundLootDrops);
+            int collected = 0;
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                if (snapshot[i] != null && !snapshot[i].IsCollected)
+                {
+                    CollectLootDrop(snapshot[i]);
+                    collected++;
+                }
+            }
+            return collected;
+        }
+
         private void EndBattle()
         {
+            // Gom hết vật phẩm còn trên chiến trường trước khi hiện tổng kết
+            CollectAllGroundLoot();
+
             if (state == BattleState.WON)
             {
                 AudioManager.Instance?.PlayVictoryFanfare();
-                SetDialogue("<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Đội hình anh hùng đã quét sạch toàn bộ quái vật!");
+                SetDialogue("<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Đội hình anh hùng đã chinh phục toàn bộ bản đồ và thu thập kho báu!");
             }
             else if (state == BattleState.LOST)
             {
                 AudioManager.Instance?.PlayDefeatSting();
-                SetDialogue("<color=#FF6B6B><b>THẤT BẠI!</b></color> Toàn bộ đội hình đã gục ngã. Hãy ôn lại kiến thức và thử sức lại nhé!");
+                SetDialogue("<color=#FF6B6B><b>THẤT BẠI!</b></color> Toàn bộ đội hình đã gục ngã. Trang bị đã nhặt vẫn được lưu lại trong Kho Đồ!");
             }
             OnBattleEnded?.Invoke(state);
         }

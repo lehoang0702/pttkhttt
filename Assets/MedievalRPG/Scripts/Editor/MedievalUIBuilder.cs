@@ -444,11 +444,11 @@ namespace MedievalRPG.EditorTools
             mcRt.anchorMax = new Vector2(0.5f, 0.5f);
             mcRt.pivot = new Vector2(0.5f, 0.5f);
             mcRt.anchoredPosition = new Vector2(0f, -66f);
-            mcRt.sizeDelta = new Vector2(470f, 392f);
+            mcRt.sizeDelta = new Vector2(470f, 444f);
 
             VerticalLayoutGroup vlg = menuCard.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.padding = new RectOffset(32, 32, 30, 30);
-            vlg.spacing = 14f;
+            vlg.padding = new RectOffset(32, 32, 26, 26);
+            vlg.spacing = 12f;
             vlg.childAlignment = TextAnchor.MiddleCenter;
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
@@ -456,13 +456,15 @@ namespace MedievalRPG.EditorTools
             vlg.childForceExpandHeight = false;
 
             var btnStart = CreateStyledMenuButton("StartButton", menuCard.transform, a, a.iconPlay,
-                "BẮT ĐẦU TRẬN CHIẾN", MedievalUITheme.BtnPrimaryGold, 76f, 24f);
+                "BẮT ĐẦU TRẬN CHIẾN", MedievalUITheme.BtnPrimaryGold, 68f, 23f);
+            var btnEquip = CreateStyledMenuButton("EquipmentButton", menuCard.transform, a, a.iconCrown,
+                "KHO TRANG BỊ", MedievalUITheme.BtnSkill, 58f, 20f);
             var btnGuide = CreateStyledMenuButton("InstructionsButton", menuCard.transform, a, a.iconBook,
-                "HƯỚNG DẪN CÁCH CHƠI", MedievalUITheme.BtnNeutralSlate, 64f, 21f);
+                "HƯỚNG DẪN CÁCH CHƠI", MedievalUITheme.BtnNeutralSlate, 56f, 20f);
             var btnSettings = CreateStyledMenuButton("SettingsButton", menuCard.transform, a, a.iconGear,
-                "CÀI ĐẶT", MedievalUITheme.BtnNeutralSlate, 64f, 21f);
+                "CÀI ĐẶT", MedievalUITheme.BtnNeutralSlate, 56f, 20f);
             var btnQuit = CreateStyledMenuButton("QuitButton", menuCard.transform, a, a.iconExit,
-                "THOÁT GAME", MedievalUITheme.BtnDangerSlate, 60f, 20f);
+                "THOÁT GAME", MedievalUITheme.BtnDangerSlate, 54f, 19f);
 
             // Footer hint
             TextMeshProUGUI footer = CreateTMP("FooterHint", canvas.transform,
@@ -490,6 +492,10 @@ namespace MedievalRPG.EditorTools
                 out UnityEngine.UI.Toggle quizToggle, out UnityEngine.UI.Toggle fastToggle);
             settingsModal.SetActive(false);
 
+            // --- Modal Kho Trang Bị (dùng chung với màn chiến đấu) ---
+            EquipmentModalUI menuEquipModal = CreateEquipmentModal(canvas.transform, a);
+            menuEquipModal.gameObject.SetActive(false);
+
             // --- Fade Overlay ---
             CanvasGroup fadeOverlay = CreateFadeOverlay(canvas.transform);
 
@@ -500,6 +506,7 @@ namespace MedievalRPG.EditorTools
                 guideModal, closeGuideBtn,
                 settingsModal, closeSettBtn,
                 musicSlider, musicValue, sfxSlider, sfxValue, quizToggle, fastToggle);
+            menuMgr.ConfigureEquipmentUI(btnEquip, menuEquipModal);
 
             EditorUtility.SetDirty(menuMgr);
             EditorSceneManager.MarkSceneDirty(scene);
@@ -596,8 +603,8 @@ namespace MedievalRPG.EditorTools
             CreateRuleRow(parent, a, a.iconScroll, MedievalUITheme.GoldPrimary, "2. Chiến Đấu & Tri Thức",
                 "Khi chọn Tấn Công hoặc Kỹ Năng, bạn cần trả lời 1 câu hỏi trắc nghiệm.\n• ĐÚNG: Xuất chiêu + thưởng sát thương (Chuỗi >= 3 tăng +20% lực đánh!).\n• SAI: Anh hùng mất lượt hành động.");
 
-            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Chiến Thuật, Túi Đồ & Phím Tắt",
-                "• Túi Đồ [4] (Bình Máu/Mana/Hồi Sinh) & Phòng Thủ [5] không cần trả lời Quiz.\n• Phím tắt: [1-5] hành động, [Tab] hoặc bấm trực tiếp để chọn mục tiêu, [A-D] trả lời, [Esc] tạm dừng.");
+            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Bản Đồ 6 Đợt, Rớt Đồ & Phím Tắt",
+                "• 6 đợt leo thang: Quái yếu → Thành đàn → Mạnh hơn → Tinh Anh → Boss. Càng đi xa tỉ lệ rớt đồ (Thường → Huyền Thoại) càng cao!\n• Bấm vào rương rơi dưới đất hoặc [E] để nhặt đồ, [I] mở Kho Trang Bị cho cả 3 Class, [1-5] hành động, [Tab] đổi mục tiêu.");
         }
 
         private static void CreateRuleRow(Transform parent, UIAssets a, Sprite icon, Color accent, string title, string body)
@@ -664,6 +671,7 @@ namespace MedievalRPG.EditorTools
             if (battleSystem != null)
             {
                 battleSystem.enableLegacyOnGUI = false;
+                battleSystem.lootLabelFont = a.fontBold;
                 WireBattleEncounterAndStations(battleSystem);
                 EditorUtility.SetDirty(battleSystem);
             }
@@ -809,14 +817,24 @@ namespace MedievalRPG.EditorTools
                 frame.gameObject.SetActive(false);
             }
 
-            // Top-Right: Enemy Boss Card + Settings Gear Button + Wave Badge + Multi-Enemy Tabs
+            // Top-Right: Settings Gear + Kho Đồ [I] + Wave/Drop Badge + Enemy Card + Multi-Enemy Tabs
             UnityEngine.UI.Button pauseOpenBtn = CreateIconSquareButton("PauseSettingsButton", topBar.transform, a, a.iconGear,
-                MedievalUITheme.BtnNeutralSlate, new Vector2(56f, 56f));
+                MedievalUITheme.BtnNeutralSlate, new Vector2(48f, 46f));
             RectTransform pbRt = pauseOpenBtn.GetComponent<RectTransform>();
             pbRt.anchorMin = new Vector2(1f, 1f);
             pbRt.anchorMax = new Vector2(1f, 1f);
             pbRt.pivot = new Vector2(1f, 1f);
             pbRt.anchoredPosition = Vector2.zero;
+
+            UnityEngine.UI.Button equipOpenBtn = CreateStyledMenuButton("OpenEquipmentButton", topBar.transform, a, null,
+                "KHO ĐỒ [I] (0)", MedievalUITheme.BtnSkill, 46f, 12.5f);
+            RectTransform eqbRt = equipOpenBtn.GetComponent<RectTransform>();
+            eqbRt.anchorMin = new Vector2(1f, 1f);
+            eqbRt.anchorMax = new Vector2(1f, 1f);
+            eqbRt.pivot = new Vector2(1f, 1f);
+            eqbRt.anchoredPosition = new Vector2(-54f, 0f);
+            eqbRt.sizeDelta = new Vector2(118f, 46f);
+            TextMeshProUGUI equipOpenLabelTMP = equipOpenBtn.GetComponentInChildren<TextMeshProUGUI>();
 
             UnityEngine.UI.Image wavePill = CreateImage("WaveBadgePill", topBar.transform, a.badgePill, MedievalUITheme.DeepInset);
             wavePill.type = UnityEngine.UI.Image.Type.Sliced;
@@ -825,10 +843,10 @@ namespace MedievalRPG.EditorTools
             wavePill.rectTransform.anchorMin = new Vector2(1f, 1f);
             wavePill.rectTransform.anchorMax = new Vector2(1f, 1f);
             wavePill.rectTransform.pivot = new Vector2(1f, 1f);
-            wavePill.rectTransform.anchoredPosition = new Vector2(0f, -64f);
-            wavePill.rectTransform.sizeDelta = new Vector2(88f, 26f);
-            TextMeshProUGUI waveBadgeTMP = CreateTMP("WaveBadgeText", wavePill.transform, "ĐỢT 1/3",
-                a.fontBold, 12.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
+            wavePill.rectTransform.anchoredPosition = new Vector2(0f, -54f);
+            wavePill.rectTransform.sizeDelta = new Vector2(172f, 30f);
+            TextMeshProUGUI waveBadgeTMP = CreateTMP("WaveBadgeText", wavePill.transform, "ĐỢT 1/6 • RỚT 35%",
+                a.fontBold, 11.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
             StretchFull(waveBadgeTMP.rectTransform);
 
             EnemyStatusCardUI enemyCard = CreateEnemyStatusCard("EnemyStatusCard", topBar.transform, a);
@@ -836,7 +854,7 @@ namespace MedievalRPG.EditorTools
             ecRt.anchorMin = new Vector2(1f, 1f);
             ecRt.anchorMax = new Vector2(1f, 1f);
             ecRt.pivot = new Vector2(1f, 1f);
-            ecRt.anchoredPosition = new Vector2(-96f, 0f);
+            ecRt.anchoredPosition = new Vector2(-182f, 0f);
 
             // Tab chọn đa quái khi có >= 2 kẻ địch
             GameObject enemyTabsRow = CreateRect("EnemyTabsRow", topBar.transform);
@@ -844,7 +862,7 @@ namespace MedievalRPG.EditorTools
             etRt.anchorMin = new Vector2(1f, 1f);
             etRt.anchorMax = new Vector2(1f, 1f);
             etRt.pivot = new Vector2(1f, 1f);
-            etRt.anchoredPosition = new Vector2(-96f, -118f);
+            etRt.anchoredPosition = new Vector2(-182f, -118f);
             etRt.sizeDelta = new Vector2(340f, 34f);
 
             HorizontalLayoutGroup etHlg = enemyTabsRow.AddComponent<HorizontalLayoutGroup>();
@@ -884,6 +902,11 @@ namespace MedievalRPG.EditorTools
 
                 TextMeshProUGUI lbl = CreateTMP("Label", tabBg.transform, $"Quái {i + 1}",
                     a.fontBold, 11.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+                lbl.enableAutoSizing = true;
+                lbl.fontSizeMin = 8.5f;
+                lbl.fontSizeMax = 11.5f;
+                lbl.textWrappingMode = TextWrappingModes.NoWrap;
+                lbl.overflowMode = TextOverflowModes.Truncate;
                 lbl.rectTransform.anchorMin = Vector2.zero;
                 lbl.rectTransform.anchorMax = Vector2.one;
                 lbl.rectTransform.offsetMin = new Vector2(6f, 7f);
@@ -1123,9 +1146,58 @@ namespace MedievalRPG.EditorTools
             }
             itemBagImg.gameObject.SetActive(false);
 
+            // --- Nút Nổi Nhặt Tất Cả Đồ Rơi Trên Chiến Trường [E] ---
+            UnityEngine.UI.Button collectLootBtn = CreateStyledMenuButton("CollectAllLootButton", canvas.transform, a, a.iconCrown,
+                "NHẶT TẤT CẢ [E] (1)", MedievalUITheme.BtnPrimaryGold, 48f, 15.5f);
+            RectTransform clRt = collectLootBtn.GetComponent<RectTransform>();
+            clRt.anchorMin = new Vector2(1f, 0f);
+            clRt.anchorMax = new Vector2(1f, 0f);
+            clRt.pivot = new Vector2(1f, 0f);
+            clRt.anchoredPosition = new Vector2(-68f, 240f);
+            clRt.sizeDelta = new Vector2(262f, 48f);
+            TextMeshProUGUI collectLootLbl = collectLootBtn.GetComponentInChildren<TextMeshProUGUI>();
+            collectLootBtn.gameObject.SetActive(false);
+
+            // --- Banner Toast Khi Nhặt Được Trang Bị ---
+            UnityEngine.UI.Image lootToastImg = CreateImage("LootPickupToast", canvas.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
+            lootToastImg.type = UnityEngine.UI.Image.Type.Sliced;
+            lootToastImg.pixelsPerUnitMultiplier = 0.65f;
+            lootToastImg.raycastTarget = false;
+            RectTransform ltRt = lootToastImg.rectTransform;
+            ltRt.anchorMin = new Vector2(0.5f, 1f);
+            ltRt.anchorMax = new Vector2(0.5f, 1f);
+            ltRt.pivot = new Vector2(0.5f, 1f);
+            ltRt.anchoredPosition = new Vector2(0f, -176f);
+            ltRt.sizeDelta = new Vector2(560f, 64f);
+
+            UnityEngine.UI.Image lootToastBorder = CreateImage("ToastBorder", lootToastImg.transform, a.buttonFrame, MedievalUITheme.GoldSoft);
+            lootToastBorder.type = UnityEngine.UI.Image.Type.Sliced;
+            lootToastBorder.pixelsPerUnitMultiplier = 0.65f;
+            lootToastBorder.raycastTarget = false;
+            StretchFull(lootToastBorder.rectTransform);
+
+            TextMeshProUGUI lootToastTitle = CreateTMP("ToastTitle", lootToastImg.transform, "NHẶT ĐƯỢC TRANG BỊ!",
+                a.fontBold, 15.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
+            lootToastTitle.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+            lootToastTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            lootToastTitle.rectTransform.offsetMin = new Vector2(14f, 0f);
+            lootToastTitle.rectTransform.offsetMax = new Vector2(-14f, -6f);
+
+            TextMeshProUGUI lootToastDetail = CreateTMP("ToastDetail", lootToastImg.transform, "+15 ATK • Bấm [I] để mở Kho Đồ",
+                a.fontBody, 13f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+            lootToastDetail.rectTransform.anchorMin = new Vector2(0f, 0f);
+            lootToastDetail.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            lootToastDetail.rectTransform.offsetMin = new Vector2(14f, 6f);
+            lootToastDetail.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            lootToastImg.gameObject.SetActive(false);
+
             // --- Layer 3: Quiz Modal ---
             QuizModalUI quizModal = CreateQuizModal(canvas.transform, a);
             quizModal.gameObject.SetActive(false);
+
+            // --- Layer 3.5: Kho Đồ & Trang Bị Modal ---
+            EquipmentModalUI battleEquipModal = CreateEquipmentModal(canvas.transform, a);
+            battleEquipModal.gameObject.SetActive(false);
 
             // --- Layer 4: Pause & Settings Modal ---
             GameObject pauseModal = CreateModalOverlay("PauseSettingsModal", canvas.transform, a, new Vector2(620f, 595f),
@@ -1196,6 +1268,10 @@ namespace MedievalRPG.EditorTools
                     winSummaryTMP, loseSummaryTMP,
                     a.portKnight, a.portMage, a.portArcher, a.portGoblin, a.portSkeleton, a.portDarkKnight,
                     a.iconSword, a.iconMagic, a.iconArrow, a.iconHeart, a.iconShield, a.iconMana, a.iconScroll);
+                uiMgr.ConfigureLootAndEquipmentUI(
+                    equipOpenBtn, equipOpenLabelTMP, battleEquipModal,
+                    collectLootBtn, collectLootLbl,
+                    lootToastImg.gameObject, lootToastBorder, lootToastTitle, lootToastDetail);
 
                 // Gắn persistent UnityEvents cho các nút modal (hoạt động cả khi scene vừa tải)
                 WirePersistentAction(resumeBtn, uiMgr.ResumeBattle);
@@ -1379,6 +1455,11 @@ namespace MedievalRPG.EditorTools
 
             TextMeshProUGUI nameTMP = CreateTMP("EnemyName", cardBg.transform, "Goblin Raider",
                 a.fontBold, 20f, new Color(1f, 0.58f, 0.58f, 1f), TextAlignmentOptions.MidlineLeft);
+            nameTMP.enableAutoSizing = true;
+            nameTMP.fontSizeMin = 13.5f;
+            nameTMP.fontSizeMax = 20f;
+            nameTMP.textWrappingMode = TextWrappingModes.NoWrap;
+            nameTMP.overflowMode = TextOverflowModes.Truncate;
             nameTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
             nameTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
             nameTMP.rectTransform.pivot = new Vector2(0f, 1f);
@@ -1559,13 +1640,13 @@ namespace MedievalRPG.EditorTools
 
             Transform s0 = bs.enemyBattleStation != null ? bs.enemyBattleStation : GameObject.Find("EnemyStation")?.transform;
             if (s0 == null) s0 = new GameObject("EnemyStation_0").transform;
-            s0.position = new Vector3(1.85f, -1.25f, 0f);
+            s0.position = new Vector3(1.65f, -1.26f, 0f);
             bs.enemyBattleStation = s0;
 
             Transform s1 = GameObject.Find("EnemyStation_1")?.transform ?? new GameObject("EnemyStation_1").transform;
-            s1.position = new Vector3(3.35f, -0.82f, 0f);
+            s1.position = new Vector3(3.15f, -0.78f, 0f);
             Transform s2 = GameObject.Find("EnemyStation_2")?.transform ?? new GameObject("EnemyStation_2").transform;
-            s2.position = new Vector3(4.05f, -1.48f, 0f);
+            s2.position = new Vector3(4.15f, -1.45f, 0f);
 
             bs.enemyBattleStations = new List<Transform> { s0, s1, s2 };
 
@@ -1576,23 +1657,378 @@ namespace MedievalRPG.EditorTools
             {
                 new MedievalRPG.Data.BattleWave
                 {
-                    waveTitle = "Đợt 1: Toán Quân Goblin",
+                    waveTitle = "Đợt 1: Trinh Sát Rừng Sâu",
+                    waveSubtitle = "Quái yếu đơn lẻ • Khởi động",
                     isBossWave = false,
-                    enemyPrefabs = new List<GameObject> { bs.enemyPrefab, bs.enemyPrefab }
+                    enemyStatMultiplier = 0.80f,
+                    enemyPrefabs = new List<GameObject> { bs.enemyPrefab }
                 },
                 new MedievalRPG.Data.BattleWave
                 {
-                    waveTitle = "Đợt 2: Vệ Binh Hầm Ngục",
+                    waveTitle = "Đợt 2: Đàn Goblin Phục Kích",
+                    waveSubtitle = "Thành đàn 3 Goblin • Ưu tiên chiêu diện rộng",
                     isBossWave = false,
+                    enemyStatMultiplier = 0.90f,
+                    dropChanceBonus = 0.02f,
+                    rarityLuckBonus = 0.03f,
+                    enemyPrefabs = new List<GameObject> { bs.enemyPrefab, bs.enemyPrefab, bs.enemyPrefab }
+                },
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 3: Vệ Binh Xương Khô",
+                    waveSubtitle = "Quái mạnh hơn • Giáp cứng",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.00f,
+                    dropChanceBonus = 0.05f,
+                    rarityLuckBonus = 0.06f,
                     enemyPrefabs = new List<GameObject> { bs.enemyPrefab, bs.skeletonPrefab }
                 },
                 new MedievalRPG.Data.BattleWave
                 {
-                    waveTitle = "Đợt 3: Thủ Lĩnh Bóng Đêm",
+                    waveTitle = "Đợt 4: Tiểu Đội Hầm Ngục",
+                    waveSubtitle = "Đàn quái hạng nặng (3 con)",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.08f,
+                    dropChanceBonus = 0.08f,
+                    rarityLuckBonus = 0.10f,
+                    enemyPrefabs = new List<GameObject> { bs.skeletonPrefab, bs.enemyPrefab, bs.skeletonPrefab }
+                },
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 5: Cận Vệ Tinh Anh",
+                    waveSubtitle = "Tinh Anh áp sát Boss • Rớt đồ Sử Thi cao",
+                    isBossWave = false,
+                    enemyStatMultiplier = 1.25f,
+                    dropChanceBonus = 0.12f,
+                    rarityLuckBonus = 0.16f,
+                    enemyPrefabs = new List<GameObject> { bs.skeletonPrefab, bs.skeletonPrefab }
+                },
+                new MedievalRPG.Data.BattleWave
+                {
+                    waveTitle = "Đợt 6: Thủ Lĩnh Bóng Đêm",
+                    waveSubtitle = "BOSS CUỐI MAP • Chắc chắn rớt 2 trang bị cao cấp",
                     isBossWave = true,
+                    enemyStatMultiplier = 1.05f,
+                    rarityLuckBonus = 0.15f,
                     enemyPrefabs = new List<GameObject> { bs.bossPrefab }
                 }
             };
+        }
+
+        // =====================================================================
+        // MODAL KHO ĐỒ & TRANG BỊ (DÙNG CHUNG CHO MAIN MENU & BATTLE SCENE)
+        // =====================================================================
+        private static EquipmentModalUI CreateEquipmentModal(Transform canvasParent, UIAssets a)
+        {
+            UnityEngine.UI.Image scrim = CreateImage("EquipmentModalOverlay", canvasParent, null, MedievalUITheme.ScrimDark);
+            StretchFull(scrim.rectTransform);
+
+            UnityEngine.UI.Image card = CreateImage("EquipmentCard", scrim.transform, a.panelDarkGold, Color.white);
+            card.type = UnityEngine.UI.Image.Type.Sliced;
+            card.pixelsPerUnitMultiplier = 0.65f;
+            RectTransform cRt = card.rectTransform;
+            cRt.anchorMin = new Vector2(0.5f, 0.5f);
+            cRt.anchorMax = new Vector2(0.5f, 0.5f);
+            cRt.pivot = new Vector2(0.5f, 0.5f);
+            cRt.sizeDelta = new Vector2(1140f, 650f);
+
+            // Header bar
+            UnityEngine.UI.Image headerIcon = CreateImage("HeaderIcon", card.transform, a.iconCrown, Color.white);
+            headerIcon.preserveAspect = true;
+            headerIcon.raycastTarget = false;
+            headerIcon.rectTransform.anchorMin = new Vector2(0f, 1f);
+            headerIcon.rectTransform.anchorMax = new Vector2(0f, 1f);
+            headerIcon.rectTransform.pivot = new Vector2(0f, 1f);
+            headerIcon.rectTransform.anchoredPosition = new Vector2(24f, -18f);
+            headerIcon.rectTransform.sizeDelta = new Vector2(36f, 36f);
+
+            TextMeshProUGUI headerTitle = CreateTMP("HeaderTitle", card.transform, "KHO TRANG BỊ • 3 CLASS • 4 CẤP HIẾM",
+                a.fontDisplay, 25f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+            headerTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            headerTitle.rectTransform.anchorMax = new Vector2(0.75f, 1f);
+            headerTitle.rectTransform.pivot = new Vector2(0f, 1f);
+            headerTitle.rectTransform.offsetMin = new Vector2(70f, -56f);
+            headerTitle.rectTransform.offsetMax = new Vector2(0f, -14f);
+
+            UnityEngine.UI.Button closeBtn = CreateStyledMenuButton("CloseEquipModalBtn", card.transform, a, null,
+                "ĐÓNG [I]", MedievalUITheme.BtnDangerSlate, 38f, 14f);
+            RectTransform clRt = closeBtn.GetComponent<RectTransform>();
+            clRt.anchorMin = new Vector2(1f, 1f);
+            clRt.anchorMax = new Vector2(1f, 1f);
+            clRt.pivot = new Vector2(1f, 1f);
+            clRt.anchoredPosition = new Vector2(-22f, -18f);
+            clRt.sizeDelta = new Vector2(116f, 38f);
+
+            // --- CỘT TRÁI: CHỌN CLASS + 3 Ô ĐANG MẶC + TỔNG CHỈ SỐ ---
+            UnityEngine.UI.Image leftCol = CreateImage("LeftLoadoutColumn", card.transform, a.panelInset, MedievalUITheme.DeepInset);
+            leftCol.type = UnityEngine.UI.Image.Type.Sliced;
+            leftCol.pixelsPerUnitMultiplier = 0.65f;
+            RectTransform lRt = leftCol.rectTransform;
+            lRt.anchorMin = new Vector2(0f, 0f);
+            lRt.anchorMax = new Vector2(0.43f, 1f);
+            lRt.offsetMin = new Vector2(22f, 22f);
+            lRt.offsetMax = new Vector2(-8f, -68f);
+
+            // 3 Class Tabs
+            GameObject clsTabRow = CreateRect("ClassTabsRow", leftCol.transform);
+            RectTransform ctRt = clsTabRow.GetComponent<RectTransform>();
+            ctRt.anchorMin = new Vector2(0f, 1f);
+            ctRt.anchorMax = new Vector2(1f, 1f);
+            ctRt.pivot = new Vector2(0.5f, 1f);
+            ctRt.offsetMin = new Vector2(14f, -58f);
+            ctRt.offsetMax = new Vector2(-14f, -14f);
+            HorizontalLayoutGroup ctHlg = clsTabRow.AddComponent<HorizontalLayoutGroup>();
+            ctHlg.spacing = 8f;
+            ctHlg.childControlWidth = true;
+            ctHlg.childControlHeight = true;
+            ctHlg.childForceExpandWidth = true;
+            ctHlg.childForceExpandHeight = true;
+
+            string[] clsNames = { "HIỆP SĨ", "PHÁP SƯ", "CUNG THỦ" };
+            var clsTabs = new UnityEngine.UI.Button[3];
+            var clsTabBgs = new UnityEngine.UI.Image[3];
+            for (int i = 0; i < 3; i++)
+            {
+                UnityEngine.UI.Image bg = CreateImage($"ClassTab_{i}", clsTabRow.transform, a.buttonFill,
+                    i == 0 ? MedievalUITheme.BtnPrimaryGold : MedievalUITheme.BtnNeutralSlate);
+                bg.type = UnityEngine.UI.Image.Type.Sliced;
+                bg.pixelsPerUnitMultiplier = 0.65f;
+                UnityEngine.UI.Button b = bg.gameObject.AddComponent<UnityEngine.UI.Button>();
+                b.targetGraphic = bg;
+                TextMeshProUGUI lbl = CreateTMP("Label", bg.transform, clsNames[i], a.fontBold, 14f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+                StretchFull(lbl.rectTransform);
+                clsTabs[i] = b;
+                clsTabBgs[i] = bg;
+            }
+
+            TextMeshProUGUI clsHeaderTMP = CreateTMP("SelectedClassHeader", leftCol.transform, "TRANG BỊ CỦA HIỆP SĨ",
+                a.fontBold, 15.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+            clsHeaderTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
+            clsHeaderTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
+            clsHeaderTMP.rectTransform.pivot = new Vector2(0.5f, 1f);
+            clsHeaderTMP.rectTransform.offsetMin = new Vector2(16f, -92f);
+            clsHeaderTMP.rectTransform.offsetMax = new Vector2(-16f, -66f);
+
+            // 3 Ô Trang bị (Weapon, Armor, Accessory)
+            GameObject slotsBox = CreateRect("EquippedSlotsBox", leftCol.transform);
+            RectTransform sbRt = slotsBox.GetComponent<RectTransform>();
+            sbRt.anchorMin = new Vector2(0f, 1f);
+            sbRt.anchorMax = new Vector2(1f, 1f);
+            sbRt.pivot = new Vector2(0.5f, 1f);
+            sbRt.offsetMin = new Vector2(14f, -384f);
+            sbRt.offsetMax = new Vector2(-14f, -98f);
+            VerticalLayoutGroup sbVlg = slotsBox.AddComponent<VerticalLayoutGroup>();
+            sbVlg.spacing = 10f;
+            sbVlg.childControlWidth = true;
+            sbVlg.childControlHeight = true;
+            sbVlg.childForceExpandWidth = true;
+            sbVlg.childForceExpandHeight = true;
+
+            var sBorders = new UnityEngine.UI.Image[3];
+            var sIcons = new UnityEngine.UI.Image[3];
+            var sNames = new TextMeshProUGUI[3];
+            var sStats = new TextMeshProUGUI[3];
+            var sUnequips = new UnityEngine.UI.Button[3];
+            string[] slotDefaultLabels = { "Vũ Khí: Trống", "Giáp: Trống", "Phụ Kiện: Trống" };
+            Sprite[] slotDefaultIcons = { a.iconSword, a.iconShield, a.iconCrown };
+
+            for (int i = 0; i < 3; i++)
+            {
+                UnityEngine.UI.Image slotCard = CreateImage($"EquipSlotCard_{i}", slotsBox.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
+                slotCard.type = UnityEngine.UI.Image.Type.Sliced;
+                slotCard.pixelsPerUnitMultiplier = 0.65f;
+
+                UnityEngine.UI.Image border = CreateImage("Border", slotCard.transform, a.buttonFrame, MedievalUITheme.SlateBorder);
+                border.type = UnityEngine.UI.Image.Type.Sliced;
+                border.pixelsPerUnitMultiplier = 0.65f;
+                border.raycastTarget = false;
+                StretchFull(border.rectTransform);
+
+                UnityEngine.UI.Image iconBox = CreateImage("IconBox", slotCard.transform, a.badgePill, MedievalUITheme.DeepInset);
+                iconBox.type = UnityEngine.UI.Image.Type.Sliced;
+                iconBox.raycastTarget = false;
+                iconBox.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                iconBox.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                iconBox.rectTransform.pivot = new Vector2(0f, 0.5f);
+                iconBox.rectTransform.anchoredPosition = new Vector2(12f, 0f);
+                iconBox.rectTransform.sizeDelta = new Vector2(52f, 52f);
+
+                UnityEngine.UI.Image ic = CreateImage("Icon", iconBox.transform, slotDefaultIcons[i], Color.white);
+                ic.preserveAspect = true;
+                ic.raycastTarget = false;
+                StretchWithPadding(ic.rectTransform, 8f);
+
+                TextMeshProUGUI nameTxt = CreateTMP("ItemName", slotCard.transform, slotDefaultLabels[i],
+                    a.fontBold, 14.5f, MedievalUITheme.SlateMuted, TextAlignmentOptions.MidlineLeft);
+                nameTxt.enableAutoSizing = true;
+                nameTxt.fontSizeMin = 11f;
+                nameTxt.fontSizeMax = 14.5f;
+                nameTxt.overflowMode = TextOverflowModes.Truncate;
+                nameTxt.textWrappingMode = TextWrappingModes.NoWrap;
+                nameTxt.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                nameTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
+                nameTxt.rectTransform.offsetMin = new Vector2(74f, 2f);
+                nameTxt.rectTransform.offsetMax = new Vector2(-74f, -8f);
+
+                TextMeshProUGUI statTxt = CreateTMP("ItemStats", slotCard.transform, "Nhặt đồ trên bản đồ để trang bị",
+                    a.fontBody, 12.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                statTxt.enableAutoSizing = true;
+                statTxt.fontSizeMin = 10f;
+                statTxt.fontSizeMax = 12.5f;
+                statTxt.overflowMode = TextOverflowModes.Truncate;
+                statTxt.textWrappingMode = TextWrappingModes.NoWrap;
+                statTxt.rectTransform.anchorMin = new Vector2(0f, 0f);
+                statTxt.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                statTxt.rectTransform.offsetMin = new Vector2(74f, 8f);
+                statTxt.rectTransform.offsetMax = new Vector2(-74f, -2f);
+
+                UnityEngine.UI.Button uneqBtn = CreateStyledMenuButton($"UnequipBtn_{i}", slotCard.transform, a, null,
+                    "GỠ", MedievalUITheme.BtnDangerSlate, 34f, 12f);
+                RectTransform uRt = uneqBtn.GetComponent<RectTransform>();
+                uRt.anchorMin = new Vector2(1f, 0.5f);
+                uRt.anchorMax = new Vector2(1f, 0.5f);
+                uRt.pivot = new Vector2(1f, 0.5f);
+                uRt.anchoredPosition = new Vector2(-10f, 0f);
+                uRt.sizeDelta = new Vector2(56f, 34f);
+
+                sBorders[i] = border;
+                sIcons[i] = ic;
+                sNames[i] = nameTxt;
+                sStats[i] = statTxt;
+                sUnequips[i] = uneqBtn;
+            }
+
+            // Khung Tổng Chỉ Số Cộng Thêm
+            UnityEngine.UI.Image bonusBox = CreateImage("BonusSummaryBox", leftCol.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
+            bonusBox.type = UnityEngine.UI.Image.Type.Sliced;
+            bonusBox.pixelsPerUnitMultiplier = 0.65f;
+            bonusBox.raycastTarget = false;
+            bonusBox.rectTransform.anchorMin = new Vector2(0f, 0f);
+            bonusBox.rectTransform.anchorMax = new Vector2(1f, 0f);
+            bonusBox.rectTransform.pivot = new Vector2(0.5f, 0f);
+            bonusBox.rectTransform.offsetMin = new Vector2(14f, 76f);
+            bonusBox.rectTransform.offsetMax = new Vector2(-14f, 152f);
+
+            TextMeshProUGUI bonusTMP = CreateTMP("TotalBonusText", bonusBox.transform, "Tổng cộng thêm: Chưa mặc trang bị nào",
+                a.fontBody, 13.5f, MedievalUITheme.SuccessGreen, TextAlignmentOptions.MidlineLeft);
+            bonusTMP.textWrappingMode = TextWrappingModes.Normal;
+            bonusTMP.rectTransform.anchorMin = Vector2.zero;
+            bonusTMP.rectTransform.anchorMax = Vector2.one;
+            bonusTMP.rectTransform.offsetMin = new Vector2(14f, 8f);
+            bonusTMP.rectTransform.offsetMax = new Vector2(-14f, -8f);
+
+            // Nút Tự Mặc Đồ Mạnh Nhất
+            UnityEngine.UI.Button autoEquipBtn = CreateStyledMenuButton("AutoEquipBestButton", leftCol.transform, a, a.iconCrown,
+                "TỰ MẶC ĐỒ MẠNH NHẤT (3 CLASS)", MedievalUITheme.BtnPrimaryGold, 50f, 15f);
+            RectTransform aeRt = autoEquipBtn.GetComponent<RectTransform>();
+            aeRt.anchorMin = new Vector2(0f, 0f);
+            aeRt.anchorMax = new Vector2(1f, 0f);
+            aeRt.pivot = new Vector2(0.5f, 0f);
+            aeRt.offsetMin = new Vector2(14f, 14f);
+            aeRt.offsetMax = new Vector2(-14f, 64f);
+
+            // --- CỘT PHẢI: BỘ LỌC + DANH SÁCH KHO TRANG BỊ ---
+            UnityEngine.UI.Image rightCol = CreateImage("RightInventoryColumn", card.transform, a.panelInset, MedievalUITheme.DeepInset);
+            rightCol.type = UnityEngine.UI.Image.Type.Sliced;
+            rightCol.pixelsPerUnitMultiplier = 0.65f;
+            RectTransform rRt = rightCol.rectTransform;
+            rRt.anchorMin = new Vector2(0.43f, 0f);
+            rRt.anchorMax = new Vector2(1f, 1f);
+            rRt.offsetMin = new Vector2(8f, 22f);
+            rRt.offsetMax = new Vector2(-22f, -68f);
+
+            TextMeshProUGUI invCountTMP = CreateTMP("InventoryCountTitle", rightCol.transform, "KHO TRANG BỊ (0 món)",
+                a.fontBold, 15.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+            invCountTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
+            invCountTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
+            invCountTMP.rectTransform.pivot = new Vector2(0.5f, 1f);
+            invCountTMP.rectTransform.offsetMin = new Vector2(16f, -42f);
+            invCountTMP.rectTransform.offsetMax = new Vector2(-16f, -12f);
+
+            // 4 Filter Buttons (Tất cả / Hiệp Sĩ / Pháp Sư / Cung Thủ)
+            GameObject filterRow = CreateRect("FilterTabsRow", rightCol.transform);
+            RectTransform frRt = filterRow.GetComponent<RectTransform>();
+            frRt.anchorMin = new Vector2(0f, 1f);
+            frRt.anchorMax = new Vector2(1f, 1f);
+            frRt.pivot = new Vector2(0.5f, 1f);
+            frRt.offsetMin = new Vector2(14f, -84f);
+            frRt.offsetMax = new Vector2(-14f, -48f);
+            HorizontalLayoutGroup frHlg = filterRow.AddComponent<HorizontalLayoutGroup>();
+            frHlg.spacing = 6f;
+            frHlg.childControlWidth = true;
+            frHlg.childControlHeight = true;
+            frHlg.childForceExpandWidth = true;
+            frHlg.childForceExpandHeight = true;
+
+            string[] filtLabels = { "Tất Cả", "Hiệp Sĩ", "Pháp Sư", "Cung Thủ" };
+            var filtBtns = new UnityEngine.UI.Button[4];
+            var filtBgs = new UnityEngine.UI.Image[4];
+            for (int i = 0; i < 4; i++)
+            {
+                UnityEngine.UI.Image bg = CreateImage($"FilterBtn_{i}", filterRow.transform, a.buttonFill,
+                    i == 0 ? MedievalUITheme.BtnPrimaryGold : MedievalUITheme.BtnNeutralSlate);
+                bg.type = UnityEngine.UI.Image.Type.Sliced;
+                bg.pixelsPerUnitMultiplier = 0.65f;
+                UnityEngine.UI.Button b = bg.gameObject.AddComponent<UnityEngine.UI.Button>();
+                b.targetGraphic = bg;
+                TextMeshProUGUI lbl = CreateTMP("Label", bg.transform, filtLabels[i], a.fontBold, 13f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+                StretchFull(lbl.rectTransform);
+                filtBtns[i] = b;
+                filtBgs[i] = bg;
+            }
+
+            // ScrollRect chứa danh sách món đồ
+            GameObject scrollGo = CreateRect("InventoryScrollView", rightCol.transform);
+            RectTransform scRt = scrollGo.GetComponent<RectTransform>();
+            scRt.anchorMin = Vector2.zero;
+            scRt.anchorMax = Vector2.one;
+            scRt.offsetMin = new Vector2(14f, 14f);
+            scRt.offsetMax = new Vector2(-14f, -94f);
+            UnityEngine.UI.Image scrollBg = scrollGo.AddComponent<UnityEngine.UI.Image>();
+            scrollBg.color = new Color(0.04f, 0.05f, 0.08f, 0.72f);
+            scrollGo.AddComponent<RectMask2D>();
+            ScrollRect scrollRect = scrollGo.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.scrollSensitivity = 28f;
+
+            GameObject contentGo = CreateRect("Content", scrollGo.transform);
+            RectTransform contentRt = contentGo.GetComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot = new Vector2(0.5f, 1f);
+            contentRt.anchoredPosition = Vector2.zero;
+            contentRt.sizeDelta = Vector2.zero;
+
+            VerticalLayoutGroup cVlg = contentGo.AddComponent<VerticalLayoutGroup>();
+            cVlg.padding = new RectOffset(8, 8, 8, 8);
+            cVlg.spacing = 8f;
+            cVlg.childControlWidth = true;
+            cVlg.childControlHeight = false;
+            cVlg.childForceExpandWidth = true;
+            cVlg.childForceExpandHeight = false;
+            ContentSizeFitter csf = contentGo.AddComponent<ContentSizeFitter>();
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scrollRect.content = contentRt;
+            scrollRect.viewport = scRt;
+
+            TextMeshProUGUI emptyHint = CreateTMP("EmptyHint", scrollGo.transform,
+                "Kho đồ đang trống!\nHãy tiến sâu vào bản đồ 6 đợt để săn trang bị\nThường • Hiếm • Sử Thi • Huyền Thoại cho cả 3 Class.",
+                a.fontBody, 15.5f, MedievalUITheme.SlateMuted, TextAlignmentOptions.Center);
+            emptyHint.textWrappingMode = TextWrappingModes.Normal;
+            StretchWithPadding(emptyHint.rectTransform, 32f);
+
+            EquipmentModalUI modal = scrim.gameObject.AddComponent<EquipmentModalUI>();
+            modal.Configure(
+                a.panelInset, a.buttonFill, a.buttonFrame, a.badgePill,
+                a.fontBold, a.fontBody,
+                a.iconSword, a.iconMagic, a.iconArrow, a.iconShield, a.iconCrown,
+                clsTabs, clsTabBgs, clsHeaderTMP, bonusTMP,
+                sBorders, sIcons, sNames, sStats, sUnequips,
+                filtBtns, filtBgs, invCountTMP, contentGo.transform, emptyHint.gameObject,
+                autoEquipBtn, closeBtn);
+            return modal;
         }
 
         private static void CreateStatusBar(
@@ -2020,7 +2456,7 @@ namespace MedievalRPG.EditorTools
             card.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            card.rectTransform.sizeDelta = new Vector2(660f, 470f);
+            card.rectTransform.sizeDelta = new Vector2(700f, 510f);
 
             UnityEngine.UI.Image emblem = CreateImage("EmblemIcon", card.transform, emblemIcon, Color.white);
             emblem.preserveAspect = true;
@@ -2051,7 +2487,10 @@ namespace MedievalRPG.EditorTools
             summaryBox.rectTransform.offsetMax = new Vector2(-36f, -152f);
 
             summaryTMP = CreateTMP("SummaryText", summaryBox.transform, "",
-                a.fontBody, 19f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                a.fontBody, 18f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+            summaryTMP.enableAutoSizing = true;
+            summaryTMP.fontSizeMin = 14f;
+            summaryTMP.fontSizeMax = 18f;
             summaryTMP.textWrappingMode = TextWrappingModes.Normal;
             StretchWithPadding(summaryTMP.rectTransform, 22f);
 

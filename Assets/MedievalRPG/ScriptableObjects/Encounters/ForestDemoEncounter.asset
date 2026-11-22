@@ -12,19 +12,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44e02b30ac1d3c218b5811532b1e80b7, type: 3}
   m_Name: ForestDemoEncounter
   m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EncounterData
-  encounterTitle: "R\u1EEBng S\u01B0\u01A1ng M\xF9 - Th\u1EED Th\xE1ch Tri Th\u1EE9c"
+  encounterTitle: "R\u1EEBng S\u01B0\u01A1ng M\xF9 - Chinh Ph\u1EE5c 6 \u0110\u1EE3t Qu\xE1i"
   waves:
-  - waveTitle: "\u0110\u1EE3t 1: To\xE1n Qu\xE2n Goblin"
+  - waveTitle: "\u0110\u1EE3t 1: Trinh S\xE1t R\u1EEBng S\xE2u"
+    waveSubtitle: "Qu\xE1i y\u1EBFu \u0111\u01A1n l\u1EBB \u2022 Kh\u1EDFi \u0111\u1ED9ng"
     isBossWave: 0
+    enemyStatMultiplier: 0.8
+    dropChanceBonus: 0
+    rarityLuckBonus: 0
+    enemyPrefabs:
+    - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
+  - waveTitle: "\u0110\u1EE3t 2: \u0110\xE0n Goblin Ph\u1EE5c K\xEDch"
+    waveSubtitle: "Th\xE0nh \u0111\xE0n 3 Goblin \u2022 \u01AFu ti\xEAn chi\xEAu di\u1EC7n r\u1ED9ng"
+    isBossWave: 0
+    enemyStatMultiplier: 0.9
+    dropChanceBonus: 0.02
+    rarityLuckBonus: 0.03
     enemyPrefabs:
     - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
     - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
-  - waveTitle: "\u0110\u1EE3t 2: V\u1EC7 Binh H\u1EA7m Ng\u1EE5c"
+    - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
+  - waveTitle: "\u0110\u1EE3t 3: V\u1EC7 Binh X\u01B0\u01A1ng Kh\xF4"
+    waveSubtitle: "Qu\xE1i m\u1EA1nh h\u01A1n \u2022 Gi\xE1p c\u1EE9ng"
     isBossWave: 0
+    enemyStatMultiplier: 1
+    dropChanceBonus: 0.05
+    rarityLuckBonus: 0.06
     enemyPrefabs:
     - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
     - {fileID: 1000000001, guid: d4827d0cad3567e5e15f0c8744eb72f3, type: 3}
-  - waveTitle: "\u0110\u1EE3t 3: Th\u1EE7 L\u0129nh B\xF3ng \u0110\xEAm"
+  - waveTitle: "\u0110\u1EE3t 4: Ti\u1EC3u \u0110\u1ED9i H\u1EA7m Ng\u1EE5c"
+    waveSubtitle: "\u0110\xE0n qu\xE1i h\u1EA1ng n\u1EB7ng (3 con)"
+    isBossWave: 0
+    enemyStatMultiplier: 1.08
+    dropChanceBonus: 0.08
+    rarityLuckBonus: 0.1
+    enemyPrefabs:
+    - {fileID: 1000000001, guid: d4827d0cad3567e5e15f0c8744eb72f3, type: 3}
+    - {fileID: 1000000001, guid: bcb5fa82f408ad2aea636436e608206a, type: 3}
+    - {fileID: 1000000001, guid: d4827d0cad3567e5e15f0c8744eb72f3, type: 3}
+  - waveTitle: "\u0110\u1EE3t 5: C\u1EADn V\u1EC7 Tinh Anh"
+    waveSubtitle: "Tinh Anh \xE1p s\xE1t Boss \u2022 R\u1EDBt \u0111\u1ED3 S\u1EED Thi cao"
+    isBossWave: 0
+    enemyStatMultiplier: 1.25
+    dropChanceBonus: 0.12
+    rarityLuckBonus: 0.16
+    enemyPrefabs:
+    - {fileID: 1000000001, guid: d4827d0cad3567e5e15f0c8744eb72f3, type: 3}
+    - {fileID: 1000000001, guid: d4827d0cad3567e5e15f0c8744eb72f3, type: 3}
+  - waveTitle: "\u0110\u1EE3t 6: Th\u1EE7 L\u0129nh B\xF3ng \u0110\xEAm"
+    waveSubtitle: "BOSS CU\u1ED0I MAP \u2022 Ch\u1EAFc ch\u1EAFn r\u1EDBt 2 trang b\u1ECB cao c\u1EA5p"
     isBossWave: 1
+    enemyStatMultiplier: 1.05
+    dropChanceBonus: 0
+    rarityLuckBonus: 0.15
     enemyPrefabs:
     - {fileID: 1000000001, guid: 4a59e0199554888f78b148ef92ef21c1, type: 3}

@@ -36,3 +36,6 @@ MonoBehaviour:
   unitDeath: {fileID: 8300000, guid: cdf1bcc5a27cec900b527d4f17e6d37b, type: 3}
   victoryFanfare: {fileID: 8300000, guid: 694a86b0e1e8521e2b26c1cc83c6b382, type: 3}
   defeatSting: {fileID: 8300000, guid: 2c91336425f4a9e12a512de48fe8dea6, type: 3}
+  lootDrop: {fileID: 8300000, guid: e07f4778f31ab4e0c84cd8922cdb668c, type: 3}
+  lootLegendary: {fileID: 8300000, guid: 74fea88e039eb9bbba1f77cfacbc2010, type: 3}
+  lootPickup: {fileID: 8300000, guid: a7ced4ebae04bfad7bc06499e48dd0e8, type: 3}

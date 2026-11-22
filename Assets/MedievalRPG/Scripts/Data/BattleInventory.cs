@@ -48,6 +48,13 @@ namespace MedievalRPG.Data
             return true;
         }
 
+        public void AddItem(ConsumableItemType item, int amount = 1)
+        {
+            if (amount <= 0) return;
+            _counts[item] = GetCount(item) + amount;
+            OnInventoryChanged?.Invoke();
+        }
+
         public static string GetDisplayName(ConsumableItemType item)
         {
             switch (item)
