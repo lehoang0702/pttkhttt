@@ -27,6 +27,11 @@ namespace MedievalRPG.UI
         [SerializeField] private TextMeshProUGUI[] optionTexts = new TextMeshProUGUI[4];
         [SerializeField] private UIButtonFeedback[] optionFeedbacks = new UIButtonFeedback[4];
 
+        [Header("Bộ đếm thời gian Quiz (V2)")]
+        [SerializeField] private GameObject questionTimerRoot;
+        [SerializeField] private Image questionTimerFill;
+        [SerializeField] private TextMeshProUGUI questionTimerText;
+
         [Header("Khung kết quả & giải thích")]
         [SerializeField] private GameObject feedbackContainer;
         [SerializeField] private Image feedbackBackground;
@@ -35,12 +40,26 @@ namespace MedievalRPG.UI
         [SerializeField] private Image feedbackTimerFill;
         [SerializeField] private Button continueButton;
 
+        private const float QuestionTimeLimit = 20f;
+        private const float QuickMindThreshold = 5f;
+
         private bool _isLocked;
         private float _feedbackDuration = 2.4f;
         private float _feedbackElapsed;
+        private float _questionElapsed;
+        private bool _timerEnabledForCurrentQuestion;
+        private bool _lastWasQuickMind;
         private bool _isShowingFeedback;
         private Action<int> _onAnswerSubmitted;
+        private Action<int, bool> _onAnswerSubmittedWithSpeed;
         private Action _onContinueClicked;
+
+        public void ConfigureTimerUI(GameObject timerRoot, Image timerFill, TextMeshProUGUI timerText)
+        {
+            questionTimerRoot = timerRoot;
+            questionTimerFill = timerFill;
+            questionTimerText = timerText;
+        }
 
         public void Configure(
             Image catBadge, TextMeshProUGUI catText, TextMeshProUGUI bonusText,
@@ -96,14 +115,35 @@ namespace MedievalRPG.UI
 
         public void ShowQuestion(QuizQuestion q, string actionContext, Action<int> onAnswerSubmitted, Action onContinueClicked)
         {
+            ShowQuestionInternal(q, actionContext, onAnswerSubmitted, null, onContinueClicked);
+        }
+
+        public void ShowQuestion(QuizQuestion q, string actionContext, Action<int, bool> onAnswerSubmittedWithSpeed, Action onContinueClicked)
+        {
+            ShowQuestionInternal(q, actionContext, null, onAnswerSubmittedWithSpeed, onContinueClicked);
+        }
+
+        private void ShowQuestionInternal(
+            QuizQuestion q,
+            string actionContext,
+            Action<int> onAnswerSubmitted,
+            Action<int, bool> onAnswerSubmittedWithSpeed,
+            Action onContinueClicked)
+        {
             _onAnswerSubmitted = onAnswerSubmitted;
+            _onAnswerSubmittedWithSpeed = onAnswerSubmittedWithSpeed;
             _onContinueClicked = onContinueClicked;
             _isLocked = false;
             _isShowingFeedback = false;
             _feedbackElapsed = 0f;
+            _questionElapsed = 0f;
+            _lastWasQuickMind = false;
+            _timerEnabledForCurrentQuestion = Data.PlayerCampProgressManager.EnsureLoaded().QuizTimerEnabled;
 
             gameObject.SetActive(true);
             if (feedbackContainer != null) feedbackContainer.SetActive(false);
+            if (questionTimerRoot != null) questionTimerRoot.SetActive(true);
+            RefreshQuestionTimerUI();
 
             if (q == null) return;
 
@@ -189,9 +229,18 @@ namespace MedievalRPG.UI
             }
             if (feedbackTitleText != null)
             {
-                feedbackTitleText.text = isCorrect
-                    ? $"CHÍNH XÁC!  +{bonusDamage} sát thương chiêu thức & +10 Vàng!"
-                    : "CHƯA ĐÚNG!  Anh hùng mất lượt hành động này.";
+                if (isCorrect)
+                {
+                    feedbackTitleText.text = _lastWasQuickMind
+                        ? $"PHẢN XẠ NHANH!  +{bonusDamage} ST, +15 Vàng & +15% Chí mạng!"
+                        : $"CHÍNH XÁC!  +{bonusDamage} sát thương chiêu thức & +10 Vàng!";
+                }
+                else
+                {
+                    feedbackTitleText.text = selectedIndex < 0
+                        ? "HẾT GIỜ!  Anh hùng mất lượt hành động này."
+                        : "CHƯA ĐÚNG!  Anh hùng mất lượt hành động này.";
+                }
                 feedbackTitleText.color = isCorrect ? MedievalUITheme.GoldSoft : new Color(1f, 0.68f, 0.68f, 1f);
             }
             if (feedbackExplanationText != null)
@@ -218,7 +267,59 @@ namespace MedievalRPG.UI
         {
             if (_isLocked) return;
             _isLocked = true;
+            _lastWasQuickMind = index >= 0 && _questionElapsed <= QuickMindThreshold;
+            _onAnswerSubmittedWithSpeed?.Invoke(index, _lastWasQuickMind);
             _onAnswerSubmitted?.Invoke(index);
+        }
+
+        private void RefreshQuestionTimerUI()
+        {
+            if (questionTimerFill == null && questionTimerText == null) return;
+
+            if (!_timerEnabledForCurrentQuestion)
+            {
+                if (questionTimerFill != null)
+                {
+                    questionTimerFill.fillAmount = 1f;
+                    questionTimerFill.color = new Color(0.28f, 0.56f, 0.78f, 1f);
+                }
+                if (questionTimerText != null)
+                {
+                    questionTimerText.text = _questionElapsed <= QuickMindThreshold
+                        ? $"NHANH! ({Mathf.CeilToInt(QuickMindThreshold - _questionElapsed)}s)"
+                        : "KHÔNG GIỚI HẠN";
+                }
+                return;
+            }
+
+            float remaining = Mathf.Max(0f, QuestionTimeLimit - _questionElapsed);
+            float ratio = Mathf.Clamp01(remaining / QuestionTimeLimit);
+            bool inQuickWindow = _questionElapsed <= QuickMindThreshold;
+
+            if (questionTimerFill != null)
+            {
+                questionTimerFill.fillAmount = ratio;
+                if (inQuickWindow)
+                {
+                    questionTimerFill.color = MedievalUITheme.GoldPrimary;
+                }
+                else if (remaining <= 5f)
+                {
+                    questionTimerFill.color = MedievalUITheme.DangerRed;
+                }
+                else
+                {
+                    questionTimerFill.color = MedievalUITheme.SuccessGreen;
+                }
+            }
+
+            if (questionTimerText != null)
+            {
+                int sec = Mathf.CeilToInt(remaining);
+                questionTimerText.text = inQuickWindow
+                    ? $"NHANH! {sec}s"
+                    : $"THỜI GIAN: {sec}s";
+            }
         }
 
         private void Update()
@@ -248,6 +349,15 @@ namespace MedievalRPG.UI
 
             if (!_isLocked)
             {
+                _questionElapsed += Time.unscaledDeltaTime;
+                RefreshQuestionTimerUI();
+
+                if (_timerEnabledForCurrentQuestion && _questionElapsed >= QuestionTimeLimit)
+                {
+                    SubmitOption(-1);
+                    return;
+                }
+
                 Keyboard kb = Keyboard.current;
                 if (kb == null) return;
 

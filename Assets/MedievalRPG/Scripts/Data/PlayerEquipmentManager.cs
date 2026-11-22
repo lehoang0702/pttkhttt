@@ -12,6 +12,7 @@ namespace MedievalRPG.Data
         public string itemId;
         public int obtainedWave;
         public bool isNew;
+        public int upgradeLevel;
     }
 
     [Serializable]
@@ -305,7 +306,7 @@ namespace MedievalRPG.Data
                         EquipmentItemData data = ResolveData(cand);
                         if (data == null || data.requiredClass != cls || data.slot != slot) continue;
 
-                        int score = data.GetPowerScore();
+                        int score = data.GetPowerScore(cand.upgradeLevel);
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -340,10 +341,156 @@ namespace MedievalRPG.Data
             EquipmentStatBonus total = new EquipmentStatBonus();
             foreach (EquipmentSlot slot in (EquipmentSlot[])Enum.GetValues(typeof(EquipmentSlot)))
             {
-                EquipmentItemData item = GetEquippedItemData(cls, slot);
-                if (item != null) total.Add(item);
+                OwnedEquipmentInstance inst = GetEquippedInstance(cls, slot);
+                EquipmentItemData item = ResolveData(inst);
+                if (item != null) total.Add(item.GetScaledStats(inst.upgradeLevel));
             }
             return total;
+        }
+
+        public bool SellItem(string instanceId, out int goldEarned)
+        {
+            goldEarned = 0;
+            LoadIfNeeded();
+            OwnedEquipmentInstance inst = FindOwnedByInstanceId(instanceId);
+            EquipmentItemData data = ResolveData(inst);
+            if (inst == null || data == null) return false;
+
+            goldEarned = data.GetSellGoldValue(inst.upgradeLevel);
+            if (IsEquipped(instanceId))
+            {
+                _equippedMap.Remove((data.requiredClass, data.slot));
+            }
+            _ownedItems.Remove(inst);
+            SaveToDisk();
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public int SellAllUnequippedByMaxRarity(ItemRarity maxRarity, out int totalGoldEarned)
+        {
+            totalGoldEarned = 0;
+            LoadIfNeeded();
+            int soldCount = 0;
+
+            for (int i = _ownedItems.Count - 1; i >= 0; i--)
+            {
+                OwnedEquipmentInstance inst = _ownedItems[i];
+                if (IsEquipped(inst.instanceId) || inst.upgradeLevel > 0) continue;
+                EquipmentItemData data = ResolveData(inst);
+                if (data == null || data.rarity > maxRarity) continue;
+
+                totalGoldEarned += data.GetSellGoldValue(inst.upgradeLevel);
+                _ownedItems.RemoveAt(i);
+                soldCount++;
+            }
+
+            if (soldCount > 0)
+            {
+                SaveToDisk();
+                OnEquipmentChanged?.Invoke();
+            }
+            return soldCount;
+        }
+
+        public bool TryUpgradeItem(string instanceId, int availableGold, out int goldSpent)
+        {
+            goldSpent = 0;
+            LoadIfNeeded();
+            OwnedEquipmentInstance inst = FindOwnedByInstanceId(instanceId);
+            EquipmentItemData data = ResolveData(inst);
+            if (inst == null || data == null || inst.upgradeLevel >= EquipmentItemData.MaxUpgradeLevel)
+            {
+                return false;
+            }
+
+            int cost = data.GetUpgradeCost(inst.upgradeLevel);
+            if (availableGold < cost) return false;
+
+            goldSpent = cost;
+            inst.upgradeLevel++;
+            inst.isNew = false;
+            SaveToDisk();
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public int CountUnequippedByRarity(ItemRarity rarity)
+        {
+            LoadIfNeeded();
+            int count = 0;
+            for (int i = 0; i < _ownedItems.Count; i++)
+            {
+                OwnedEquipmentInstance inst = _ownedItems[i];
+                if (IsEquipped(inst.instanceId)) continue;
+                EquipmentItemData data = ResolveData(inst);
+                if (data != null && data.rarity == rarity) count++;
+            }
+            return count;
+        }
+
+        public bool TryForgeThreeIntoNextRarity(ItemRarity sourceRarity, out EquipmentItemData forgedItem, out OwnedEquipmentInstance createdInst)
+        {
+            forgedItem = null;
+            createdInst = null;
+            LoadIfNeeded();
+            if (sourceRarity >= ItemRarity.Legendary) return false;
+
+            List<OwnedEquipmentInstance> candidates = new List<OwnedEquipmentInstance>();
+            for (int i = 0; i < _ownedItems.Count; i++)
+            {
+                OwnedEquipmentInstance inst = _ownedItems[i];
+                if (IsEquipped(inst.instanceId)) continue;
+                EquipmentItemData data = ResolveData(inst);
+                if (data != null && data.rarity == sourceRarity)
+                {
+                    candidates.Add(inst);
+                }
+            }
+            if (candidates.Count < 3) return false;
+
+            // Ưu tiên ghép các món chưa cường hóa trước
+            candidates.Sort((a, b) => a.upgradeLevel.CompareTo(b.upgradeLevel));
+
+            ItemRarity nextRarity = sourceRarity + 1;
+            List<EquipmentItemData> pool = new List<EquipmentItemData>();
+            foreach (EquipmentItemData item in Catalog.allItems)
+            {
+                if (item != null && item.rarity == nextRarity) pool.Add(item);
+            }
+            if (pool.Count == 0) return false;
+
+            for (int i = 0; i < 3; i++)
+            {
+                _ownedItems.Remove(candidates[i]);
+            }
+
+            forgedItem = pool[UnityEngine.Random.Range(0, pool.Count)];
+            createdInst = new OwnedEquipmentInstance
+            {
+                instanceId = Guid.NewGuid().ToString("N"),
+                itemId = forgedItem.itemId,
+                obtainedWave = 1,
+                isNew = true,
+                upgradeLevel = 0
+            };
+            _ownedItems.Add(createdInst);
+            SaveToDisk();
+            OnEquipmentChanged?.Invoke();
+            return true;
+        }
+
+        public void ClearAllForReset()
+        {
+            _ownedItems.Clear();
+            _equippedMap.Clear();
+            _isLoaded = true;
+            if (!_disableDiskPersistence)
+            {
+                string path = GetSavePath();
+                if (File.Exists(path)) File.Delete(path);
+            }
+            OnEquipmentChanged?.Invoke();
         }
 
         public List<OwnedEquipmentInstance> GetOwnedItemsSorted(CharacterClassType? classFilter = null)
@@ -370,7 +517,7 @@ namespace MedievalRPG.Data
                 int rCmp = ((int)dB.rarity).CompareTo((int)dA.rarity);
                 if (rCmp != 0) return rCmp;
 
-                int pCmp = dB.GetPowerScore().CompareTo(dA.GetPowerScore());
+                int pCmp = dB.GetPowerScore(b.upgradeLevel).CompareTo(dA.GetPowerScore(a.upgradeLevel));
                 if (pCmp != 0) return pCmp;
 
                 return string.CompareOrdinal(dA.itemName, dB.itemName);

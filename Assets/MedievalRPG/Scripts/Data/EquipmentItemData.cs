@@ -31,34 +31,76 @@ namespace MedievalRPG.Data
         [Range(0f, 0.5f)]
         public float bonusCritRate;
 
+        public const int MaxUpgradeLevel = 5;
+
         /// <summary>Điểm sức mạnh ước lượng dùng để sắp xếp và tự động mặc đồ mạnh nhất.</summary>
-        public int GetPowerScore()
+        public int GetPowerScore() => GetPowerScore(0);
+
+        public int GetPowerScore(int upgradeLevel)
         {
+            EquipmentStatBonus s = GetScaledStats(upgradeLevel);
             int rarityWeight = ((int)rarity + 1) * 100;
             int statsScore =
-                bonusMaxHP
-                + bonusMaxMP * 2
-                + bonusPhysicalAttack * 4
-                + bonusMagicAttack * 4
-                + bonusPhysicalDefense * 3
-                + bonusMagicDefense * 3
-                + bonusSpeed * 5
-                + Mathf.RoundToInt(bonusCritRate * 300f);
+                s.maxHP
+                + s.maxMP * 2
+                + s.physicalAttack * 4
+                + s.magicAttack * 4
+                + s.physicalDefense * 3
+                + s.magicDefense * 3
+                + s.speed * 5
+                + Mathf.RoundToInt(s.critRate * 300f);
             return rarityWeight + statsScore;
         }
 
-        public string GetStatsSummary()
+        public EquipmentStatBonus GetScaledStats(int upgradeLevel)
         {
-            List<string> parts = new List<string>(6);
-            if (bonusPhysicalAttack > 0) parts.Add($"+{bonusPhysicalAttack} ATK");
-            if (bonusMagicAttack > 0) parts.Add($"+{bonusMagicAttack} MAG");
-            if (bonusMaxHP > 0) parts.Add($"+{bonusMaxHP} HP");
-            if (bonusMaxMP > 0) parts.Add($"+{bonusMaxMP} MP");
-            if (bonusPhysicalDefense > 0) parts.Add($"+{bonusPhysicalDefense} DEF");
-            if (bonusMagicDefense > 0) parts.Add($"+{bonusMagicDefense} MDEF");
-            if (bonusSpeed > 0) parts.Add($"+{bonusSpeed} SPD");
-            if (bonusCritRate > 0.001f) parts.Add($"+{Mathf.RoundToInt(bonusCritRate * 100f)}% CRIT");
-            return parts.Count > 0 ? string.Join("  ", parts) : "Không cộng chỉ số";
+            int lv = Mathf.Clamp(upgradeLevel, 0, MaxUpgradeLevel);
+            float mult = 1f + lv * 0.15f;
+
+            int ScaleStat(int baseVal)
+            {
+                if (baseVal <= 0) return 0;
+                if (lv == 0) return baseVal;
+                return Mathf.Max(baseVal + lv, Mathf.RoundToInt(baseVal * mult));
+            }
+
+            return new EquipmentStatBonus
+            {
+                maxHP = ScaleStat(bonusMaxHP),
+                maxMP = ScaleStat(bonusMaxMP),
+                physicalAttack = ScaleStat(bonusPhysicalAttack),
+                magicAttack = ScaleStat(bonusMagicAttack),
+                physicalDefense = ScaleStat(bonusPhysicalDefense),
+                magicDefense = ScaleStat(bonusMagicDefense),
+                speed = lv == 0 ? bonusSpeed : (bonusSpeed > 0 ? bonusSpeed + Mathf.Max(1, lv / 2) : 0),
+                critRate = bonusCritRate + (bonusCritRate > 0.001f ? lv * 0.01f : 0f)
+            };
+        }
+
+        public int GetSellGoldValue(int upgradeLevel)
+        {
+            int basePrice = rarity switch
+            {
+                ItemRarity.Common => 20,
+                ItemRarity.Rare => 45,
+                ItemRarity.Epic => 95,
+                ItemRarity.Legendary => 200,
+                _ => 20
+            };
+            return basePrice + Mathf.Clamp(upgradeLevel, 0, MaxUpgradeLevel) * 25;
+        }
+
+        public int GetUpgradeCost(int currentUpgradeLevel)
+        {
+            if (currentUpgradeLevel >= MaxUpgradeLevel) return 0;
+            return (int)rarity * 25 + (currentUpgradeLevel + 1) * 35;
+        }
+
+        public string GetStatsSummary() => GetStatsSummary(0);
+
+        public string GetStatsSummary(int upgradeLevel)
+        {
+            return GetScaledStats(upgradeLevel).FormatCompact();
         }
 
         public static string GetRarityDisplayName(ItemRarity rarity)
@@ -154,6 +196,45 @@ namespace MedievalRPG.Data
             magicDefense += other.magicDefense;
             speed += other.speed;
             critRate += other.critRate;
+        }
+
+        public string FormatCompact()
+        {
+            List<string> parts = new List<string>(6);
+            if (physicalAttack > 0) parts.Add($"+{physicalAttack} ATK");
+            if (magicAttack > 0) parts.Add($"+{magicAttack} MAG");
+            if (maxHP > 0) parts.Add($"+{maxHP} HP");
+            if (maxMP > 0) parts.Add($"+{maxMP} MP");
+            if (physicalDefense > 0) parts.Add($"+{physicalDefense} DEF");
+            if (magicDefense > 0) parts.Add($"+{magicDefense} MDEF");
+            if (speed > 0) parts.Add($"+{speed} SPD");
+            if (critRate > 0.001f) parts.Add($"+{Mathf.RoundToInt(critRate * 100f)}% CRIT");
+            return parts.Count > 0 ? string.Join("  ", parts) : "Không cộng chỉ số";
+        }
+
+        public string FormatDiffAgainst(EquipmentStatBonus currentEquipped)
+        {
+            List<string> parts = new List<string>(8);
+            void AppendDelta(int delta, string label)
+            {
+                if (delta == 0) return;
+                string col = delta > 0 ? "#5CE09A" : "#FF6B6B";
+                string sign = delta > 0 ? "+" : "";
+                parts.Add($"<color={col}>{sign}{delta} {label}</color>");
+            }
+
+            AppendDelta(maxHP - currentEquipped.maxHP, "HP");
+            AppendDelta(maxMP - currentEquipped.maxMP, "MP");
+            AppendDelta(physicalAttack - currentEquipped.physicalAttack, "ATK");
+            AppendDelta(magicAttack - currentEquipped.magicAttack, "MAG");
+            AppendDelta(physicalDefense - currentEquipped.physicalDefense, "DEF");
+            AppendDelta(magicDefense - currentEquipped.magicDefense, "MDEF");
+            AppendDelta(speed - currentEquipped.speed, "SPD");
+
+            int critDelta = Mathf.RoundToInt((critRate - currentEquipped.critRate) * 100f);
+            AppendDelta(critDelta, "% CRIT");
+
+            return parts.Count > 0 ? string.Join("  ", parts) : "<color=#A8B3C5>Chỉ số tương đương món đang mặc</color>";
         }
 
         public string FormatSummary()

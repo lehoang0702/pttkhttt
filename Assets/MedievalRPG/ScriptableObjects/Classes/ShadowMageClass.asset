@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42610554debfc54de55ea110ef79e23b, type: 3}
+  m_Name: ShadowMageClass
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.CharacterClassData
+  classType: 1
+  className: "Ph\xE1p S\u01B0 H\u1EAFc \xC1m"
+  baseLevel: 3
+  isBoss: 0
+  loreDescription: A stalwart protector clad in iron plate armor.
+  maxHealth: 112
+  maxMana: 75
+  physicalAttack: 8
+  magicAttack: 24
+  physicalDefense: 7
+  magicDefense: 22
+  speed: 14
+  critRate: 0.08
+  critMultiplier: 1.5
+  idleSprite: {fileID: 0}
+  idleSpriteAlt: {fileID: 0}
+  actionSprite: {fileID: 0}
+  hitSprite: {fileID: 0}
+  skills:
+  - {fileID: 11400000, guid: 839f331a3bb19d5329084d6ccbf4b1d5, type: 2}
+  - {fileID: 11400000, guid: d9bdef89c6c01d1d58efd1c938041a9e, type: 2}

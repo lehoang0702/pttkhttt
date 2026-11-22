@@ -219,7 +219,7 @@ namespace MedievalRPG.Tests.EditMode
                 QuizManager qm = go.AddComponent<QuizManager>();
                 qm.LoadDefaultQuestions();
 
-                Assert.AreEqual(30, qm.questionBank.Count, "Phải có đúng 30 câu hỏi tiếng Anh (15 B1 + 15 B2)");
+                Assert.AreEqual(120, qm.questionBank.Count, "Phải nạp đủ 120 câu hỏi tiếng Anh (60 B1 + 60 B2) từ english_b1_b2.json");
 
                 int b1Count = 0;
                 int b2Count = 0;
@@ -247,8 +247,8 @@ namespace MedievalRPG.Tests.EditMode
                     Assert.IsFalse(string.IsNullOrWhiteSpace(q.explanation), $"Câu {i} thiếu giải thích");
                 }
 
-                Assert.AreEqual(15, b1Count, "Phải có 15 câu trình độ B1");
-                Assert.AreEqual(15, b2Count, "Phải có 15 câu trình độ B2");
+                Assert.AreEqual(60, b1Count, "Phải có 60 câu trình độ B1");
+                Assert.AreEqual(60, b2Count, "Phải có 60 câu trình độ B2");
             }
             finally
             {
@@ -308,6 +308,139 @@ namespace MedievalRPG.Tests.EditMode
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(BattleInventory.GetDisplayName(t)));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(BattleInventory.GetEffectDescription(t)));
+            }
+        }
+
+        [Test]
+        public void Equipment_UpgradeSellBulkSellAndForge3To1WorkCorrectly()
+        {
+            EquipmentCatalog catalog = EquipmentCatalog.CreateRuntimeFallbackCatalog();
+            PlayerEquipmentManager eqMgr = new PlayerEquipmentManager();
+            try
+            {
+                eqMgr.InitializeForTests(catalog);
+                EquipmentItemData commonSword = catalog.allItems.Find(
+                    i => i.requiredClass == CharacterClassType.Knight && i.slot == EquipmentSlot.Weapon && i.rarity == ItemRarity.Common);
+                Assert.IsNotNull(commonSword);
+
+                OwnedEquipmentInstance inst1 = eqMgr.AddItem(commonSword, 1);
+                Assert.AreEqual(0, inst1.upgradeLevel);
+                int baseScore = commonSword.GetPowerScore(0);
+
+                // Cường hóa +0 -> +1 -> +5
+                int cost0 = commonSword.GetUpgradeCost(0);
+                Assert.IsTrue(eqMgr.TryUpgradeItem(inst1.instanceId, cost0, out int spent0));
+                Assert.AreEqual(cost0, spent0);
+                Assert.AreEqual(1, inst1.upgradeLevel);
+                Assert.Greater(commonSword.GetPowerScore(1), baseScore);
+
+                Assert.IsTrue(eqMgr.Equip(inst1.instanceId));
+                int atkPlus1 = eqMgr.GetTotalBonusesForClass(CharacterClassType.Knight).physicalAttack;
+                Assert.GreaterOrEqual(atkPlus1, commonSword.bonusPhysicalAttack);
+
+                for (int lv = 1; lv < EquipmentItemData.MaxUpgradeLevel; lv++)
+                {
+                    Assert.IsTrue(eqMgr.TryUpgradeItem(inst1.instanceId, 99999, out _));
+                }
+                Assert.AreEqual(EquipmentItemData.MaxUpgradeLevel, inst1.upgradeLevel);
+                Assert.IsFalse(eqMgr.TryUpgradeItem(inst1.instanceId, 99999, out _), "Không vượt quá +5");
+
+                int expectedSell = commonSword.GetSellGoldValue(EquipmentItemData.MaxUpgradeLevel);
+                Assert.IsTrue(eqMgr.SellItem(inst1.instanceId, out int goldEarned));
+                Assert.AreEqual(expectedSell, goldEarned);
+                Assert.AreEqual(0, eqMgr.OwnedCount);
+
+                // Bán nhanh đồ Thường rảnh +0
+                eqMgr.AddItem(commonSword, 1);
+                eqMgr.AddItem(commonSword, 1);
+                int soldCount = eqMgr.SellAllUnequippedByMaxRarity(ItemRarity.Common, out int bulkGold);
+                Assert.AreEqual(2, soldCount);
+                Assert.Greater(bulkGold, 0);
+                Assert.AreEqual(0, eqMgr.OwnedCount);
+
+                // Ghép 3 đồ Thường -> 1 đồ Hiếm
+                eqMgr.AddItem(commonSword, 1);
+                eqMgr.AddItem(commonSword, 1);
+                eqMgr.AddItem(commonSword, 1);
+                Assert.AreEqual(3, eqMgr.CountUnequippedByRarity(ItemRarity.Common));
+                Assert.IsTrue(eqMgr.TryForgeThreeIntoNextRarity(ItemRarity.Common, out EquipmentItemData forgedData, out OwnedEquipmentInstance forgedInst));
+                Assert.IsNotNull(forgedData);
+                Assert.IsNotNull(forgedInst);
+                Assert.AreEqual(ItemRarity.Rare, forgedData.rarity);
+                Assert.AreEqual(1, eqMgr.OwnedCount);
+            }
+            finally
+            {
+                foreach (EquipmentItemData item in catalog.allItems)
+                {
+                    if (item != null) UnityEngine.Object.DestroyImmediate(item);
+                }
+                UnityEngine.Object.DestroyImmediate(catalog);
+            }
+        }
+
+        [Test]
+        public void PlayerCampProgress_HeroLevelStageUnlockMistakeReviewAndAchievementsWork()
+        {
+            PlayerCampProgressManager camp = new PlayerCampProgressManager();
+            camp.InitializeForTests(200);
+
+            int lv1Hp = camp.GetLevelBonusForClass(CharacterClassType.Knight).maxHP;
+            int needExp = PlayerCampProgressManager.GetExpRequiredForNextLevel(1);
+            camp.AwardPartyExp(needExp + 5, out List<CharacterClassType> ups);
+            Assert.AreEqual(3, ups.Count, "Cả 3 anh hùng đều phải lên Lv.2");
+            Assert.AreEqual(2, camp.GetHeroProgress(CharacterClassType.Knight).level);
+            Assert.Greater(camp.GetLevelBonusForClass(CharacterClassType.Knight).maxHP, lv1Hp);
+
+            Assert.IsFalse(camp.GetStageProgress(CampaignStageId.CryptChapter2).unlocked);
+            camp.RecordStageResult(CampaignStageId.ForestChapter1, true, 6, 3, out int firstGold, out bool unlockedNext);
+            Assert.Greater(firstGold, 0);
+            Assert.IsTrue(unlockedNext);
+            Assert.IsTrue(camp.GetStageProgress(CampaignStageId.CryptChapter2).unlocked);
+            Assert.AreEqual(3, camp.GetStageProgress(CampaignStageId.ForestChapter1).bestStars);
+            Assert.IsTrue(camp.IsAchievementUnlocked(AchievementId.FirstChapterClear));
+
+            int goldBefore = camp.Gold;
+            Assert.IsTrue(camp.TryClaimAchievement(AchievementId.FirstChapterClear, out int achGold));
+            Assert.AreEqual(80, achGold);
+            Assert.AreEqual(goldBefore + 80, camp.Gold);
+            Assert.IsFalse(camp.TryClaimAchievement(AchievementId.FirstChapterClear, out _), "Không được nhận trùng thành tựu");
+
+            camp.RecordQuizMistake("Q1");
+            camp.RecordQuizMistake("Q2");
+            camp.RecordQuizMistake("Q3");
+            Assert.AreEqual(3, camp.MistakeCount);
+            Assert.IsTrue(camp.ResolveQuizMistake("Q1"));
+            Assert.IsTrue(camp.ResolveQuizMistake("Q2"));
+            Assert.IsTrue(camp.ResolveQuizMistake("Q3"));
+            Assert.AreEqual(0, camp.MistakeCount);
+            Assert.AreEqual(3, camp.MistakesReviewedCount);
+            Assert.IsTrue(camp.IsAchievementUnlocked(AchievementId.MistakeReviewer));
+        }
+
+        [Test]
+        public void QuizManager_DifficultyFilterOnlyB1AndOnlyB2Work()
+        {
+            GameObject go = new GameObject("QuizFilterTest");
+            try
+            {
+                QuizManager qm = go.AddComponent<QuizManager>();
+                qm.LoadDefaultQuestions();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    QuizQuestion b1 = qm.GetRandomQuestion(QuizDifficultyFilter.OnlyB1);
+                    Assert.IsNotNull(b1);
+                    Assert.IsTrue(b1.category.StartsWith("B1", StringComparison.OrdinalIgnoreCase), $"Phải lọc đúng B1 nhưng ra {b1.category}");
+
+                    QuizQuestion b2 = qm.GetRandomQuestion(QuizDifficultyFilter.OnlyB2);
+                    Assert.IsNotNull(b2);
+                    Assert.IsTrue(b2.category.StartsWith("B2", StringComparison.OrdinalIgnoreCase), $"Phải lọc đúng B2 nhưng ra {b2.category}");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
             }
         }
     }

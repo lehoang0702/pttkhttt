@@ -52,11 +52,60 @@ namespace MedievalRPG.UI
         [SerializeField] private Button autoEquipAllButton;
         [SerializeField] private Button closeButton;
 
+        [Header("V2: Chi Tiết, Cường Hóa, Bán & Rèn Đồ")]
+        [SerializeField] private GameObject detailPanelRoot;
+        [SerializeField] private TextMeshProUGUI detailTitleTMP;
+        [SerializeField] private TextMeshProUGUI detailStatsTMP;
+        [SerializeField] private TextMeshProUGUI detailDiffTMP;
+        [SerializeField] private Button detailEquipButton;
+        [SerializeField] private TextMeshProUGUI detailEquipLabelTMP;
+        [SerializeField] private Button detailUpgradeButton;
+        [SerializeField] private TextMeshProUGUI detailUpgradeLabelTMP;
+        [SerializeField] private Button detailSellButton;
+        [SerializeField] private TextMeshProUGUI detailSellLabelTMP;
+        [SerializeField] private Button bulkSellCommonButton;
+        [SerializeField] private TextMeshProUGUI bulkSellCommonLabelTMP;
+        [SerializeField] private Button forgeThreeButton;
+        [SerializeField] private TextMeshProUGUI forgeThreeLabelTMP;
+        [SerializeField] private TextMeshProUGUI goldBalanceTMP;
+
         private CharacterClassType _selectedClass = CharacterClassType.Knight;
         private CharacterClassType? _inventoryFilter = null;
+        private string _selectedInstanceId;
         private Action _onCloseRequested;
 
         public bool IsOpen => gameObject.activeSelf;
+
+        public void ConfigureUpgradeAndForgeUI(
+            GameObject detailRoot,
+            TextMeshProUGUI detailTitle,
+            TextMeshProUGUI detailStats,
+            TextMeshProUGUI detailDiff,
+            Button detailEquipBtn, TextMeshProUGUI detailEquipLbl,
+            Button detailUpgradeBtn, TextMeshProUGUI detailUpgradeLbl,
+            Button detailSellBtn, TextMeshProUGUI detailSellLbl,
+            Button bulkSellBtn, TextMeshProUGUI bulkSellLbl,
+            Button forgeBtn, TextMeshProUGUI forgeLbl,
+            TextMeshProUGUI goldBalTMP)
+        {
+            detailPanelRoot = detailRoot;
+            detailTitleTMP = detailTitle;
+            detailStatsTMP = detailStats;
+            detailDiffTMP = detailDiff;
+            detailEquipButton = detailEquipBtn;
+            detailEquipLabelTMP = detailEquipLbl;
+            detailUpgradeButton = detailUpgradeBtn;
+            detailUpgradeLabelTMP = detailUpgradeLbl;
+            detailSellButton = detailSellBtn;
+            detailSellLabelTMP = detailSellLbl;
+            bulkSellCommonButton = bulkSellBtn;
+            bulkSellCommonLabelTMP = bulkSellLbl;
+            forgeThreeButton = forgeBtn;
+            forgeThreeLabelTMP = forgeLbl;
+            goldBalanceTMP = goldBalTMP;
+
+            WireV2Controls();
+        }
 
         public void Configure(
             Sprite panelInset, Sprite btnFill, Sprite btnFrame, Sprite badgePill,
@@ -110,11 +159,13 @@ namespace MedievalRPG.UI
         private void OnEnable()
         {
             PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += RefreshAll;
+            PlayerCampProgressManager.EnsureLoaded().OnCampProgressChanged += RefreshDetailAndToolbar;
         }
 
         private void OnDisable()
         {
             PlayerEquipmentManager.Instance.OnEquipmentChanged -= RefreshAll;
+            PlayerCampProgressManager.Instance.OnCampProgressChanged -= RefreshDetailAndToolbar;
         }
 
         private void WireControls()
@@ -164,8 +215,7 @@ namespace MedievalRPG.UI
                     {
                         _inventoryFilter = idx == 0 ? (CharacterClassType?)null : (CharacterClassType)(idx - 1);
                         AudioManager.Instance?.PlayButtonClick();
-                        RefreshInventoryList();
-                        RefreshFilterVisuals();
+                        RefreshAll();
                     });
                 }
             }
@@ -190,6 +240,41 @@ namespace MedievalRPG.UI
                     AudioManager.Instance?.PlayButtonClick();
                     Hide();
                 });
+            }
+
+            WireV2Controls();
+        }
+
+        private void WireV2Controls()
+        {
+            if (detailEquipButton != null)
+            {
+                detailEquipButton.onClick.RemoveAllListeners();
+                detailEquipButton.onClick.AddListener(HandleDetailEquipToggle);
+            }
+
+            if (detailUpgradeButton != null)
+            {
+                detailUpgradeButton.onClick.RemoveAllListeners();
+                detailUpgradeButton.onClick.AddListener(HandleDetailUpgrade);
+            }
+
+            if (detailSellButton != null)
+            {
+                detailSellButton.onClick.RemoveAllListeners();
+                detailSellButton.onClick.AddListener(HandleDetailSell);
+            }
+
+            if (bulkSellCommonButton != null)
+            {
+                bulkSellCommonButton.onClick.RemoveAllListeners();
+                bulkSellCommonButton.onClick.AddListener(HandleBulkSellCommon);
+            }
+
+            if (forgeThreeButton != null)
+            {
+                forgeThreeButton.onClick.RemoveAllListeners();
+                forgeThreeButton.onClick.AddListener(HandleForgeThree);
             }
         }
 
@@ -218,6 +303,7 @@ namespace MedievalRPG.UI
             RefreshEquippedSlots();
             RefreshFilterVisuals();
             RefreshInventoryList();
+            RefreshDetailAndToolbar();
         }
 
         private void RefreshClassTabs()
@@ -250,7 +336,9 @@ namespace MedievalRPG.UI
             for (int i = 0; i < 3; i++)
             {
                 EquipmentSlot slot = (EquipmentSlot)i;
-                EquipmentItemData equipped = mgr.GetEquippedItemData(_selectedClass, slot);
+                OwnedEquipmentInstance eqInst = mgr.GetEquippedInstance(_selectedClass, slot);
+                EquipmentItemData equipped = mgr.ResolveData(eqInst);
+                int upLv = eqInst != null ? eqInst.upgradeLevel : 0;
 
                 if (slotBorders != null && i < slotBorders.Length && slotBorders[i] != null)
                 {
@@ -270,7 +358,8 @@ namespace MedievalRPG.UI
                     if (equipped != null)
                     {
                         string rTag = EquipmentItemData.GetRarityDisplayName(equipped.rarity);
-                        slotItemNames[i].text = $"{EquipmentItemData.GetSlotDisplayName(slot)}: [{rTag}] {equipped.itemName}";
+                        string upTag = upLv > 0 ? $" +{upLv}" : "";
+                        slotItemNames[i].text = $"{EquipmentItemData.GetSlotDisplayName(slot)}: [{rTag}] {equipped.itemName}{upTag}";
                         slotItemNames[i].color = EquipmentItemData.GetRarityColor(equipped.rarity);
                     }
                     else
@@ -282,7 +371,7 @@ namespace MedievalRPG.UI
 
                 if (slotItemStats != null && i < slotItemStats.Length && slotItemStats[i] != null)
                 {
-                    slotItemStats[i].text = equipped != null ? equipped.GetStatsSummary() : "Nhặt đồ trên bản đồ để trang bị";
+                    slotItemStats[i].text = equipped != null ? equipped.GetStatsSummary(upLv) : "Nhặt đồ trên bản đồ để trang bị";
                 }
 
                 if (slotUnequipButtons != null && i < slotUnequipButtons.Length && slotUnequipButtons[i] != null)
@@ -326,6 +415,11 @@ namespace MedievalRPG.UI
                 emptyHintObject.SetActive(items.Count == 0);
             }
 
+            if (string.IsNullOrEmpty(_selectedInstanceId) || mgr.FindOwnedByInstanceId(_selectedInstanceId) == null)
+            {
+                _selectedInstanceId = items.Count > 0 ? items[0].instanceId : null;
+            }
+
             for (int i = 0; i < items.Count; i++)
             {
                 OwnedEquipmentInstance inst = items[i];
@@ -338,6 +432,7 @@ namespace MedievalRPG.UI
         private void BuildInventoryRowCard(OwnedEquipmentInstance inst, EquipmentItemData data, bool isEquipped)
         {
             Color rarityColor = EquipmentItemData.GetRarityColor(data.rarity);
+            bool isSelected = inst.instanceId == _selectedInstanceId;
 
             GameObject rowGo = new GameObject($"EquipRow_{data.itemId}");
             rowGo.transform.SetParent(inventoryListContent, false);
@@ -346,9 +441,23 @@ namespace MedievalRPG.UI
             rowBg.sprite = panelInsetSprite;
             rowBg.type = panelInsetSprite != null ? Image.Type.Sliced : Image.Type.Simple;
             rowBg.pixelsPerUnitMultiplier = 0.65f;
-            rowBg.color = isEquipped
-                ? new Color(0.11f, 0.22f, 0.19f, 0.96f)
-                : new Color(0.08f, 0.10f, 0.14f, 0.96f);
+            rowBg.color = isSelected
+                ? new Color(0.18f, 0.23f, 0.34f, 0.98f)
+                : (isEquipped
+                    ? new Color(0.11f, 0.22f, 0.19f, 0.96f)
+                    : new Color(0.08f, 0.10f, 0.14f, 0.96f));
+
+            Button rowSelectBtn = rowGo.AddComponent<Button>();
+            rowSelectBtn.targetGraphic = rowBg;
+            string selectedCapture = inst.instanceId;
+            CharacterClassType selectClassCapture = data.requiredClass;
+            rowSelectBtn.onClick.AddListener(() =>
+            {
+                _selectedInstanceId = selectedCapture;
+                _selectedClass = selectClassCapture;
+                AudioManager.Instance?.PlayButtonHover();
+                RefreshAll();
+            });
 
             LayoutElement le = rowGo.AddComponent<LayoutElement>();
             le.preferredHeight = 72f;
@@ -402,7 +511,9 @@ namespace MedievalRPG.UI
             string rName = EquipmentItemData.GetRarityDisplayName(data.rarity).ToUpperInvariant();
             string cName = EquipmentItemData.GetClassDisplayName(data.requiredClass);
             string sName = EquipmentItemData.GetSlotDisplayName(data.slot);
-            titleTMP.text = $"[{rName}] {data.itemName}  <color=#A8B3C5><size=12>({cName} • {sName})</size></color>";
+            string upTag = inst.upgradeLevel > 0 ? $" +{inst.upgradeLevel}" : "";
+            string selMark = isSelected ? "> " : "";
+            titleTMP.text = $"{selMark}[{rName}] {data.itemName}{upTag}  <color=#A8B3C5><size=12>({cName} - {sName})</size></color>";
             titleTMP.fontSize = 15f;
             titleTMP.enableAutoSizing = true;
             titleTMP.fontSizeMin = 11f;
@@ -423,7 +534,7 @@ namespace MedievalRPG.UI
             statsGo.transform.SetParent(rowGo.transform, false);
             TextMeshProUGUI statsTMP = statsGo.AddComponent<TextMeshProUGUI>();
             if (fontBody != null) statsTMP.font = fontBody;
-            statsTMP.text = data.GetStatsSummary();
+            statsTMP.text = data.GetStatsSummary(inst.upgradeLevel);
             statsTMP.fontSize = 13f;
             statsTMP.enableAutoSizing = true;
             statsTMP.fontSizeMin = 10f;
@@ -465,6 +576,7 @@ namespace MedievalRPG.UI
                 btn.onClick.AddListener(() =>
                 {
                     _selectedClass = capturedClass;
+                    _selectedInstanceId = capturedId;
                     if (PlayerEquipmentManager.EnsureLoaded().Equip(capturedId))
                     {
                         AudioManager.Instance?.PlayLootPickupSfx();
@@ -487,6 +599,276 @@ namespace MedievalRPG.UI
             blRt.anchorMax = Vector2.one;
             blRt.offsetMin = Vector2.zero;
             blRt.offsetMax = Vector2.zero;
+        }
+
+        private void RefreshDetailAndToolbar()
+        {
+            PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+
+            if (goldBalanceTMP != null)
+            {
+                goldBalanceTMP.text = $"VÀNG: {camp.Gold} V";
+            }
+
+            OwnedEquipmentInstance selInst = !string.IsNullOrEmpty(_selectedInstanceId)
+                ? mgr.FindOwnedByInstanceId(_selectedInstanceId)
+                : null;
+            EquipmentItemData selData = mgr.ResolveData(selInst);
+
+            if (detailPanelRoot != null)
+            {
+                detailPanelRoot.SetActive(true);
+            }
+
+            if (selInst != null && selData != null)
+            {
+                bool selEquipped = mgr.IsEquipped(selInst.instanceId);
+                string upStr = selInst.upgradeLevel > 0 ? $" +{selInst.upgradeLevel}" : "";
+                string rName = EquipmentItemData.GetRarityDisplayName(selData.rarity);
+                if (detailTitleTMP != null)
+                {
+                    detailTitleTMP.text = $"[<color={EquipmentItemData.GetRarityHex(selData.rarity)}>{rName}</color>] {selData.itemName}{upStr}  ({EquipmentItemData.GetClassDisplayName(selData.requiredClass)})";
+                }
+                if (detailStatsTMP != null)
+                {
+                    detailStatsTMP.text = $"Chỉ số: {selData.GetStatsSummary(selInst.upgradeLevel)}";
+                }
+                if (detailDiffTMP != null)
+                {
+                    if (selEquipped)
+                    {
+                        detailDiffTMP.text = "<color=#6BE39B>Đang trang bị trên ô này</color>";
+                    }
+                    else
+                    {
+                        OwnedEquipmentInstance curEqInst = mgr.GetEquippedInstance(selData.requiredClass, selData.slot);
+                        EquipmentItemData curEqData = mgr.ResolveData(curEqInst);
+                        EquipmentStatBonus curBonus = curEqData != null
+                            ? curEqData.GetScaledStats(curEqInst != null ? curEqInst.upgradeLevel : 0)
+                            : default;
+                        EquipmentStatBonus selBonus = selData.GetScaledStats(selInst.upgradeLevel);
+                        detailDiffTMP.text = $"So với đang mặc: {selBonus.FormatDiffAgainst(curBonus)}";
+                    }
+                }
+
+                if (detailEquipButton != null) detailEquipButton.interactable = true;
+                if (detailEquipLabelTMP != null) detailEquipLabelTMP.text = selEquipped ? "THÁO RA" : "TRANG BỊ";
+
+                if (detailUpgradeButton != null && detailUpgradeLabelTMP != null)
+                {
+                    if (selInst.upgradeLevel >= EquipmentItemData.MaxUpgradeLevel)
+                    {
+                        detailUpgradeButton.interactable = false;
+                        detailUpgradeLabelTMP.text = "TỐI ĐA (+5)";
+                    }
+                    else
+                    {
+                        int upCost = selData.GetUpgradeCost(selInst.upgradeLevel);
+                        detailUpgradeButton.interactable = camp.Gold >= upCost;
+                        detailUpgradeLabelTMP.text = $"CƯỜNG HÓA +{selInst.upgradeLevel + 1} ({upCost}V)";
+                    }
+                }
+
+                if (detailSellButton != null && detailSellLabelTMP != null)
+                {
+                    int sellVal = selData.GetSellGoldValue(selInst.upgradeLevel);
+                    detailSellButton.interactable = true;
+                    detailSellLabelTMP.text = $"BÁN (+{sellVal}V)";
+                }
+            }
+            else
+            {
+                if (detailTitleTMP != null) detailTitleTMP.text = "CHI TIẾT & LÒ RÈN TRANG BỊ";
+                if (detailStatsTMP != null) detailStatsTMP.text = "Chưa chọn trang bị trong kho.";
+                if (detailDiffTMP != null) detailDiffTMP.text = "Chọn 1 món ở danh sách bên phải để xem so sánh chỉ số, cường hóa hoặc bán.";
+                if (detailEquipButton != null) detailEquipButton.interactable = false;
+                if (detailEquipLabelTMP != null) detailEquipLabelTMP.text = "TRANG BỊ";
+                if (detailUpgradeButton != null) detailUpgradeButton.interactable = false;
+                if (detailUpgradeLabelTMP != null) detailUpgradeLabelTMP.text = "CƯỜNG HÓA";
+                if (detailSellButton != null) detailSellButton.interactable = false;
+                if (detailSellLabelTMP != null) detailSellLabelTMP.text = "BÁN";
+            }
+
+            RefreshBulkAndForgeButtons(mgr);
+        }
+
+        private void RefreshBulkAndForgeButtons(PlayerEquipmentManager mgr)
+        {
+            if (bulkSellCommonButton != null && bulkSellCommonLabelTMP != null)
+            {
+                int count = 0;
+                int totalGold = 0;
+                List<OwnedEquipmentInstance> all = mgr.GetOwnedItemsSorted(null);
+                for (int i = 0; i < all.Count; i++)
+                {
+                    OwnedEquipmentInstance inst = all[i];
+                    if (mgr.IsEquipped(inst.instanceId) || inst.upgradeLevel > 0) continue;
+                    EquipmentItemData data = mgr.ResolveData(inst);
+                    if (data != null && data.rarity == ItemRarity.Common)
+                    {
+                        count++;
+                        totalGold += data.GetSellGoldValue(inst.upgradeLevel);
+                    }
+                }
+                bulkSellCommonButton.interactable = count > 0;
+                bulkSellCommonLabelTMP.text = count > 0
+                    ? $"BÁN {count} ĐỒ THƯỜNG (+{totalGold}V)"
+                    : "BÁN ĐỒ THƯỜNG (0)";
+            }
+
+            if (forgeThreeButton != null && forgeThreeLabelTMP != null)
+            {
+                ItemRarity? source = GetForgeSourceRarity(mgr);
+                if (source.HasValue)
+                {
+                    string srcName = EquipmentItemData.GetRarityDisplayName(source.Value).ToUpperInvariant();
+                    string dstName = EquipmentItemData.GetRarityDisplayName(source.Value + 1).ToUpperInvariant();
+                    forgeThreeButton.interactable = true;
+                    forgeThreeLabelTMP.text = $"GHÉP 3 {srcName} -> {dstName}";
+                }
+                else
+                {
+                    forgeThreeButton.interactable = false;
+                    forgeThreeLabelTMP.text = "GHÉP 3 ĐỒ CÙNG PHẨM CHẤT";
+                }
+            }
+        }
+
+        private ItemRarity? GetForgeSourceRarity(PlayerEquipmentManager mgr)
+        {
+            if (!string.IsNullOrEmpty(_selectedInstanceId))
+            {
+                OwnedEquipmentInstance selInst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
+                EquipmentItemData selData = mgr.ResolveData(selInst);
+                if (selData != null && selData.rarity < ItemRarity.Legendary && mgr.CountUnequippedByRarity(selData.rarity) >= 3)
+                {
+                    return selData.rarity;
+                }
+            }
+
+            ItemRarity[] order = { ItemRarity.Common, ItemRarity.Rare, ItemRarity.Epic };
+            for (int i = 0; i < order.Length; i++)
+            {
+                if (mgr.CountUnequippedByRarity(order[i]) >= 3) return order[i];
+            }
+            return null;
+        }
+
+        private void HandleDetailEquipToggle()
+        {
+            if (string.IsNullOrEmpty(_selectedInstanceId)) return;
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            OwnedEquipmentInstance inst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
+            EquipmentItemData data = mgr.ResolveData(inst);
+            if (inst == null || data == null) return;
+
+            if (mgr.IsEquipped(inst.instanceId))
+            {
+                if (mgr.Unequip(data.requiredClass, data.slot))
+                {
+                    AudioManager.Instance?.PlayButtonClick();
+                    RefreshAll();
+                }
+            }
+            else if (mgr.Equip(inst.instanceId))
+            {
+                _selectedClass = data.requiredClass;
+                AudioManager.Instance?.PlayLootPickupSfx();
+                RefreshAll();
+            }
+        }
+
+        private void HandleDetailUpgrade()
+        {
+            if (string.IsNullOrEmpty(_selectedInstanceId)) return;
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+
+            if (mgr.TryUpgradeItem(_selectedInstanceId, camp.Gold, out int goldSpent))
+            {
+                camp.TrySpendGold(goldSpent);
+                AudioManager.Instance?.PlayForgeUpgradeSfx();
+
+                OwnedEquipmentInstance inst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
+                if (inst != null && inst.upgradeLevel >= 3)
+                {
+                    camp.UnlockAchievement(AchievementId.ForgePlusThree);
+                }
+
+                RefreshAll();
+                if (detailDiffTMP != null && inst != null)
+                {
+                    detailDiffTMP.text = $"<color=#FFD24A>CƯỜNG HÓA THÀNH CÔNG +{inst.upgradeLevel} (-{goldSpent} Vàng)!</color>";
+                }
+            }
+            else
+            {
+                AudioManager.Instance?.PlayQuizResult(false, 0);
+            }
+        }
+
+        private void HandleDetailSell()
+        {
+            if (string.IsNullOrEmpty(_selectedInstanceId)) return;
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            if (mgr.SellItem(_selectedInstanceId, out int goldEarned))
+            {
+                PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
+                _selectedInstanceId = null;
+                AudioManager.Instance?.PlayCoinRewardSfx();
+                RefreshAll();
+                if (detailDiffTMP != null)
+                {
+                    detailDiffTMP.text = $"<color=#5CE09A>Đã bán trang bị, nhận +{goldEarned} Vàng!</color>";
+                }
+            }
+        }
+
+        private void HandleBulkSellCommon()
+        {
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            int count = mgr.SellAllUnequippedByMaxRarity(ItemRarity.Common, out int goldEarned);
+            if (count > 0)
+            {
+                PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
+                if (!string.IsNullOrEmpty(_selectedInstanceId) && mgr.FindOwnedByInstanceId(_selectedInstanceId) == null)
+                {
+                    _selectedInstanceId = null;
+                }
+                AudioManager.Instance?.PlayCoinRewardSfx();
+                RefreshAll();
+                if (detailDiffTMP != null)
+                {
+                    detailDiffTMP.text = $"<color=#5CE09A>Đã bán {count} đồ Thường rảnh, thu +{goldEarned} Vàng!</color>";
+                }
+            }
+        }
+
+        private void HandleForgeThree()
+        {
+            PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
+            ItemRarity? source = GetForgeSourceRarity(mgr);
+            if (!source.HasValue) return;
+
+            if (mgr.TryForgeThreeIntoNextRarity(source.Value, out EquipmentItemData forgedItem, out OwnedEquipmentInstance createdInst))
+            {
+                _selectedInstanceId = createdInst.instanceId;
+                _selectedClass = forgedItem.requiredClass;
+                AudioManager.Instance?.PlayForgeUpgradeSfx();
+
+                if (forgedItem.rarity == ItemRarity.Legendary)
+                {
+                    PlayerCampProgressManager.EnsureLoaded().UnlockAchievement(AchievementId.FirstLegendary);
+                }
+
+                RefreshAll();
+                if (detailDiffTMP != null)
+                {
+                    string rName = EquipmentItemData.GetRarityDisplayName(forgedItem.rarity);
+                    detailDiffTMP.text = $"<color=#FFD24A>RÈN THÀNH CÔNG:</color> [<color={EquipmentItemData.GetRarityHex(forgedItem.rarity)}>{rName}</color>] {forgedItem.itemName}!";
+                }
+            }
         }
 
         private Sprite GetSpriteForItem(CharacterClassType cls, EquipmentSlot slot, EquipmentItemData data)

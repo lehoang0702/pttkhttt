@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
+  m_Name: ShadowMage_CursedBlast
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.SkillData
+  skillName: Cursed Blast
+  description: "V\u1EE5 n\u1ED5 l\u1EDDi nguy\u1EC1n thi\xEAu \u0111\u1ED1t to\xE0n b\u1ED9 anh h\xF9ng."
+  requiredClass: 1
+  icon: {fileID: 0}
+  manaCost: 14
+  cooldownTurns: 2
+  targetType: 1
+  damageType: 1
+  powerMultiplier: 0.85
+  flatBonusDamage: 3
+  baseHealAmount: 0
+  defenseBonus: 0
+  bonusCritRate: 0
+  effectDurationTurns: 0
+  statusEffect: 2
+  statusDurationTurns: 2
+  statusPotency: 6
+  applyStatusToSelf: 0

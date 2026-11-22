@@ -1,5 +1,7 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using MedievalRPG.Combat;
 
@@ -8,7 +10,7 @@ namespace MedievalRPG.UI
     /// <summary>
     /// Thẻ thông tin Quái vật / Boss đang được chọn mục tiêu (kèm trạng thái, Khiên Boss & hiệu ứng HP mượt).
     /// </summary>
-    public class EnemyStatusCardUI : MonoBehaviour
+    public class EnemyStatusCardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField] private Image portraitImage;
         [SerializeField] private Image activeGlowBorder;
@@ -25,6 +27,9 @@ namespace MedievalRPG.UI
         private float _displayedHpRatio = 1f;
         private float _trailHpRatio = 1f;
         private bool _isEnemyTurn;
+        private bool _isHovered;
+
+        public event Action<Unit, bool, Vector3> OnPointerHoverChanged;
 
         public void Configure(
             Image glowBorder, Image portrait,
@@ -109,6 +114,29 @@ namespace MedievalRPG.UI
                 {
                     statusPillRoot.SetActive(false);
                 }
+            }
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (_boundEnemy == null) return;
+            _isHovered = true;
+            OnPointerHoverChanged?.Invoke(_boundEnemy, true, transform.position);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (!_isHovered && _boundEnemy == null) return;
+            _isHovered = false;
+            OnPointerHoverChanged?.Invoke(_boundEnemy, false, transform.position);
+        }
+
+        private void OnDisable()
+        {
+            if (_isHovered)
+            {
+                _isHovered = false;
+                OnPointerHoverChanged?.Invoke(_boundEnemy, false, transform.position);
             }
         }
 

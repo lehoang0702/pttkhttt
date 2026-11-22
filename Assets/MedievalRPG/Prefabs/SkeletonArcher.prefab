@@ -1,0 +1,237 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4000000001}
+  - component: {fileID: 2120000001}
+  - component: {fileID: 1140000001}
+  - component: {fileID: 1140000002}
+  - component: {fileID: 6100000001}
+  m_Layer: 0
+  m_Name: SkeletonArcher
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4000000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &2120000001
+SpriteRenderer:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: 2aa225bb6fc2fa880e8221a2de222ed3, type: 3}
+  m_Color: {r: 0.65, g: 0.94, b: 1, a: 1}
+  m_FlipX: 1
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
+--- !u!114 &1140000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 837d3ab106647877065b2baef25583d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spriteRenderer: {fileID: 2120000001}
+  idleFrames:
+  - {fileID: 21300000, guid: 2aa225bb6fc2fa880e8221a2de222ed3, type: 3}
+  - {fileID: 21300000, guid: 67560b1f4e3e29aaa272a248b5015bb7, type: 3}
+  - {fileID: 21300000, guid: 120ee42605139de4d793d119eef5e13e, type: 3}
+  - {fileID: 21300000, guid: e2c67920c7f040482e57a184b5c2f24a, type: 3}
+  - {fileID: 21300000, guid: d5a24c29e0f392bc315741ad37aaff2f, type: 3}
+  - {fileID: 21300000, guid: 538fc96c4dbacd0b39a5c7ca875bdb4e, type: 3}
+  - {fileID: 21300000, guid: 207dcacf5cd593a3a323d40d45c4925c, type: 3}
+  - {fileID: 21300000, guid: 3e5b08139ff7e53b8e36502ccc4498ca, type: 3}
+  - {fileID: 21300000, guid: 57240663c9550d77afa11c5f831864da, type: 3}
+  - {fileID: 21300000, guid: e8826f89639bfd51b5432c99028346bc, type: 3}
+  runFrames:
+  - {fileID: 21300000, guid: 3c15756793188003d9f091e8a6749980, type: 3}
+  - {fileID: 21300000, guid: a720b4e5772214a9f5d3dec9fd0e9492, type: 3}
+  - {fileID: 21300000, guid: 8af1ee5d310c3c29a2c31a1daa2ae64d, type: 3}
+  - {fileID: 21300000, guid: 83a5c5ff54d41a7a31d431a81625976a, type: 3}
+  - {fileID: 21300000, guid: 8a21a983a7eab2994e94bfc901a676d2, type: 3}
+  - {fileID: 21300000, guid: 84b4ea4d69edc66305ea6f0229ae1c09, type: 3}
+  - {fileID: 21300000, guid: 27f7c70182ad0d941d4a1b94f9216703, type: 3}
+  - {fileID: 21300000, guid: d7a16dfbc12f32faf682379045a42ab2, type: 3}
+  attackFrames:
+  - {fileID: 21300000, guid: e9e7111e3fe9883cc5ed567c2f8b076f, type: 3}
+  - {fileID: 21300000, guid: a141239f59b9b84d629d154b63b2c223, type: 3}
+  - {fileID: 21300000, guid: 0182e1c5f0fab1c34752761c6a19c6c7, type: 3}
+  - {fileID: 21300000, guid: 7847db73ca9889da10974d402eb92776, type: 3}
+  - {fileID: 21300000, guid: 24a22446cf97f4f34bb2348761761908, type: 3}
+  - {fileID: 21300000, guid: 9f529534398defd60e7ba2f7ca8f84ac, type: 3}
+  hitFrames:
+  - {fileID: 21300000, guid: 06a03498005a9a956e18acf73bc46ccf, type: 3}
+  - {fileID: 21300000, guid: aa8aaf820c408361e7fa8dc20f5eec60, type: 3}
+  - {fileID: 21300000, guid: 1e1217adbf93310bc4d3ce7bdbf34409, type: 3}
+  deathFrames:
+  - {fileID: 21300000, guid: 5126843b220817b3ca5e3e253f5f7db9, type: 3}
+  - {fileID: 21300000, guid: e83928be9718287b240a0bc874f5629f, type: 3}
+  - {fileID: 21300000, guid: 8beeccef1ec94909d83866b18e48e05e, type: 3}
+  - {fileID: 21300000, guid: 64b8a5740b57784227efcd75d08fcf23, type: 3}
+  - {fileID: 21300000, guid: bc5e20ef24418c93da647bb3bf39fb5c, type: 3}
+  - {fileID: 21300000, guid: 2e0726155d1875192d9ae8f332c155cf, type: 3}
+  - {fileID: 21300000, guid: c7faa6c89c5b5f8b95d287dba52ee6e0, type: 3}
+  - {fileID: 21300000, guid: f16a6348cd8e8e9aa31cefdf94b12bda, type: 3}
+  - {fileID: 21300000, guid: 9d20f2129105784ff993174c6bf96a62, type: 3}
+  - {fileID: 21300000, guid: 7ad01663367bd814e485076f9c1e7cc8, type: 3}
+  frameRate: 10
+  attackStepDistance: -0.8
+  hitFlashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+--- !u!114 &1140000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 599a6c9ae2ae109577a4d4b1dd425bd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitName: "X\u01B0\u01A1ng Cung Th\u1EE7"
+  unitLevel: 2
+  damage: 20
+  maxHP: 105
+  currentHP: 105
+  characterClass: 2
+  maxMP: 45
+  currentMP: 45
+  defense: 9
+  magicDefense: 8
+  magicDamage: 8
+  speed: 16
+  critRate: 0.14
+  critMultiplier: 1.5
+  isBoss: 0
+  isDefending: 0
+  bonusDefense: 0
+  defenseBuffTurns: 0
+  isEnemy: 1
+  classData: {fileID: 11400000, guid: 5beefeb1b41cc3bf08938f468c9d3a09, type: 2}
+  pixelAnimator: {fileID: 1140000001}
+  skills:
+  - {fileID: 11400000, guid: b1db34c38378a20fc920f66f906d58a8, type: 2}
+  - {fileID: 11400000, guid: 064cd4a85679e4449ab3d4f20724ee98, type: 2}
+--- !u!61 &6100000001
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.3}
+    oldSize: {x: 1.8181819, y: 1.8181819}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1.25, y: 1.45}
+  m_EdgeRadius: 0

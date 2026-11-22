@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42610554debfc54de55ea110ef79e23b, type: 3}
+  m_Name: SkeletonArcherClass
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.CharacterClassData
+  classType: 2
+  className: "X\u01B0\u01A1ng Cung Th\u1EE7"
+  baseLevel: 2
+  isBoss: 0
+  loreDescription: A stalwart protector clad in iron plate armor.
+  maxHealth: 105
+  maxMana: 45
+  physicalAttack: 20
+  magicAttack: 8
+  physicalDefense: 9
+  magicDefense: 8
+  speed: 16
+  critRate: 0.14
+  critMultiplier: 1.5
+  idleSprite: {fileID: 0}
+  idleSpriteAlt: {fileID: 0}
+  actionSprite: {fileID: 0}
+  hitSprite: {fileID: 0}
+  skills:
+  - {fileID: 11400000, guid: b1db34c38378a20fc920f66f906d58a8, type: 2}
+  - {fileID: 11400000, guid: 064cd4a85679e4449ab3d4f20724ee98, type: 2}

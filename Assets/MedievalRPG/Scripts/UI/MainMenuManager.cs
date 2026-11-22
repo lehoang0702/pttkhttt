@@ -40,7 +40,28 @@ namespace MedievalRPG.UI
         [SerializeField] private UnityEngine.UI.Toggle quizModeToggle;
         [SerializeField] private UnityEngine.UI.Toggle fastSpeedToggle;
 
+        [Header("V2: Cài Đặt Mở Rộng & Đặt Lại Dữ Liệu")]
+        [SerializeField] private UnityEngine.UI.Toggle quizTimerToggle;
+        [SerializeField] private UnityEngine.UI.Toggle cameraShakeToggle;
+        [SerializeField] private UnityEngine.UI.Toggle fullscreenToggle;
+        [SerializeField] private UnityEngine.UI.Button resetSaveButton;
+        [SerializeField] private TextMeshProUGUI resetSaveLabelTMP;
+
         private bool _isTransitioning;
+
+        public void ConfigureV2Settings(
+            UnityEngine.UI.Toggle timerToggle,
+            UnityEngine.UI.Toggle shakeToggle,
+            UnityEngine.UI.Toggle fullToggle,
+            UnityEngine.UI.Button resetBtn,
+            TextMeshProUGUI resetLbl)
+        {
+            quizTimerToggle = timerToggle;
+            cameraShakeToggle = shakeToggle;
+            fullscreenToggle = fullToggle;
+            resetSaveButton = resetBtn;
+            resetSaveLabelTMP = resetLbl;
+        }
 
         public bool HasCanvasUI => rootCanvas != null && startButton != null;
 
@@ -144,65 +165,13 @@ namespace MedievalRPG.UI
 
         private void WireSettings()
         {
-            AudioManager audio = AudioManager.EnsureExists();
+            GameSettingsUIHelper.BindSettingsControls(
+                musicVolumeSlider, musicVolumeValueTMP,
+                sfxVolumeSlider, sfxVolumeValueTMP,
+                quizModeToggle, fastSpeedToggle,
+                quizTimerToggle, cameraShakeToggle, fullscreenToggle);
 
-            if (musicVolumeSlider != null)
-            {
-                musicVolumeSlider.minValue = 0f;
-                musicVolumeSlider.maxValue = 1f;
-                musicVolumeSlider.value = audio.MusicVolume;
-                UpdatePercentText(musicVolumeValueTMP, musicVolumeSlider.value);
-                musicVolumeSlider.onValueChanged.RemoveAllListeners();
-                musicVolumeSlider.onValueChanged.AddListener(val =>
-                {
-                    AudioManager.EnsureExists().SetMusicVolume(val);
-                    UpdatePercentText(musicVolumeValueTMP, val);
-                });
-            }
-
-            if (sfxVolumeSlider != null)
-            {
-                sfxVolumeSlider.minValue = 0f;
-                sfxVolumeSlider.maxValue = 1f;
-                sfxVolumeSlider.value = audio.SFXVolume;
-                UpdatePercentText(sfxVolumeValueTMP, sfxVolumeSlider.value);
-                sfxVolumeSlider.onValueChanged.RemoveAllListeners();
-                sfxVolumeSlider.onValueChanged.AddListener(val =>
-                {
-                    AudioManager.EnsureExists().SetSFXVolume(val);
-                    UpdatePercentText(sfxVolumeValueTMP, val);
-                });
-            }
-
-            if (quizModeToggle != null)
-            {
-                quizModeToggle.isOn = PlayerPrefs.GetInt("QuizEnabled", 1) == 1;
-                quizModeToggle.onValueChanged.RemoveAllListeners();
-                quizModeToggle.onValueChanged.AddListener(isOn =>
-                {
-                    PlayerPrefs.SetInt("QuizEnabled", isOn ? 1 : 0);
-                    PlayerPrefs.Save();
-                });
-            }
-
-            if (fastSpeedToggle != null)
-            {
-                fastSpeedToggle.isOn = PlayerPrefs.GetFloat("BattleSpeed", 1f) > 1.1f;
-                fastSpeedToggle.onValueChanged.RemoveAllListeners();
-                fastSpeedToggle.onValueChanged.AddListener(isOn =>
-                {
-                    PlayerPrefs.SetFloat("BattleSpeed", isOn ? 1.5f : 1f);
-                    PlayerPrefs.Save();
-                });
-            }
-        }
-
-        private static void UpdatePercentText(TextMeshProUGUI label, float val)
-        {
-            if (label != null)
-            {
-                label.text = $"{Mathf.RoundToInt(val * 100f)}%";
-            }
+            GameSettingsUIHelper.WireResetSaveButton(this, resetSaveButton, resetSaveLabelTMP);
         }
 
         private void Update()
@@ -245,7 +214,11 @@ namespace MedievalRPG.UI
         public void ToggleSettings(bool show)
         {
             if (show && instructionsPanel != null) instructionsPanel.SetActive(false);
-            if (settingsPanel != null) settingsPanel.SetActive(show);
+            if (settingsPanel != null)
+            {
+                if (show) WireSettings();
+                settingsPanel.SetActive(show);
+            }
         }
 
         public void OnQuitClicked()

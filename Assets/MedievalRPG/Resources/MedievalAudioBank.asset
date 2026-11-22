@@ -39,3 +39,6 @@ MonoBehaviour:
   lootDrop: {fileID: 8300000, guid: e07f4778f31ab4e0c84cd8922cdb668c, type: 3}
   lootLegendary: {fileID: 8300000, guid: 74fea88e039eb9bbba1f77cfacbc2010, type: 3}
   lootPickup: {fileID: 8300000, guid: a7ced4ebae04bfad7bc06499e48dd0e8, type: 3}
+  coinReward: {fileID: 8300000, guid: f285cf490f61f8775973e865f7047dbb, type: 3}
+  forgeUpgrade: {fileID: 8300000, guid: a0a4c9dcfddfba2c08e48b5e03e3d64e, type: 3}
+  levelUp: {fileID: 8300000, guid: da4fe8bc60da65652832bb17b7f0aacf, type: 3}

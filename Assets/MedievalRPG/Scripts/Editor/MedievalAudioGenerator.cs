@@ -60,6 +60,11 @@ namespace MedievalRPG.EditorTools
             WriteWav($"{SfxDir}/SFX_LootLegendary.wav", SynthLootLegendary());
             WriteWav($"{SfxDir}/SFX_LootPickup.wav", SynthLootPickup());
 
+            // 6. Economy & Progression SFX
+            WriteWav($"{SfxDir}/SFX_CoinReward.wav", SynthCoinReward());
+            WriteWav($"{SfxDir}/SFX_ForgeUpgrade.wav", SynthForgeUpgrade());
+            WriteWav($"{SfxDir}/SFX_LevelUp.wav", SynthLevelUp());
+
             AssetDatabase.Refresh();
 
             ConfigureImporter($"{MusicDir}/BGM_MainMenu.wav", AudioClipLoadType.Streaming, true);
@@ -108,10 +113,14 @@ namespace MedievalRPG.EditorTools
             bank.lootLegendary = LoadClip($"{SfxDir}/SFX_LootLegendary.wav");
             bank.lootPickup = LoadClip($"{SfxDir}/SFX_LootPickup.wav");
 
+            bank.coinReward = LoadClip($"{SfxDir}/SFX_CoinReward.wav");
+            bank.forgeUpgrade = LoadClip($"{SfxDir}/SFX_ForgeUpgrade.wav");
+            bank.levelUp = LoadClip($"{SfxDir}/SFX_LevelUp.wav");
+
             EditorUtility.SetDirty(bank);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[MedievalAudioGenerator] Đã sinh 23 tệp âm thanh WAV và cấu hình Resources/MedievalAudioBank.asset!");
+            Debug.Log("[MedievalAudioGenerator] Đã sinh 26 tệp âm thanh WAV và cấu hình Resources/MedievalAudioBank.asset!");
             return bank;
         }
 
@@ -701,6 +710,70 @@ namespace MedievalRPG.EditorTools
                 buf[i] = (Mathf.Sin(2f * Mathf.PI * f * t) * 0.7f + Mathf.Sin(2f * Mathf.PI * f * 1.5f * t) * 0.3f) * env;
             }
             NormalizePeak(buf, 0.82f);
+            return buf;
+        }
+
+        private static float[] SynthCoinReward()
+        {
+            float duration = 0.28f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            float[] notes = { 987.77f, 1318.51f }; // B5 -> E6
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float s = 0f;
+                for (int n = 0; n < notes.Length; n++)
+                {
+                    float lt = t - n * 0.065f;
+                    if (lt < 0f) continue;
+                    float env = Mathf.Exp(-lt * 16f) * Mathf.Clamp01(lt / 0.004f);
+                    s += (Mathf.Sin(2f * Mathf.PI * notes[n] * lt) * 0.7f +
+                          Mathf.Sin(2f * Mathf.PI * notes[n] * 2f * lt) * 0.3f) * env;
+                }
+                buf[i] = s;
+            }
+            NormalizePeak(buf, 0.84f);
+            return buf;
+        }
+
+        private static float[] SynthForgeUpgrade()
+        {
+            float duration = 0.42f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                // Tiếng búa đe kim loại sáng + ngân vang
+                float env = Mathf.Exp(-t * 8.5f) * Mathf.Clamp01(t / 0.003f);
+                float clang = Mathf.Sin(2f * Mathf.PI * 1046.5f * t) * 0.55f +
+                              Mathf.Sin(2f * Mathf.PI * 1567.98f * t) * 0.30f +
+                              Mathf.Sin(2f * Mathf.PI * 2489.0f * t) * 0.15f;
+                buf[i] = clang * env;
+            }
+            NormalizePeak(buf, 0.86f);
+            return buf;
+        }
+
+        private static float[] SynthLevelUp()
+        {
+            float duration = 0.75f;
+            float[] buf = new float[(int)(SampleRate * duration)];
+            float[] freqs = { 523.25f, 659.25f, 783.99f, 1046.50f }; // C5-E5-G5-C6
+            for (int i = 0; i < buf.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float s = 0f;
+                for (int n = 0; n < freqs.Length; n++)
+                {
+                    float lt = t - n * 0.085f;
+                    if (lt < 0f) continue;
+                    float env = Mathf.Exp(-lt * 5.2f) * Mathf.Clamp01(lt / 0.006f);
+                    s += (Mathf.Sin(2f * Mathf.PI * freqs[n] * lt) * 0.65f +
+                          Mathf.Sin(2f * Mathf.PI * freqs[n] * 2f * lt) * 0.35f) * env;
+                }
+                buf[i] = s;
+            }
+            NormalizePeak(buf, 0.88f);
             return buf;
         }
 

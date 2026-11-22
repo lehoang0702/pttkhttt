@@ -44,6 +44,15 @@ namespace MedievalRPG.Visuals
         private bool _isActionLocked;
         private bool _isDead;
         private bool _isTargetHighlighted;
+        private GameObject _footShadowGo;
+
+        private static Sprite _cachedShadowSprite;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _cachedShadowSprite = null;
+        }
 
         public PixelAnimState CurrentState => _currentState;
         public Vector3 HomePosition => _originalPosition;
@@ -64,10 +73,60 @@ namespace MedievalRPG.Visuals
 
         private void Start()
         {
+            EnsureFootShadow();
             if (!_isActionLocked && !_isDead)
             {
                 PlayIdle();
             }
+        }
+
+        private void EnsureFootShadow()
+        {
+            if (_footShadowGo != null) return;
+            Transform existing = transform.Find("FootShadow");
+            if (existing != null)
+            {
+                _footShadowGo = existing.gameObject;
+                return;
+            }
+
+            _footShadowGo = new GameObject("FootShadow");
+            _footShadowGo.transform.SetParent(transform, false);
+            _footShadowGo.transform.localPosition = new Vector3(0f, -0.34f, 0.02f);
+            _footShadowGo.transform.localScale = new Vector3(1.1f, 0.42f, 1f);
+            SpriteRenderer shadowSr = _footShadowGo.AddComponent<SpriteRenderer>();
+            shadowSr.sprite = GetOrCreateShadowSprite();
+            shadowSr.color = new Color(0.03f, 0.04f, 0.07f, 0.42f);
+            shadowSr.sortingOrder = -1;
+        }
+
+        private static Sprite GetOrCreateShadowSprite()
+        {
+            if (_cachedShadowSprite != null) return _cachedShadowSprite;
+            const int w = 32, h = 16;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float nx = (x - 15.5f) / 14f;
+                    float ny = (y - 7.5f) / 6.5f;
+                    float r = Mathf.Sqrt(nx * nx + ny * ny);
+                    float a = r >= 1f ? 0f : (1f - r * r);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            }
+            tex.Apply();
+            _cachedShadowSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32f);
+            return _cachedShadowSprite;
+        }
+
+        public void SetFacingRight(bool facingRight)
+        {
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null) spriteRenderer.flipX = !facingRight;
         }
 
         public void SetHomePosition(Vector3 homePos)
@@ -205,7 +264,7 @@ namespace MedievalRPG.Visuals
             _currentAnimCoroutine = StartCoroutine(LoopAnimationRoutine(idleFrames));
         }
 
-        public void PlayAttack(Vector3 targetWorldPos, Action onImpact = null, Action onComplete = null)
+        public void PlayAttack(Vector3 targetWorldPos, Action onImpact = null, Action onComplete = null, float customStepDistance = -1f)
         {
             if (_isDead)
             {
@@ -215,7 +274,7 @@ namespace MedievalRPG.Visuals
             }
 
             if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
-            _currentAnimCoroutine = StartCoroutine(AttackSequenceRoutine(targetWorldPos, onImpact, onComplete));
+            _currentAnimCoroutine = StartCoroutine(AttackSequenceRoutine(targetWorldPos, onImpact, onComplete, customStepDistance));
         }
 
         public void PlayHit()
@@ -232,6 +291,7 @@ namespace MedievalRPG.Visuals
             _isDead = true;
             _isActionLocked = false;
             _currentState = PixelAnimState.Death;
+            if (_footShadowGo != null) _footShadowGo.SetActive(false);
 
             if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
             _currentAnimCoroutine = StartCoroutine(DeathSequenceRoutine());
@@ -243,6 +303,7 @@ namespace MedievalRPG.Visuals
             _isActionLocked = false;
             transform.position = _originalPosition;
             transform.rotation = _baseRotation;
+            if (_footShadowGo != null) _footShadowGo.SetActive(true);
             if (spriteRenderer != null)
             {
                 spriteRenderer.enabled = true;
@@ -266,7 +327,7 @@ namespace MedievalRPG.Visuals
             }
         }
 
-        private IEnumerator AttackSequenceRoutine(Vector3 targetWorldPos, Action onImpact, Action onComplete)
+        private IEnumerator AttackSequenceRoutine(Vector3 targetWorldPos, Action onImpact, Action onComplete, float customStepDistance = -1f)
         {
             _isActionLocked = true;
             _currentState = PixelAnimState.Attack;
@@ -278,7 +339,7 @@ namespace MedievalRPG.Visuals
             if (dir.sqrMagnitude < 0.0001f) dir = Vector3.right;
             else dir.Normalize();
 
-            float stepDist = Mathf.Abs(attackStepDistance);
+            float stepDist = customStepDistance >= 0f ? customStepDistance : Mathf.Abs(attackStepDistance);
             Vector3 stepTarget = _originalPosition + dir * stepDist;
 
             // 1. Lao nhanh về phía mục tiêu

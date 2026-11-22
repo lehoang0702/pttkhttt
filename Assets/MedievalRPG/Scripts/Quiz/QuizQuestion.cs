@@ -38,6 +38,11 @@ namespace MedievalRPG.Quiz
         public int bonusDamage = 5;
 
         /// <summary>
+        /// Constructor mặc định cho JSON serialization
+        /// </summary>
+        public QuizQuestion() { }
+
+        /// <summary>
         /// Constructor tiện lợi để khởi tạo câu hỏi nhanh qua code
         /// </summary>
         public QuizQuestion(string category, string questionText, string[] answers, int correctAnswerIndex, string explanation = "", int bonusDamage = 5)

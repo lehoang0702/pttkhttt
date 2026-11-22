@@ -12,7 +12,7 @@ namespace MedievalRPG.UI
     /// <summary>
     /// Thẻ hiển thị trạng thái từng anh hùng (có thể bấm chọn làm mục tiêu hồi phục / vật phẩm).
     /// </summary>
-    public class PartyMemberCardUI : MonoBehaviour, IPointerClickHandler
+    public class PartyMemberCardUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         [Header("Thành phần hiển thị")]
         [SerializeField] private Image cardBackground;
@@ -33,14 +33,22 @@ namespace MedievalRPG.UI
         [SerializeField] private TextMeshProUGUI hpValueText;
         [SerializeField] private Image mpFillImage;
         [SerializeField] private TextMeshProUGUI mpValueText;
+        [SerializeField] private Image expFillImage;
 
         private Unit _boundUnit;
         private float _displayedHpRatio = 1f;
         private float _trailHpRatio = 1f;
         private float _displayedMpRatio = 1f;
         private bool _isCurrentTurn;
+        private bool _isHovered;
 
         public event Action<Unit> OnCardClicked;
+        public event Action<Unit, bool, Vector3> OnPointerHoverChanged;
+
+        public void ConfigureExpBar(Image expFill)
+        {
+            expFillImage = expFill;
+        }
 
         public void Configure(
             Image bg, Image glowBorder, Image selectedBorder, Image portrait, Image classIcon,
@@ -82,7 +90,10 @@ namespace MedievalRPG.UI
             if (portraitImage != null && portraitSprite != null) portraitImage.sprite = portraitSprite;
             if (classIconImage != null && classIconSprite != null) classIconImage.sprite = classIconSprite;
             if (nameText != null) nameText.text = MedievalUITheme.FormatHeroDisplayName(unit.unitName);
-            if (levelText != null) levelText.text = $"Lv.{unit.unitLevel}";
+            PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+            int lv = camp != null ? camp.GetHeroProgress(unit.characterClass).level : unit.unitLevel;
+            if (levelText != null) levelText.text = $"Lv.{lv}";
+            if (expFillImage != null) expFillImage.fillAmount = camp != null ? camp.GetHeroExpProgress01(unit.characterClass) : 0f;
 
             _displayedHpRatio = unit.maxHP > 0 ? (float)unit.currentHP / unit.maxHP : 0f;
             _trailHpRatio = _displayedHpRatio;
@@ -113,6 +124,16 @@ namespace MedievalRPG.UI
 
             if (hpValueText != null) hpValueText.text = $"HP {_boundUnit.currentHP}/{_boundUnit.maxHP}";
             if (mpValueText != null) mpValueText.text = $"MP {_boundUnit.currentMP}/{_boundUnit.maxMP}";
+            PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+            if (levelText != null)
+            {
+                int lv = camp != null ? camp.GetHeroProgress(_boundUnit.characterClass).level : _boundUnit.unitLevel;
+                levelText.text = $"Lv.{lv}";
+            }
+            if (expFillImage != null && camp != null)
+            {
+                expFillImage.fillAmount = camp.GetHeroExpProgress01(_boundUnit.characterClass);
+            }
 
             UpdateStatusBadge(isDead);
         }
@@ -159,6 +180,29 @@ namespace MedievalRPG.UI
             if (_boundUnit == null) return;
             AudioManager.Instance?.PlayButtonHover();
             OnCardClicked?.Invoke(_boundUnit);
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (_boundUnit == null) return;
+            _isHovered = true;
+            OnPointerHoverChanged?.Invoke(_boundUnit, true, transform.position);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (!_isHovered && _boundUnit == null) return;
+            _isHovered = false;
+            OnPointerHoverChanged?.Invoke(_boundUnit, false, transform.position);
+        }
+
+        private void OnDisable()
+        {
+            if (_isHovered)
+            {
+                _isHovered = false;
+                OnPointerHoverChanged?.Invoke(_boundUnit, false, transform.position);
+            }
         }
 
         private void Update()

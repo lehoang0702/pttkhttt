@@ -72,4 +72,37 @@ namespace MedievalRPG.Data
         Armor = 1,      // Giáp
         Accessory = 2   // Phụ Kiện
     }
+
+    public enum QuizDifficultyFilter
+    {
+        AllB1B2 = 0,
+        OnlyB1 = 1,
+        OnlyB2 = 2
+    }
+
+    public enum CampaignStageId
+    {
+        ForestChapter1 = 0,
+        CryptChapter2 = 1,
+        CitadelChapter3 = 2,
+        EndlessTower = 3
+    }
+
+    public enum EnvironmentThemeType
+    {
+        MistyForest = 0,
+        AncientCrypt = 1,
+        DarkCitadel = 2
+    }
+
+    public enum AchievementId
+    {
+        FirstChapterClear = 0,
+        StreakFiveB2 = 1,
+        FirstLegendary = 2,
+        ForgePlusThree = 3,
+        MistakeReviewer = 4,
+        ChapterThreeClear = 5,
+        EndlessWaveTen = 6
+    }
 }

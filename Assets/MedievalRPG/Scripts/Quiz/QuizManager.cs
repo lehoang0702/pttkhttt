@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using MedievalRPG.Data;
 
 namespace MedievalRPG.Quiz
 {
+    [Serializable]
+    internal class QuizBankJsonPayload
+    {
+        public List<QuizQuestion> questions = new List<QuizQuestion>();
+    }
+
     /// <summary>
     /// [Bộ Quản Lý Câu Hỏi Trắc Nghiệm Tiếng Anh B1/B2 - QuizManager]
-    /// Ngân hàng 30 câu hỏi tiếng Anh chuẩn CEFR B1 & B2 (Grammar, Vocabulary, Phrasal Verbs, Usage).
-    /// Bốc ngẫu nhiên không trùng lặp cho tới khi hết vòng và chấm thưởng sát thương + Vàng.
+    /// Ngân hàng 120 câu hỏi tiếng Anh chuẩn CEFR B1 (60) & B2 (60) nạp từ Resources/english_b1_b2.json.
+    /// Hỗ trợ lọc trình độ B1 / B2 / B1+B2, không lặp trong vòng, và tra cứu cho Sổ Tay Ôn Lỗi Sai.
     /// </summary>
     public class QuizManager : MonoBehaviour
     {
@@ -56,11 +63,29 @@ namespace MedievalRPG.Quiz
         }
 
         /// <summary>
-        /// Nạp 30 câu hỏi tiếng Anh trình độ B1 (15 câu) và B2 (15 câu).
+        /// Nạp ngân hàng 120 câu hỏi B1/B2 từ Resources/english_b1_b2.json (fallback về 30 câu nội bộ nếu thiếu asset).
         /// </summary>
         public void LoadDefaultQuestions()
         {
             _usedQuestionIndices.Clear();
+            TextAsset jsonAsset = Resources.Load<TextAsset>("english_b1_b2");
+            if (jsonAsset != null && !string.IsNullOrEmpty(jsonAsset.text))
+            {
+                try
+                {
+                    QuizBankJsonPayload payload = JsonUtility.FromJson<QuizBankJsonPayload>(jsonAsset.text);
+                    if (payload != null && payload.questions != null && payload.questions.Count >= 30)
+                    {
+                        questionBank = payload.questions;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[QuizManager] Lỗi đọc english_b1_b2.json, dùng fallback: {ex.Message}");
+                }
+            }
+
             questionBank = new List<QuizQuestion>
             {
                 // ==================== CEFR B1 (15 QUESTIONS) ====================
@@ -311,23 +336,41 @@ namespace MedievalRPG.Quiz
 
         public QuizQuestion GetRandomQuestion()
         {
+            QuizDifficultyFilter filter = PlayerCampProgressManager.EnsureLoaded().SelectedQuizFilter;
+            return GetRandomQuestion(filter);
+        }
+
+        public QuizQuestion GetRandomQuestion(QuizDifficultyFilter filter)
+        {
             if (questionBank == null || questionBank.Count == 0 || !AreAllQuestionsEnglishCEFR())
             {
                 LoadDefaultQuestions();
             }
 
-            if (_usedQuestionIndices.Count >= questionBank.Count)
-            {
-                _usedQuestionIndices.Clear();
-            }
-
-            List<int> availableIndices = new List<int>();
+            List<int> matchingIndices = new List<int>(questionBank.Count);
             for (int i = 0; i < questionBank.Count; i++)
             {
-                if (!_usedQuestionIndices.Contains(i))
+                if (MatchesDifficultyFilter(questionBank[i], filter))
                 {
-                    availableIndices.Add(i);
+                    matchingIndices.Add(i);
                 }
+            }
+            if (matchingIndices.Count == 0)
+            {
+                for (int i = 0; i < questionBank.Count; i++) matchingIndices.Add(i);
+            }
+
+            List<int> availableIndices = new List<int>(matchingIndices.Count);
+            for (int i = 0; i < matchingIndices.Count; i++)
+            {
+                int idx = matchingIndices[i];
+                if (!_usedQuestionIndices.Contains(idx)) availableIndices.Add(idx);
+            }
+
+            if (availableIndices.Count == 0)
+            {
+                _usedQuestionIndices.Clear();
+                availableIndices.AddRange(matchingIndices);
             }
 
             int pickedIdx = availableIndices[UnityEngine.Random.Range(0, availableIndices.Count)];
@@ -335,6 +378,83 @@ namespace MedievalRPG.Quiz
 
             currentQuestion = questionBank[pickedIdx];
             return currentQuestion;
+        }
+
+        public static bool MatchesDifficultyFilter(QuizQuestion q, QuizDifficultyFilter filter)
+        {
+            if (q == null) return false;
+            if (filter == QuizDifficultyFilter.AllB1B2) return true;
+            string cat = q.category ?? "";
+            if (filter == QuizDifficultyFilter.OnlyB1) return cat.StartsWith("B1", StringComparison.OrdinalIgnoreCase);
+            if (filter == QuizDifficultyFilter.OnlyB2) return cat.StartsWith("B2", StringComparison.OrdinalIgnoreCase);
+            return true;
+        }
+
+        public QuizQuestion FindQuestionByText(string questionText)
+        {
+            if (string.IsNullOrWhiteSpace(questionText)) return null;
+            if (questionBank == null || questionBank.Count == 0) LoadDefaultQuestions();
+            for (int i = 0; i < questionBank.Count; i++)
+            {
+                if (string.Equals(questionBank[i].questionText, questionText, StringComparison.Ordinal))
+                {
+                    return questionBank[i];
+                }
+            }
+            return null;
+        }
+
+        public List<QuizQuestion> GetMistakeQuestions(IReadOnlyList<string> mistakeTexts)
+        {
+            List<QuizQuestion> result = new List<QuizQuestion>();
+            if (mistakeTexts == null) return result;
+            if (questionBank == null || questionBank.Count == 0) LoadDefaultQuestions();
+            for (int i = 0; i < mistakeTexts.Count; i++)
+            {
+                QuizQuestion found = FindQuestionByText(mistakeTexts[i]);
+                if (found != null) result.Add(found);
+            }
+            return result;
+        }
+
+        public static List<QuizQuestion> ResolveMistakeQuestionsStatic(IReadOnlyList<string> mistakeTexts)
+        {
+            if (Instance != null)
+            {
+                return Instance.GetMistakeQuestions(mistakeTexts);
+            }
+
+            List<QuizQuestion> result = new List<QuizQuestion>();
+            if (mistakeTexts == null || mistakeTexts.Count == 0) return result;
+
+            TextAsset jsonAsset = Resources.Load<TextAsset>("english_b1_b2");
+            if (jsonAsset == null || string.IsNullOrEmpty(jsonAsset.text)) return result;
+
+            QuizBankJsonPayload payload = null;
+            try
+            {
+                payload = JsonUtility.FromJson<QuizBankJsonPayload>(jsonAsset.text);
+            }
+            catch
+            {
+                return result;
+            }
+            if (payload == null || payload.questions == null) return result;
+
+            for (int i = 0; i < mistakeTexts.Count; i++)
+            {
+                string key = mistakeTexts[i];
+                if (string.IsNullOrWhiteSpace(key)) continue;
+                for (int j = 0; j < payload.questions.Count; j++)
+                {
+                    if (string.Equals(payload.questions[j].questionText, key, StringComparison.Ordinal))
+                    {
+                        result.Add(payload.questions[j]);
+                        break;
+                    }
+                }
+            }
+            return result;
         }
 
         public bool SubmitAnswer(int answerIndex, out string feedbackMessage, out int bonusDamage)

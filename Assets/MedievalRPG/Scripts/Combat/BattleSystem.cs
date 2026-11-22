@@ -48,6 +48,8 @@ namespace MedievalRPG.Combat
         public GameObject archerPrefab;
         public GameObject enemyPrefab;
         public GameObject skeletonPrefab;
+        public GameObject skeletonArcherPrefab;
+        public GameObject shadowMagePrefab;
         public GameObject bossPrefab;
 
         [Header("--- Vị Trí Đứng Trong Trận (Battle Stations) ---")]
@@ -88,19 +90,29 @@ namespace MedievalRPG.Combat
         private bool _isQuizAnswerCorrect;
         private bool _quizAnswerSubmitted;
         private bool _skipQuizFeedback;
+        private bool _isQuickMindActive;
         private float _battleSpeed = 1f;
+        private List<BattleWave> _runtimeStageWaves;
+        private readonly List<CharacterClassType> _leveledUpClasses = new List<CharacterClassType>();
 
         public BattleInventory Inventory { get; private set; } = new BattleInventory(3, 2, 1);
 
         // Thống kê trận đấu
         public int TurnCount { get; private set; } = 1;
         public int CurrentWaveNumber => _currentWaveIndex + 1;
-        public int TotalWaves => GetActiveWaveList().Count;
+        public int TotalWaves => ActiveStage.isEndless ? Mathf.Max(CurrentWaveNumber, 5) : GetActiveWaveList().Count;
         public int TotalQuestionsAnswered { get; private set; }
         public int CorrectAnswersCount { get; private set; }
         public int CurrentQuizStreak { get; private set; }
         public int BestQuizStreak { get; private set; }
         public int SessionGoldEarned { get; private set; }
+        public int SessionExpEarned { get; private set; }
+        public CampaignStageId ActiveStageId { get; private set; }
+        public StageDefinition ActiveStage { get; private set; }
+        public int LastEarnedStars { get; private set; }
+        public int LastFirstClearGoldBonus { get; private set; }
+        public bool LastUnlockedNewStage { get; private set; }
+        public IReadOnlyList<CharacterClassType> LeveledUpClasses => _leveledUpClasses;
         public int TotalPlayerGold => PlayerCampProgressManager.EnsureLoaded().Gold;
         public bool IsActionInProgress => _isActionInProgress;
         public bool IsPaused { get; private set; }
@@ -281,6 +293,23 @@ namespace MedievalRPG.Combat
             PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
             campMgr.ApplyToBattleInventory(Inventory);
             SessionGoldEarned = 0;
+            SessionExpEarned = 0;
+            LastEarnedStars = 0;
+            LastFirstClearGoldBonus = 0;
+            LastUnlockedNewStage = false;
+            _leveledUpClasses.Clear();
+
+            ActiveStageId = campMgr.SelectedStage;
+            ActiveStage = StageCatalog.GetStage(ActiveStageId);
+            if (enemyPrefab != null)
+            {
+                _runtimeStageWaves = StageCatalog.BuildWavesForStage(
+                    ActiveStageId, enemyPrefab, skeletonPrefab, skeletonArcherPrefab, shadowMagePrefab, bossPrefab);
+            }
+            else
+            {
+                _runtimeStageWaves = null;
+            }
 
             TurnCount = 1;
             _currentWaveIndex = 0;
@@ -292,13 +321,16 @@ namespace MedievalRPG.Combat
             equipMgr.OnEquipmentChanged -= ApplyPartyEquipment;
             equipMgr.OnEquipmentChanged += ApplyPartyEquipment;
 
+            PixelCombatVFXManager.EnsureExists();
+
             if (forestRoad == null)
             {
                 forestRoad = FindAnyObjectByType<ForestRoadController>();
             }
-            if (forestRoad != null && !forestRoad.HasRoadTiles)
+            if (forestRoad != null)
             {
-                forestRoad.BuildOrRebuildRoadVisuals();
+                if (!forestRoad.HasRoadTiles) forestRoad.BuildOrRebuildRoadVisuals();
+                forestRoad.SetEnvironmentTheme(ActiveStage.theme);
             }
 
             EnsureEnemyStationsExist();
@@ -329,7 +361,8 @@ namespace MedievalRPG.Combat
             forestRoad?.SetMilestone(1, Mathf.Max(1, TotalWaves), isBossWave);
             AudioManager.Instance?.PlayBattleMusic(isBossWave);
             int dropPct = Mathf.RoundToInt(CurrentWaveDropChance * 100f);
-            SetDialogue($"Đợt 1/{TotalWaves}: Tiến quân dọc đường rừng săn kho báu (Tỉ lệ rớt đồ: <b>{dropPct}%</b>)!");
+            string waveTag = ActiveStage.isEndless ? "Tầng 1 (Tháp Vô Tận)" : $"{ActiveStage.shortName} • Đợt 1/{TotalWaves}";
+            SetDialogue($"{waveTag}: Tiến quân săn kho báu & luyện tiếng Anh {ActiveStage.quizFocusLabel} (Rớt đồ: <b>{dropPct}%</b>)!");
 
             yield return new WaitForSeconds(0.9f);
             StartNewRound();
@@ -338,12 +371,15 @@ namespace MedievalRPG.Combat
         public void ApplyPartyEquipment()
         {
             PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
-            EquipmentStatBonus campBuff = PlayerCampProgressManager.EnsureLoaded().GetActiveCampBonusTotal();
+            PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
+            EquipmentStatBonus campBuff = campMgr.GetActiveCampBonusTotal();
             for (int i = 0; i < partyUnits.Count; i++)
             {
                 Unit hero = partyUnits[i];
                 if (hero == null) continue;
+                hero.unitLevel = campMgr.GetHeroProgress(hero.characterClass).level;
                 EquipmentStatBonus bonus = equipMgr.GetTotalBonusesForClass(hero.characterClass);
+                bonus.Add(campMgr.GetLevelBonusForClass(hero.characterClass));
                 bonus.Add(campBuff);
                 hero.ApplyEquipmentBonuses(bonus);
             }
@@ -384,6 +420,10 @@ namespace MedievalRPG.Combat
 
         private List<BattleWave> GetActiveWaveList()
         {
+            if (_runtimeStageWaves != null && _runtimeStageWaves.Count > 0)
+            {
+                return _runtimeStageWaves;
+            }
             if (encounterData != null && encounterData.waves != null && encounterData.waves.Count > 0)
             {
                 return encounterData.waves;
@@ -809,13 +849,16 @@ namespace MedievalRPG.Combat
             return actionType == PendingActionType.Attack ? "Tấn Công" : "Kỹ Năng";
         }
 
-        public void ProcessQuizAnswer(int answerIndex)
+        public void ProcessQuizAnswer(int answerIndex) => ProcessQuizAnswer(answerIndex, false);
+
+        public void ProcessQuizAnswer(int answerIndex, bool isQuickMind)
         {
             if (state != BattleState.WAITING_FOR_QUIZ || _activeQuestion == null || _quizAnswerSubmitted) return;
             _quizAnswerSubmitted = true;
 
             int bonusDamage = 0;
             string feedback = "";
+            bool timedOut = answerIndex < 0;
 
             if (QuizManager.Instance != null)
             {
@@ -825,21 +868,45 @@ namespace MedievalRPG.Combat
             {
                 _isQuizAnswerCorrect = _activeQuestion.IsCorrect(answerIndex);
                 bonusDamage = _isQuizAnswerCorrect ? _activeQuestion.bonusDamage : 0;
-                feedback = _isQuizAnswerCorrect ? "Chính xác!" : "Sai rồi!";
+                feedback = _isQuizAnswerCorrect ? "CORRECT!" : "INCORRECT!";
             }
 
+            if (timedOut)
+            {
+                feedback = $"<b>TIME'S UP!</b> Correct answer: <b>{_activeQuestion.GetCorrectAnswerString()}</b>.\n<i>{_activeQuestion.explanation}</i>";
+            }
+
+            PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
             TotalQuestionsAnswered++;
+            _isQuickMindActive = _isQuizAnswerCorrect && isQuickMind;
+
             if (_isQuizAnswerCorrect)
             {
                 CorrectAnswersCount++;
                 CurrentQuizStreak++;
                 if (CurrentQuizStreak > BestQuizStreak) BestQuizStreak = CurrentQuizStreak;
-                AwardSessionGold(10);
-                if (CurrentHero != null) OnUnitStatusPop?.Invoke(CurrentHero, "+10 VÀNG!", MedievalUITheme.GoldSoft);
+
+                int goldGain = 10 + (_isQuickMindActive ? 5 : 0);
+                int expGain = 12 + (_isQuickMindActive ? 6 : 0);
+                AwardSessionGold(goldGain);
+                SessionExpEarned += expGain;
+
+                if (CurrentHero != null)
+                {
+                    string popLabel = _isQuickMindActive ? $"QUICK MIND! +{goldGain}V" : $"+{goldGain} VÀNG!";
+                    OnUnitStatusPop?.Invoke(CurrentHero, popLabel, MedievalUITheme.GoldSoft);
+                }
+
+                if (CurrentQuizStreak >= 5 && !string.IsNullOrEmpty(_activeQuestion.category)
+                    && _activeQuestion.category.StartsWith("B2", StringComparison.OrdinalIgnoreCase))
+                {
+                    campMgr.UnlockAchievement(AchievementId.StreakFiveB2);
+                }
             }
             else
             {
                 CurrentQuizStreak = 0;
+                campMgr.RecordQuizMistake(_activeQuestion.questionText);
             }
 
             AudioManager.Instance?.PlayQuizResult(_isQuizAnswerCorrect, CurrentQuizStreak);
@@ -998,6 +1065,7 @@ namespace MedievalRPG.Combat
                     {
                         int gained = ally.Heal(healValue);
                         OnUnitHealed?.Invoke(ally, gained);
+                        PixelCombatVFXManager.Instance?.PlayHealColumn(ally.transform.position);
                     }
                     string targetLabel = healTargets.Count > 1
                         ? "toàn đội hình"
@@ -1007,7 +1075,7 @@ namespace MedievalRPG.Combat
 
                 if (hero.pixelAnimator != null)
                 {
-                    hero.pixelAnimator.PlayAttack(focusPos, ApplyHeals, () => animDone = true);
+                    hero.pixelAnimator.PlayAttack(focusPos, ApplyHeals, () => animDone = true, customStepDistance: 0.16f);
                     while (!animDone) yield return null;
                 }
                 else
@@ -1042,6 +1110,13 @@ namespace MedievalRPG.Combat
 
             bool isAttackDone = false;
             Vector3 attackPos = targets[0].transform.position;
+            float quickMindCritBonus = _isQuickMindActive ? 0.15f : 0f;
+            _isQuickMindActive = false;
+
+            string skillLower = skill != null && skill.skillName != null ? skill.skillName.ToLowerInvariant() : "";
+            bool isRainOfArrows = skillLower.Contains("rain");
+            bool isFireball = skillLower.Contains("fireball");
+            bool isRangedAttack = hero.characterClass == CharacterClassType.Mage || hero.characterClass == CharacterClassType.Archer;
 
             void ApplyDamageImpact()
             {
@@ -1049,7 +1124,7 @@ namespace MedievalRPG.Combat
                 int basePower = dmgType == DamageType.Magical ? hero.magicDamage : hero.damage;
                 float powerMult = skill != null ? Mathf.Max(0.1f, skill.powerMultiplier) : 1f;
                 int flatBonus = skill != null ? skill.flatBonusDamage : 0;
-                float bonusCrit = skill != null ? skill.bonusCritRate : 0f;
+                float bonusCrit = (skill != null ? skill.bonusCritRate : 0f) + quickMindCritBonus;
 
                 bool anyCrit = false;
                 int totalDamageShown = 0;
@@ -1075,6 +1150,16 @@ namespace MedievalRPG.Combat
                     totalDamageShown += actualDmg;
                     OnDamageDealt?.Invoke(target, actualDmg, isCrit);
 
+                    if (!isRangedAttack)
+                    {
+                        Color slashCol = isCrit ? MedievalUITheme.GoldSoft : new Color(0.95f, 0.96f, 1f, 1f);
+                        PixelCombatVFXManager.Instance?.PlaySlashArc(target.transform.position, slashCol, false, isCrit ? 1.45f : 1.15f);
+                    }
+                    else if (isFireball)
+                    {
+                        PixelCombatVFXManager.Instance?.PlayExplosionBurst(target.transform.position, new Color(1f, 0.52f, 0.18f, 1f), 1.15f);
+                    }
+
                     // Hiệu ứng phụ (Stun / Burn)
                     if (!targetDied && skill != null && skill.statusEffect != StatusEffectType.None && !skill.applyStatusToSelf && skill.statusDurationTurns > 0)
                     {
@@ -1082,12 +1167,14 @@ namespace MedievalRPG.Combat
                         OnUnitStatusPop?.Invoke(target, skill.statusEffect == StatusEffectType.Stun ? "CHOÁNG!" : "THIÊU ĐỐT!", MedievalUITheme.GoldSoft);
                     }
 
-                    // Boss Phase 2 Trigger & Quiz Shield Break
+                    // Boss Phase 2 Trigger & Quiz Shield Break + Boss Phase 2 Music
                     if (!targetDied)
                     {
                         if (target.TryTriggerPhase2())
                         {
                             OnUnitStatusPop?.Invoke(target, "KHIÊN BÓNG TỐI x2!", MedievalUITheme.BtnSkill);
+                            PixelCombatVFXManager.Instance?.PlayExplosionBurst(target.transform.position, new Color(0.65f, 0.25f, 1f, 1f), 1.35f);
+                            AudioManager.Instance?.PlayBattleMusic(true);
                         }
                         else if (target.ShadowShieldStacks > 0 && (!enableQuizSystem || _isQuizAnswerCorrect))
                         {
@@ -1096,6 +1183,8 @@ namespace MedievalRPG.Combat
                                 if (broken)
                                 {
                                     OnUnitStatusPop?.Invoke(target, "PHÁ KHIÊN • CHOÁNG!", MedievalUITheme.GoldSoft);
+                                    PixelCombatVFXManager.Instance?.PlayShieldShatter(target.transform.position);
+                                    PixelCombatVFXManager.Instance?.TriggerCameraShake(0.18f, 0.24f);
                                     int breakDmg = target.TakeDamage(25, DamageType.TrueDamage, out targetDied);
                                     OnDamageDealt?.Invoke(target, breakDmg, true);
                                 }
@@ -1114,6 +1203,12 @@ namespace MedievalRPG.Combat
                     }
                 }
 
+                if (anyCrit)
+                {
+                    PixelCombatVFXManager.Instance?.TriggerHitstop(0.045f);
+                    PixelCombatVFXManager.Instance?.TriggerCameraShake(0.14f, 0.20f);
+                }
+
                 AudioManager.Instance?.PlayAttackForHero(hero.characterClass, skill, anyCrit);
 
                 string critTag = anyCrit ? "<color=#F2CA6B><b>CHÍ MẠNG!</b> </color>" : "";
@@ -1124,8 +1219,43 @@ namespace MedievalRPG.Combat
 
             if (hero.pixelAnimator != null)
             {
-                hero.pixelAnimator.PlayAttack(attackPos, ApplyDamageImpact, () => isAttackDone = true);
-                while (!isAttackDone) yield return null;
+                if (isRainOfArrows)
+                {
+                    bool arrowHitDone = false;
+                    hero.pixelAnimator.PlayAttack(attackPos, () =>
+                    {
+                        PixelCombatVFXManager.EnsureExists().PlayRainOfArrows(attackPos, () =>
+                        {
+                            ApplyDamageImpact();
+                            arrowHitDone = true;
+                        });
+                    }, () => isAttackDone = true, customStepDistance: 0.14f);
+                    while (!isAttackDone || !arrowHitDone) yield return null;
+                }
+                else if (isRangedAttack)
+                {
+                    bool projHitDone = false;
+                    Color projColor = isFireball
+                        ? new Color(1f, 0.52f, 0.18f, 1f)
+                        : (hero.characterClass == CharacterClassType.Mage ? new Color(0.45f, 0.85f, 1f, 1f) : new Color(0.72f, 0.96f, 0.58f, 1f));
+                    bool isArrowProj = hero.characterClass == CharacterClassType.Archer;
+
+                    hero.pixelAnimator.PlayAttack(attackPos, () =>
+                    {
+                        StartCoroutine(PixelCombatVFXManager.EnsureExists().PlayProjectileRoutine(
+                            hero.transform.position, attackPos, projColor, isArrowProj, 0.22f, () =>
+                            {
+                                ApplyDamageImpact();
+                                projHitDone = true;
+                            }));
+                    }, () => isAttackDone = true, customStepDistance: 0.16f);
+                    while (!isAttackDone || !projHitDone) yield return null;
+                }
+                else
+                {
+                    hero.pixelAnimator.PlayAttack(attackPos, ApplyDamageImpact, () => isAttackDone = true);
+                    while (!isAttackDone) yield return null;
+                }
             }
             else
             {
@@ -1341,6 +1471,8 @@ namespace MedievalRPG.Combat
 
             bool animDone = false;
             Vector3 strikePos = targets[0].transform.position;
+            string enemySkillLower = skill != null && skill.skillName != null ? skill.skillName.ToLowerInvariant() : "";
+            bool isEnemyRanged = skill != null && (skill.damageType == DamageType.Magical || enemySkillLower.Contains("arrow") || enemySkillLower.Contains("volley") || enemySkillLower.Contains("dagger"));
 
             void ApplyEnemyStrike()
             {
@@ -1351,11 +1483,13 @@ namespace MedievalRPG.Combat
                 int flat = skill != null ? skill.flatBonusDamage : 0;
 
                 int totalDmg = 0;
+                bool anyCrit = false;
                 foreach (Unit h in targets)
                 {
                     if (h == null || !h.IsAlive) continue;
 
                     bool isCrit = UnityEngine.Random.value < (enemy.critRate + (skill != null ? skill.bonusCritRate : 0f));
+                    if (isCrit) anyCrit = true;
                     int raw = CombatCalculator.CalculateSkillRawDamage(
                         baseAtk,
                         mult,
@@ -1370,6 +1504,16 @@ namespace MedievalRPG.Combat
                     totalDmg += actual;
                     OnDamageDealt?.Invoke(h, actual, isCrit);
 
+                    if (!isEnemyRanged)
+                    {
+                        PixelCombatVFXManager.Instance?.PlaySlashArc(h.transform.position, new Color(1f, 0.35f, 0.32f, 1f), true, 1.15f);
+                    }
+                    else
+                    {
+                        Color hitCol = dmgType == DamageType.Magical ? new Color(0.75f, 0.35f, 1f, 1f) : new Color(0.95f, 0.48f, 0.35f, 1f);
+                        PixelCombatVFXManager.Instance?.PlayExplosionBurst(h.transform.position, hitCol, 0.75f);
+                    }
+
                     if (!heroDied && skill != null && skill.statusEffect != StatusEffectType.None && !skill.applyStatusToSelf && skill.statusDurationTurns > 0)
                     {
                         h.ApplyStatus(skill.statusEffect, skill.statusDurationTurns, skill.statusPotency);
@@ -1382,6 +1526,8 @@ namespace MedievalRPG.Combat
                     }
                 }
 
+                if (anyCrit) PixelCombatVFXManager.Instance?.TriggerCameraShake(0.11f, 0.16f);
+
                 string skillLabel = skill != null ? $" dùng <b>{skill.skillName}</b>" : " tấn công";
                 string targetLabel = targets.Count > 1
                     ? "toàn bộ đội hình"
@@ -1391,8 +1537,27 @@ namespace MedievalRPG.Combat
 
             if (enemy.pixelAnimator != null)
             {
-                enemy.pixelAnimator.PlayAttack(strikePos, ApplyEnemyStrike, () => animDone = true);
-                while (!animDone) yield return null;
+                if (isEnemyRanged)
+                {
+                    bool projDone = false;
+                    bool arrow = enemySkillLower.Contains("arrow") || enemySkillLower.Contains("volley") || enemySkillLower.Contains("dagger");
+                    Color projColor = arrow ? new Color(0.85f, 0.95f, 0.65f, 1f) : new Color(0.78f, 0.32f, 1f, 1f);
+                    enemy.pixelAnimator.PlayAttack(strikePos, () =>
+                    {
+                        StartCoroutine(PixelCombatVFXManager.EnsureExists().PlayProjectileRoutine(
+                            enemy.transform.position, strikePos, projColor, arrow, 0.22f, () =>
+                            {
+                                ApplyEnemyStrike();
+                                projDone = true;
+                            }));
+                    }, () => animDone = true, customStepDistance: 0.15f);
+                    while (!animDone || !projDone) yield return null;
+                }
+                else
+                {
+                    enemy.pixelAnimator.PlayAttack(strikePos, ApplyEnemyStrike, () => animDone = true);
+                    while (!animDone) yield return null;
+                }
             }
             else
             {
@@ -1421,6 +1586,12 @@ namespace MedievalRPG.Combat
             if (GetAliveEnemies().Count == 0)
             {
                 List<BattleWave> waves = GetActiveWaveList();
+                if (ActiveStage.isEndless && _currentWaveIndex + 1 >= waves.Count)
+                {
+                    waves.Add(StageCatalog.CreateEndlessWave(
+                        _currentWaveIndex + 1, enemyPrefab, skeletonPrefab, skeletonArcherPrefab, shadowMagePrefab, bossPrefab));
+                }
+
                 if (_currentWaveIndex + 1 < waves.Count)
                 {
                     StartCoroutine(TransitionToNextWaveRoutine());
@@ -1513,8 +1684,10 @@ namespace MedievalRPG.Combat
             if (deadEnemy == null || !deadEnemy.isEnemy) return;
             if (!_lootDroppedUnits.Add(deadEnemy)) return;
 
-            int enemyGold = deadEnemy.isBoss ? 120 : (15 + _currentWaveIndex * 4);
+            int baseGold = deadEnemy.isBoss ? 120 : (15 + _currentWaveIndex * 4);
+            int enemyGold = Mathf.RoundToInt(baseGold * Mathf.Max(1f, ActiveStage.rewardMultiplier));
             AwardSessionGold(enemyGold);
+            SessionExpEarned += deadEnemy.isBoss ? 85 : (22 + _currentWaveIndex * 5);
 
             List<BattleWave> waves = GetActiveWaveList();
             BattleWave wave = (_currentWaveIndex >= 0 && _currentWaveIndex < waves.Count) ? waves[_currentWaveIndex] : null;
@@ -1581,6 +1754,10 @@ namespace MedievalRPG.Combat
             if (!data.isConsumableOnly && data.equipment != null)
             {
                 addedEquip = PlayerEquipmentManager.EnsureLoaded().AddItem(data.equipment, data.waveNumber);
+                if (data.equipment.rarity == ItemRarity.Legendary)
+                {
+                    PlayerCampProgressManager.EnsureLoaded().UnlockAchievement(AchievementId.FirstLegendary);
+                }
             }
             else if (data.isConsumableOnly)
             {
@@ -1629,18 +1806,51 @@ namespace MedievalRPG.Combat
             // Gom hết vật phẩm còn trên chiến trường trước khi hiện tổng kết
             CollectAllGroundLoot();
 
+            PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
+            int finalExp = SessionExpEarned;
+
             if (state == BattleState.WON)
             {
-                AwardSessionGold(80);
-                AudioManager.Instance?.PlayVictoryFanfare();
-                SetDialogue($"<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Đội hình chinh phục đường rừng & nhận tổng cộng <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color>!");
+                int winGold = Mathf.RoundToInt(80f * Mathf.Max(1f, ActiveStage.rewardMultiplier));
+                AwardSessionGold(winGold);
+                finalExp += 65;
+
+                int aliveCount = GetAliveHeroes().Count;
+                float quizRatio = TotalQuestionsAnswered > 0 ? (float)CorrectAnswersCount / TotalQuestionsAnswered : 1f;
+                int stars = 1;
+                if (quizRatio >= 0.75f) stars++;
+                if (aliveCount >= partyUnits.Count && partyUnits.Count > 0) stars++;
+                LastEarnedStars = stars;
+
+                campMgr.RecordStageResult(ActiveStageId, true, CurrentWaveNumber, stars, out int firstGold, out bool unlocked);
+                LastFirstClearGoldBonus = firstGold;
+                LastUnlockedNewStage = unlocked;
+                if (firstGold > 0) SessionGoldEarned += firstGold;
+
+                campMgr.AwardPartyExp(finalExp, out List<CharacterClassType> ups);
+                _leveledUpClasses.Clear();
+                _leveledUpClasses.AddRange(ups);
+
+                if (_leveledUpClasses.Count > 0) AudioManager.Instance?.PlayLevelUpSfx();
+                else AudioManager.Instance?.PlayVictoryFanfare();
+
+                SetDialogue($"<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Nhận <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color> & <color=#6ED2FF><b>+{finalExp} EXP</b></color>!");
             }
             else if (state == BattleState.LOST)
             {
+                finalExp = Mathf.Max(SessionExpEarned > 0 ? 15 : 0, Mathf.RoundToInt(SessionExpEarned * 0.45f));
+                LastEarnedStars = 0;
+                campMgr.RecordStageResult(ActiveStageId, false, CurrentWaveNumber, 0, out _, out _);
+                campMgr.AwardPartyExp(finalExp, out List<CharacterClassType> ups);
+                _leveledUpClasses.Clear();
+                _leveledUpClasses.AddRange(ups);
+
                 AudioManager.Instance?.PlayDefeatSting();
-                SetDialogue($"<color=#FF6B6B><b>THẤT BẠI!</b></color> Trang bị đã nhặt & <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color> vẫn được mang về Sảnh Chờ!");
+                SetDialogue($"<color=#FF6B6B><b>THẤT BẠI!</b></color> Mang về <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color> & <b>+{finalExp} EXP</b> để rèn luyện lại!");
             }
-            PlayerCampProgressManager.EnsureLoaded().SyncAfterBattle(Inventory, consumeActiveBuffs: true);
+
+            SessionExpEarned = finalExp;
+            campMgr.SyncAfterBattle(Inventory, consumeActiveBuffs: true);
             OnBattleEnded?.Invoke(state);
         }
 
@@ -1701,6 +1911,16 @@ namespace MedievalRPG.Combat
         {
             if (state != BattleState.PLAYERTURN || _isActionInProgress) return;
             StartCoroutine(PlayerDefend());
+        }
+
+        public void FinishEndlessExpedition()
+        {
+            if (!ActiveStage.isEndless || state == BattleState.WON || state == BattleState.LOST) return;
+            StopAllCoroutines();
+            SetPaused(false);
+            _isActionInProgress = false;
+            SetState(BattleState.WON);
+            EndBattle();
         }
     }
 }

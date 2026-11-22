@@ -44,5 +44,10 @@ namespace MedievalRPG.Audio
         public AudioClip lootDrop;
         public AudioClip lootLegendary;
         public AudioClip lootPickup;
+
+        [Header("Economy & Progression SFX")]
+        public AudioClip coinReward;
+        public AudioClip forgeUpgrade;
+        public AudioClip levelUp;
     }
 }

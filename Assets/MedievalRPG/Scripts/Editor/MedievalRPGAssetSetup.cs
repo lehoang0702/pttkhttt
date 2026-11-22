@@ -114,6 +114,42 @@ namespace MedievalRPG.EditorTools
                 powerMult: 0f, flatBonus: 0, heal: 0, defBonus: 14, bonusCrit: 0f, effTurns: 2,
                 StatusEffectType.None, statusTurns: 0, statusPotency: 0, toSelf: true);
 
+            SkillData skelArrow = CreateOrUpdateSkill(
+                $"{SkillsRoot}/Skeleton_BoneArrow.asset",
+                "Bone Arrow",
+                "Bắn mũi tên xương sắc bén với tỉ lệ chí mạng cao.",
+                CharacterClassType.Archer,
+                manaCost: 0, cooldown: 0, SkillTargetType.SingleEnemy, DamageType.Physical,
+                powerMult: 1.0f, flatBonus: 2, heal: 0, defBonus: 0, bonusCrit: 0.12f, effTurns: 0,
+                StatusEffectType.None, statusTurns: 0, statusPotency: 0, toSelf: false);
+
+            SkillData skelVolley = CreateOrUpdateSkill(
+                $"{SkillsRoot}/Skeleton_PoisonVolley.asset",
+                "Poison Volley",
+                "Bắn loạt tên độc gây sát thương diện rộng & thiêu đốt.",
+                CharacterClassType.Archer,
+                manaCost: 12, cooldown: 2, SkillTargetType.AllEnemies, DamageType.Physical,
+                powerMult: 0.78f, flatBonus: 2, heal: 0, defBonus: 0, bonusCrit: 0.05f, effTurns: 0,
+                StatusEffectType.Burn, statusTurns: 2, statusPotency: 5, toSelf: false);
+
+            SkillData shadowOrb = CreateOrUpdateSkill(
+                $"{SkillsRoot}/ShadowMage_DarkOrb.asset",
+                "Dark Orb",
+                "Phóng cầu hắc ám gây sát thương phép.",
+                CharacterClassType.Mage,
+                manaCost: 0, cooldown: 0, SkillTargetType.SingleEnemy, DamageType.Magical,
+                powerMult: 1.0f, flatBonus: 3, heal: 0, defBonus: 0, bonusCrit: 0.06f, effTurns: 0,
+                StatusEffectType.None, statusTurns: 0, statusPotency: 0, toSelf: false);
+
+            SkillData shadowBlast = CreateOrUpdateSkill(
+                $"{SkillsRoot}/ShadowMage_CursedBlast.asset",
+                "Cursed Blast",
+                "Vụ nổ lời nguyền thiêu đốt toàn bộ anh hùng.",
+                CharacterClassType.Mage,
+                manaCost: 14, cooldown: 2, SkillTargetType.AllEnemies, DamageType.Magical,
+                powerMult: 0.85f, flatBonus: 3, heal: 0, defBonus: 0, bonusCrit: 0f, effTurns: 0,
+                StatusEffectType.Burn, statusTurns: 2, statusPotency: 6, toSelf: false);
+
             // 3. Gán kỹ năng cho cả 3 Anh hùng & 3 Quái vật/Boss
             SkillData knightSlash = AssetDatabase.LoadAssetAtPath<SkillData>($"{SkillsRoot}/Knight_Slash.asset");
             AssignSkillsListOnly($"{ClassesRoot}/KnightClass.asset", knightSlash, shieldSlam, ironBulwark);
@@ -131,7 +167,31 @@ namespace MedievalRPG.EditorTools
             AssignSkillsToClass($"{ClassesRoot}/SkeletonClass.asset", 2, false, skelCleave, skelShield);
             AssignSkillsToClass($"{ClassesRoot}/DarkKnightBossClass.asset", 5, true, bossSlash, bossWave, bossBulwark);
 
-            // 4. Đồng bộ ClassData, Material, Sprites & BoxCollider2D trên toàn bộ 6 Prefab nhân vật/quái
+            EnsureEnemyClassAsset(
+                $"{ClassesRoot}/SkeletonArcherClass.asset",
+                "Xương Cung Thủ",
+                CharacterClassType.Archer,
+                baseLevel: 2, hp: 105, mp: 45, atk: 20, mag: 8, def: 9, mdef: 8, spd: 16, crit: 0.14f,
+                skelArrow, skelVolley);
+            EnsureEnemyClassAsset(
+                $"{ClassesRoot}/ShadowMageClass.asset",
+                "Pháp Sư Hắc Ám",
+                CharacterClassType.Mage,
+                baseLevel: 3, hp: 112, mp: 75, atk: 8, mag: 24, def: 7, mdef: 22, spd: 14, crit: 0.08f,
+                shadowOrb, shadowBlast);
+
+            EnsureVariantEnemyPrefab(
+                "Assets/MedievalRPG/Prefabs/Archer.prefab",
+                "Assets/MedievalRPG/Prefabs/SkeletonArcher.prefab",
+                "Xương Cung Thủ",
+                new Color(0.65f, 0.94f, 1.00f, 1f));
+            EnsureVariantEnemyPrefab(
+                "Assets/MedievalRPG/Prefabs/Mage.prefab",
+                "Assets/MedievalRPG/Prefabs/ShadowMage.prefab",
+                "Pháp Sư Hắc Ám",
+                new Color(0.58f, 0.38f, 0.94f, 1f));
+
+            // 4. Đồng bộ ClassData, Material, Sprites & BoxCollider2D trên toàn bộ 8 Prefab nhân vật/quái
             SyncAllUnitPrefabs();
 
             // 5. Sinh 36 món Trang Bị (3 Class x 3 Slot x 4 Độ hiếm) và Resources/MedievalEquipmentCatalog.asset
@@ -353,7 +413,92 @@ namespace MedievalRPG.EditorTools
             SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Archer.prefab", $"{ClassesRoot}/ArcherClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f));
             SyncUnitPrefab("Assets/MedievalRPG/Prefabs/GoblinRaider.prefab", $"{ClassesRoot}/GoblinClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
             SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Skeleton.prefab", $"{ClassesRoot}/SkeletonClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/SkeletonArcher.prefab", $"{ClassesRoot}/SkeletonArcherClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/ShadowMage.prefab", $"{ClassesRoot}/ShadowMageClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
             SyncUnitPrefab("Assets/MedievalRPG/Prefabs/DarkKnightBoss.prefab", $"{ClassesRoot}/DarkKnightBossClass.asset", true, spriteLitMat, knightAnimTemplate, new Vector2(1.45f, 1.75f));
+        }
+
+        private static void EnsureEnemyClassAsset(
+            string path, string className, CharacterClassType classType,
+            int baseLevel, int hp, int mp, int atk, int mag, int def, int mdef, int spd, float crit,
+            params SkillData[] list)
+        {
+            CharacterClassData cls = AssetDatabase.LoadAssetAtPath<CharacterClassData>(path);
+            if (cls == null)
+            {
+                cls = ScriptableObject.CreateInstance<CharacterClassData>();
+                AssetDatabase.CreateAsset(cls, path);
+            }
+            cls.className = className;
+            cls.classType = classType;
+            cls.baseLevel = baseLevel;
+            cls.isBoss = false;
+            cls.maxHealth = hp;
+            cls.maxMana = mp;
+            cls.physicalAttack = atk;
+            cls.magicAttack = mag;
+            cls.physicalDefense = def;
+            cls.magicDefense = mdef;
+            cls.speed = spd;
+            cls.critRate = crit;
+            cls.critMultiplier = 1.5f;
+            cls.skills = new List<SkillData>();
+            foreach (SkillData s in list)
+            {
+                if (s != null) cls.skills.Add(s);
+            }
+            EditorUtility.SetDirty(cls);
+        }
+
+        private static void EnsureVariantEnemyPrefab(string sourcePrefabPath, string destPrefabPath, string unitTitle, Color tint)
+        {
+            if (!System.IO.File.Exists(sourcePrefabPath)) return;
+            if (!System.IO.File.Exists(destPrefabPath))
+            {
+                AssetDatabase.CopyAsset(sourcePrefabPath, destPrefabPath);
+                AssetDatabase.Refresh();
+            }
+
+            GameObject srcRoot = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePrefabPath);
+            PixelCharacterAnimator srcAnim = srcRoot != null ? srcRoot.GetComponent<PixelCharacterAnimator>() : null;
+            SpriteRenderer srcSr = srcRoot != null ? srcRoot.GetComponentInChildren<SpriteRenderer>(true) : null;
+
+            GameObject root = PrefabUtility.LoadPrefabContents(destPrefabPath);
+            try
+            {
+                Unit u = root.GetComponent<Unit>();
+                if (u != null)
+                {
+                    u.unitName = unitTitle;
+                    u.isEnemy = true;
+                    EditorUtility.SetDirty(u);
+                }
+
+                PixelCharacterAnimator dstAnim = root.GetComponent<PixelCharacterAnimator>();
+                if (dstAnim != null && srcAnim != null)
+                {
+                    dstAnim.idleFrames = new List<Sprite>(srcAnim.idleFrames);
+                    dstAnim.runFrames = new List<Sprite>(srcAnim.runFrames);
+                    dstAnim.attackFrames = new List<Sprite>(srcAnim.attackFrames);
+                    dstAnim.hitFrames = new List<Sprite>(srcAnim.hitFrames);
+                    dstAnim.deathFrames = new List<Sprite>(srcAnim.deathFrames);
+                    dstAnim.SetFacingRight(false);
+                    EditorUtility.SetDirty(dstAnim);
+                }
+
+                SpriteRenderer sr = root.GetComponentInChildren<SpriteRenderer>(true);
+                if (sr != null)
+                {
+                    if (srcSr != null && srcSr.sprite != null) sr.sprite = srcSr.sprite;
+                    sr.color = tint;
+                    EditorUtility.SetDirty(sr);
+                }
+                PrefabUtility.SaveAsPrefabAsset(root, destPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         private static void SyncUnitPrefab(

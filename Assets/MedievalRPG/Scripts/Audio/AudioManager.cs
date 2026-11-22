@@ -474,5 +474,26 @@ namespace MedievalRPG.Audio
             AudioClip clip = audioBank.lootPickup != null ? audioBank.lootPickup : audioBank.uiClick;
             if (clip != null) PlaySFX(clip, 0.82f, 0.05f);
         }
+
+        public void PlayCoinRewardSfx()
+        {
+            if (audioBank == null) return;
+            AudioClip clip = audioBank.coinReward != null ? audioBank.coinReward : audioBank.lootPickup;
+            if (clip != null) PlaySFX(clip, 0.86f, 0.04f);
+        }
+
+        public void PlayForgeUpgradeSfx()
+        {
+            if (audioBank == null) return;
+            AudioClip clip = audioBank.forgeUpgrade != null ? audioBank.forgeUpgrade : audioBank.lootDrop;
+            if (clip != null) PlaySFX(clip, 0.90f, 0.03f);
+        }
+
+        public void PlayLevelUpSfx()
+        {
+            if (audioBank == null) return;
+            AudioClip clip = audioBank.levelUp != null ? audioBank.levelUp : audioBank.lootLegendary;
+            if (clip != null) PlaySFX(clip, 0.94f, 0f);
+        }
     }
 }
