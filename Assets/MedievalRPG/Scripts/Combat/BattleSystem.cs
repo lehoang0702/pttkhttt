@@ -9,6 +9,7 @@ using MedievalRPG.Audio;
 using MedievalRPG.Data;
 using MedievalRPG.Quiz;
 using MedievalRPG.UI;
+using MedievalRPG.Visuals;
 
 namespace MedievalRPG.Combat
 {
@@ -69,6 +70,7 @@ namespace MedievalRPG.Combat
         public BattleState state;
         public bool enableLegacyOnGUI = false;
         public TMP_FontAsset lootLabelFont;
+        public ForestRoadController forestRoad;
 
         private readonly List<Unit> _turnQueue = new List<Unit>();
         private readonly List<WorldLootDrop> _groundLootDrops = new List<WorldLootDrop>();
@@ -98,6 +100,8 @@ namespace MedievalRPG.Combat
         public int CorrectAnswersCount { get; private set; }
         public int CurrentQuizStreak { get; private set; }
         public int BestQuizStreak { get; private set; }
+        public int SessionGoldEarned { get; private set; }
+        public int TotalPlayerGold => PlayerCampProgressManager.EnsureLoaded().Gold;
         public bool IsActionInProgress => _isActionInProgress;
         public bool IsPaused { get; private set; }
         public string CurrentDialogue { get; private set; } = "";
@@ -151,6 +155,7 @@ namespace MedievalRPG.Combat
         public event Action<LootDropResult, WorldLootDrop> OnLootDropped;
         public event Action<LootDropResult, OwnedEquipmentInstance> OnLootPickedUp;
         public event Action<int> OnGroundLootCountChanged;
+        public event Action<int> OnGoldChanged;
 
         private void Start()
         {
@@ -273,7 +278,10 @@ namespace MedievalRPG.Combat
         // =====================================================================
         private IEnumerator SetupBattle()
         {
-            Inventory.Reset(3, 2, 1);
+            PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
+            campMgr.ApplyToBattleInventory(Inventory);
+            SessionGoldEarned = 0;
+
             TurnCount = 1;
             _currentWaveIndex = 0;
             _sessionLootCollected.Clear();
@@ -283,6 +291,15 @@ namespace MedievalRPG.Combat
             PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
             equipMgr.OnEquipmentChanged -= ApplyPartyEquipment;
             equipMgr.OnEquipmentChanged += ApplyPartyEquipment;
+
+            if (forestRoad == null)
+            {
+                forestRoad = FindAnyObjectByType<ForestRoadController>();
+            }
+            if (forestRoad != null && !forestRoad.HasRoadTiles)
+            {
+                forestRoad.BuildOrRebuildRoadVisuals();
+            }
 
             EnsureEnemyStationsExist();
             SpawnPartyIfEmpty();
@@ -306,11 +323,13 @@ namespace MedievalRPG.Combat
             OnBattleInitialized?.Invoke();
             OnWaveChanged?.Invoke();
             OnGroundLootCountChanged?.Invoke(0);
+            OnGoldChanged?.Invoke(campMgr.Gold);
 
             bool isBossWave = IsCurrentWaveBoss();
+            forestRoad?.SetMilestone(1, Mathf.Max(1, TotalWaves), isBossWave);
             AudioManager.Instance?.PlayBattleMusic(isBossWave);
             int dropPct = Mathf.RoundToInt(CurrentWaveDropChance * 100f);
-            SetDialogue($"Đợt 1/{TotalWaves}: Tiến sâu vào rừng để săn trang bị (Tỉ lệ rớt đồ: <b>{dropPct}%</b>)!");
+            SetDialogue($"Đợt 1/{TotalWaves}: Tiến quân dọc đường rừng săn kho báu (Tỉ lệ rớt đồ: <b>{dropPct}%</b>)!");
 
             yield return new WaitForSeconds(0.9f);
             StartNewRound();
@@ -319,11 +338,13 @@ namespace MedievalRPG.Combat
         public void ApplyPartyEquipment()
         {
             PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
+            EquipmentStatBonus campBuff = PlayerCampProgressManager.EnsureLoaded().GetActiveCampBonusTotal();
             for (int i = 0; i < partyUnits.Count; i++)
             {
                 Unit hero = partyUnits[i];
                 if (hero == null) continue;
                 EquipmentStatBonus bonus = equipMgr.GetTotalBonusesForClass(hero.characterClass);
+                bonus.Add(campBuff);
                 hero.ApplyEquipmentBonuses(bonus);
             }
         }
@@ -356,6 +377,7 @@ namespace MedievalRPG.Combat
             if (unit != null)
             {
                 unit.pixelAnimator?.SetHomePosition(station.position);
+                unit.pixelAnimator?.SetSortingOrder(5);
                 partyUnits.Add(unit);
             }
         }
@@ -505,6 +527,7 @@ namespace MedievalRPG.Combat
                         eUnit.ApplyWaveScale(statMult, isEliteWave);
                     }
                     eUnit.PlanNextIntent(TurnCount);
+                    eUnit.pixelAnimator?.SetSortingOrder(5);
                     if (animateEntrance && eUnit.pixelAnimator != null)
                     {
                         eUnit.pixelAnimator.PlayEntranceStep(spawnPos, stationPos);
@@ -533,14 +556,14 @@ namespace MedievalRPG.Combat
                 return enemyBattleStations[index].position;
             }
 
-            Vector3 basePos = enemyBattleStation != null ? enemyBattleStation.position : new Vector3(2.3f, -0.5f, 0f);
+            Vector3 basePos = enemyBattleStation != null ? enemyBattleStation.position : new Vector3(1.85f, -1.24f, 0f);
             if (totalCount <= 1) return basePos;
 
             switch (index)
             {
-                case 0:  return basePos + new Vector3(-0.35f, -0.25f, 0f);
-                case 1:  return basePos + new Vector3(0.85f, 0.55f, 0f);
-                default: return basePos + new Vector3(1.45f, -0.45f, 0f);
+                case 0:  return basePos + new Vector3(-0.35f, -0.14f, 0f);
+                case 1:  return basePos + new Vector3(0.90f, 0.22f, 0f);
+                default: return basePos + new Vector3(2.15f, -0.18f, 0f);
             }
         }
 
@@ -749,12 +772,12 @@ namespace MedievalRPG.Combat
             else
             {
                 _activeQuestion = new QuizQuestion(
-                    "Toán học",
-                    "7 x 8 bằng bao nhiêu?",
-                    new[] { "54", "56", "64", "48" },
+                    "B1 • Grammar",
+                    "By the time we reached the castle, the gates _____ already.",
+                    new[] { "closed", "had closed", "have closed", "close" },
                     1,
-                    "7 nhân 8 bằng 56.",
-                    5
+                    "Past Perfect ('had closed') describes an event completed before another past action.",
+                    7
                 );
             }
 
@@ -811,6 +834,8 @@ namespace MedievalRPG.Combat
                 CorrectAnswersCount++;
                 CurrentQuizStreak++;
                 if (CurrentQuizStreak > BestQuizStreak) BestQuizStreak = CurrentQuizStreak;
+                AwardSessionGold(10);
+                if (CurrentHero != null) OnUnitStatusPop?.Invoke(CurrentHero, "+10 VÀNG!", MedievalUITheme.GoldSoft);
             }
             else
             {
@@ -1202,6 +1227,30 @@ namespace MedievalRPG.Combat
                     SetDialogue($"<b>{heroDisplay}</b> dùng <b>Lông Phượng Hoàng</b> hồi sinh <b>{MedievalUITheme.FormatHeroDisplayName(fallen.unitName)}</b> ({hp} HP)!");
                 }
             }
+            else if (item == ConsumableItemType.WarElixir)
+            {
+                List<Unit> alive = GetAliveHeroes();
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    alive[i].ApplyStatus(StatusEffectType.AttackUp, 3, 30);
+                    OnUnitStatusPop?.Invoke(alive[i], "+30% DAME!", MedievalUITheme.BtnAttack);
+                }
+                AudioManager.Instance?.PlayDefendSfx();
+                SetDialogue($"<b>{heroDisplay}</b> kích hoạt <b>Thuốc Cuồng Chiến</b>! Toàn đội tăng <b>+30% Sát Thương</b> trong 3 lượt!");
+            }
+            else if (item == ConsumableItemType.IronTonic)
+            {
+                List<Unit> alive = GetAliveHeroes();
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    int gained = alive[i].Heal(25);
+                    alive[i].ApplyStatus(StatusEffectType.DefenseUp, 3, 12);
+                    if (gained > 0) OnUnitHealed?.Invoke(alive[i], gained);
+                    OnUnitStatusPop?.Invoke(alive[i], "+12 GIÁP!", MedievalUITheme.BtnDefend);
+                }
+                AudioManager.Instance?.PlayDefendSfx();
+                SetDialogue($"<b>{heroDisplay}</b> kích hoạt <b>Thuốc Thiết Giáp</b>! Cả đội hồi +25 HP & tăng <b>+12 Giáp</b> trong 3 lượt!");
+            }
 
             yield return new WaitForSeconds(0.85f);
             _isActionInProgress = false;
@@ -1412,12 +1461,37 @@ namespace MedievalRPG.Combat
             List<BattleWave> waves = GetActiveWaveList();
             BattleWave nextWave = waves[_currentWaveIndex];
             string title = nextWave.waveTitle;
-            SetDialogue($"<color=#F2CA6B><b>VƯỢT QUA ĐỢT {_currentWaveIndex}!</b></color> Đội hình hồi sức chuẩn bị cho <b>{title}</b>...");
-            yield return new WaitForSeconds(0.85f);
+            SetDialogue($"<color=#F2CA6B><b>VƯỢT QUA ĐỢT {_currentWaveIndex}!</b></color> Đội hình hành quân dọc đường tiến tới <b>{title}</b>...");
+
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                if (partyUnits[i] != null && partyUnits[i].IsAlive)
+                {
+                    partyUnits[i].pixelAnimator?.StartMarchRun(1.22f);
+                }
+            }
+
+            bool isBossWave = nextWave.isBossWave;
+            if (forestRoad != null)
+            {
+                yield return forestRoad.ScrollForwardRoutine(1.25f, 5.8f, _currentWaveIndex + 1, waves.Count, isBossWave);
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.95f);
+            }
+
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                if (partyUnits[i] != null && partyUnits[i].IsAlive)
+                {
+                    partyUnits[i].pixelAnimator?.StopMarchRun();
+                }
+            }
 
             yield return SpawnWaveRoutine(_currentWaveIndex, animateEntrance: true);
 
-            bool isBossWave = IsCurrentWaveBoss();
+            isBossWave = IsCurrentWaveBoss();
             AudioManager.Instance?.PlayBattleMusic(isBossWave);
             OnWaveChanged?.Invoke();
 
@@ -1439,6 +1513,9 @@ namespace MedievalRPG.Combat
             if (deadEnemy == null || !deadEnemy.isEnemy) return;
             if (!_lootDroppedUnits.Add(deadEnemy)) return;
 
+            int enemyGold = deadEnemy.isBoss ? 120 : (15 + _currentWaveIndex * 4);
+            AwardSessionGold(enemyGold);
+
             List<BattleWave> waves = GetActiveWaveList();
             BattleWave wave = (_currentWaveIndex >= 0 && _currentWaveIndex < waves.Count) ? waves[_currentWaveIndex] : null;
             float dropBonus = wave != null ? wave.dropChanceBonus : 0f;
@@ -1454,7 +1531,11 @@ namespace MedievalRPG.Combat
                 luckBonus,
                 enableQuizSystem ? CurrentQuizStreak : 0);
 
-            if (drops.Count == 0) return;
+            if (drops.Count == 0)
+            {
+                OnUnitStatusPop?.Invoke(deadEnemy, $"+{enemyGold} VÀNG!", MedievalUITheme.GoldSoft);
+                return;
+            }
 
             ItemRarity highestRarity = ItemRarity.Common;
             Vector3 origin = deadEnemy.transform.position + new Vector3(0f, 0.25f, 0f);
@@ -1534,6 +1615,15 @@ namespace MedievalRPG.Combat
             return collected;
         }
 
+        private void AwardSessionGold(int amount)
+        {
+            if (amount <= 0) return;
+            SessionGoldEarned += amount;
+            PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
+            campMgr.AddGold(amount);
+            OnGoldChanged?.Invoke(campMgr.Gold);
+        }
+
         private void EndBattle()
         {
             // Gom hết vật phẩm còn trên chiến trường trước khi hiện tổng kết
@@ -1541,14 +1631,16 @@ namespace MedievalRPG.Combat
 
             if (state == BattleState.WON)
             {
+                AwardSessionGold(80);
                 AudioManager.Instance?.PlayVictoryFanfare();
-                SetDialogue("<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Đội hình anh hùng đã chinh phục toàn bộ bản đồ và thu thập kho báu!");
+                SetDialogue($"<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Đội hình chinh phục đường rừng & nhận tổng cộng <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color>!");
             }
             else if (state == BattleState.LOST)
             {
                 AudioManager.Instance?.PlayDefeatSting();
-                SetDialogue("<color=#FF6B6B><b>THẤT BẠI!</b></color> Toàn bộ đội hình đã gục ngã. Trang bị đã nhặt vẫn được lưu lại trong Kho Đồ!");
+                SetDialogue($"<color=#FF6B6B><b>THẤT BẠI!</b></color> Trang bị đã nhặt & <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color> vẫn được mang về Sảnh Chờ!");
             }
+            PlayerCampProgressManager.EnsureLoaded().SyncAfterBattle(Inventory, consumeActiveBuffs: true);
             OnBattleEnded?.Invoke(state);
         }
 

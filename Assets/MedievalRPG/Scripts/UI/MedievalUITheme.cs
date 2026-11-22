@@ -56,6 +56,8 @@ namespace MedievalRPG.UI
         {
             if (string.IsNullOrEmpty(category)) return BtnNeutralSlate;
             string lower = category.ToLowerInvariant();
+            if (lower.Contains("b2")) return CategoryEnglish;
+            if (lower.Contains("b1")) return CategoryMath;
             if (lower.Contains("sử") || lower.Contains("history")) return CategoryHistory;
             if (lower.Contains("toán") || lower.Contains("math")) return CategoryMath;
             if (lower.Contains("anh") || lower.Contains("english")) return CategoryEnglish;

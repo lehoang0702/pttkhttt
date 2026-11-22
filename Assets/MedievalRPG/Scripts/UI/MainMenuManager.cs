@@ -13,8 +13,8 @@ namespace MedievalRPG.UI
     /// </summary>
     public class MainMenuManager : MonoBehaviour
     {
-        [Header("Tên màn hình trận đấu")]
-        public string battleSceneName = "MedievalBattleDemo";
+        [Header("Tên màn hình tiếp theo (Sảnh Chờ)")]
+        public string battleSceneName = "CampHub";
 
         [Header("Bảng giao diện")]
         public GameObject instructionsPanel;

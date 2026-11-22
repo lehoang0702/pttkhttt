@@ -144,6 +144,18 @@ namespace MedievalRPG.Data
             critRate += item.bonusCritRate;
         }
 
+        public void Add(EquipmentStatBonus other)
+        {
+            maxHP += other.maxHP;
+            maxMP += other.maxMP;
+            physicalAttack += other.physicalAttack;
+            magicAttack += other.magicAttack;
+            physicalDefense += other.physicalDefense;
+            magicDefense += other.magicDefense;
+            speed += other.speed;
+            critRate += other.critRate;
+        }
+
         public string FormatSummary()
         {
             List<string> parts = new List<string>(6);

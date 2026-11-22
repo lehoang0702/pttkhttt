@@ -190,15 +190,15 @@ namespace MedievalRPG.UI
             if (feedbackTitleText != null)
             {
                 feedbackTitleText.text = isCorrect
-                    ? $"CHÍNH XÁC!  Tăng +{bonusDamage} sức mạnh chiêu thức!"
+                    ? $"CHÍNH XÁC!  +{bonusDamage} sát thương chiêu thức & +10 Vàng!"
                     : "CHƯA ĐÚNG!  Anh hùng mất lượt hành động này.";
                 feedbackTitleText.color = isCorrect ? MedievalUITheme.GoldSoft : new Color(1f, 0.68f, 0.68f, 1f);
             }
             if (feedbackExplanationText != null)
             {
                 feedbackExplanationText.text = string.IsNullOrEmpty(explanation)
-                    ? "Hãy tiếp tục phát huy ở câu hỏi tiếp theo!"
-                    : $"Kiến thức: {explanation}";
+                    ? "Keep going on the next English challenge!"
+                    : $"Grammar / Usage: {explanation}";
             }
             if (feedbackTimerFill != null)
             {

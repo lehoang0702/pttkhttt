@@ -90,10 +90,23 @@ namespace MedievalRPG.UI
 
         [Header("Túi Vật Phẩm (Popover)")]
         [SerializeField] private GameObject itemBagPanel;
-        [SerializeField] private UnityEngine.UI.Button[] itemButtons = new UnityEngine.UI.Button[3];
-        [SerializeField] private TextMeshProUGUI[] itemTitleTMPs = new TextMeshProUGUI[3];
-        [SerializeField] private TextMeshProUGUI[] itemCountTMPs = new TextMeshProUGUI[3];
+        [SerializeField] private UnityEngine.UI.Button[] itemButtons = new UnityEngine.UI.Button[5];
+        [SerializeField] private TextMeshProUGUI[] itemTitleTMPs = new TextMeshProUGUI[5];
+        [SerializeField] private TextMeshProUGUI[] itemCountTMPs = new TextMeshProUGUI[5];
         [SerializeField] private UnityEngine.UI.Button closeItemBagButton;
+
+        [Header("Vàng & Bùa Lợi Sảnh Chờ")]
+        [SerializeField] private TextMeshProUGUI goldBadgeTMP;
+        [SerializeField] private TextMeshProUGUI campBuffBadgeTMP;
+
+        private static readonly ConsumableItemType[] BagItemOrder =
+        {
+            ConsumableItemType.HealthPotion,
+            ConsumableItemType.ManaElixir,
+            ConsumableItemType.PhoenixFeather,
+            ConsumableItemType.WarElixir,
+            ConsumableItemType.IronTonic
+        };
 
         [Header("Tóm Tắt Kết Quả Trận Đấu")]
         [SerializeField] private TextMeshProUGUI victorySummaryTMP;
@@ -234,6 +247,12 @@ namespace MedievalRPG.UI
             lootToastDetailTMP = toastDetail;
         }
 
+        public void ConfigureGoldAndCampUI(TextMeshProUGUI goldTMP, TextMeshProUGUI buffPillTMP)
+        {
+            goldBadgeTMP = goldTMP;
+            campBuffBadgeTMP = buffPillTMP;
+        }
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -277,6 +296,8 @@ namespace MedievalRPG.UI
             if (lootToastRoot != null) lootToastRoot.SetActive(false);
 
             RefreshEquipmentButtonBadge();
+            RefreshGoldDisplay();
+            RefreshCampBuffBadge();
 
             if (fadeOverlay != null)
             {
@@ -303,6 +324,7 @@ namespace MedievalRPG.UI
             battleSystem.OnBattleEnded += HandleBattleEnded;
             battleSystem.OnLootPickedUp += HandleLootPickedUp;
             battleSystem.OnGroundLootCountChanged += HandleGroundLootCountChanged;
+            battleSystem.OnGoldChanged += HandleGoldChanged;
             battleSystem.Inventory.OnInventoryChanged += RefreshItemBagUI;
             PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += RefreshEquipmentButtonBadge;
         }
@@ -327,6 +349,7 @@ namespace MedievalRPG.UI
             battleSystem.OnBattleEnded -= HandleBattleEnded;
             battleSystem.OnLootPickedUp -= HandleLootPickedUp;
             battleSystem.OnGroundLootCountChanged -= HandleGroundLootCountChanged;
+            battleSystem.OnGoldChanged -= HandleGoldChanged;
             battleSystem.Inventory.OnInventoryChanged -= RefreshItemBagUI;
 
             if (partyCards != null)
@@ -514,6 +537,8 @@ namespace MedievalRPG.UI
             RefreshAllStatusDisplays();
             RefreshQuizStatsBadge();
             RefreshItemBagUI();
+            RefreshGoldDisplay();
+            RefreshCampBuffBadge();
         }
 
         private void HandleWaveChanged()
@@ -736,6 +761,8 @@ namespace MedievalRPG.UI
             }
             _pausedByEquipmentModal = false;
             RefreshEquipmentButtonBadge();
+            RefreshGoldDisplay();
+            RefreshCampBuffBadge();
             RefreshAllStatusDisplays();
             RefreshActionButtons();
         }
@@ -763,6 +790,8 @@ namespace MedievalRPG.UI
         private void HandleLootPickedUp(LootDropResult drop, OwnedEquipmentInstance inst)
         {
             RefreshEquipmentButtonBadge();
+            RefreshGoldDisplay();
+            RefreshCampBuffBadge();
             ShowLootToast(drop);
         }
 
@@ -862,6 +891,24 @@ namespace MedievalRPG.UI
             waveBadgeTMP.text = isBoss
                 ? $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves} • BOSS 100%"
                 : $"ĐỢT {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves} • RỚT {dropPct}%";
+        }
+
+        private void HandleGoldChanged(int _) => RefreshGoldDisplay();
+
+        private void RefreshGoldDisplay()
+        {
+            if (goldBadgeTMP == null) return;
+            int gold = battleSystem != null
+                ? battleSystem.TotalPlayerGold
+                : PlayerCampProgressManager.EnsureLoaded().Gold;
+            goldBadgeTMP.text = $"VÀNG: {gold}";
+        }
+
+        private void RefreshCampBuffBadge()
+        {
+            if (campBuffBadgeTMP == null) return;
+            string summary = PlayerCampProgressManager.EnsureLoaded().GetActiveBuffsShortSummary();
+            campBuffBadgeTMP.text = $"Bùa: {summary}";
         }
 
         private void RefreshQuizStatsBadge()
@@ -1132,23 +1179,16 @@ namespace MedievalRPG.UI
         {
             if (battleSystem == null || itemButtons == null) return;
 
-            ConsumableItemType[] types =
+            for (int i = 0; i < BagItemOrder.Length && i < itemButtons.Length; i++)
             {
-                ConsumableItemType.HealthPotion,
-                ConsumableItemType.ManaElixir,
-                ConsumableItemType.PhoenixFeather
-            };
-
-            for (int i = 0; i < types.Length && i < itemButtons.Length; i++)
-            {
-                ConsumableItemType item = types[i];
+                ConsumableItemType item = BagItemOrder[i];
                 int count = battleSystem.Inventory.GetCount(item);
                 bool canUse = battleSystem.CanUseConsumable(item);
 
                 if (itemButtons[i] != null) itemButtons[i].interactable = canUse;
                 if (itemTitleTMPs != null && i < itemTitleTMPs.Length && itemTitleTMPs[i] != null)
                 {
-                    itemTitleTMPs[i].text = BattleInventory.GetDisplayName(item);
+                    itemTitleTMPs[i].text = $"[{i + 1}] {BattleInventory.GetDisplayName(item)} ({BattleInventory.GetShortEffectDescription(item)})";
                 }
                 if (itemCountTMPs != null && i < itemCountTMPs.Length && itemCountTMPs[i] != null)
                 {
@@ -1159,10 +1199,8 @@ namespace MedievalRPG.UI
 
         private void UseItemByIndex(int index)
         {
-            if (battleSystem == null) return;
-            ConsumableItemType item = index == 0
-                ? ConsumableItemType.HealthPotion
-                : (index == 1 ? ConsumableItemType.ManaElixir : ConsumableItemType.PhoenixFeather);
+            if (battleSystem == null || index < 0 || index >= BagItemOrder.Length) return;
+            ConsumableItemType item = BagItemOrder[index];
 
             if (!battleSystem.CanUseConsumable(item)) return;
             SetItemBagOpen(false);
@@ -1277,6 +1315,8 @@ namespace MedievalRPG.UI
                 if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) UseItemByIndex(0);
                 else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) UseItemByIndex(1);
                 else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) UseItemByIndex(2);
+                else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame) UseItemByIndex(3);
+                else if (kb.digit5Key.wasPressedThisFrame || kb.numpad5Key.wasPressedThisFrame) UseItemByIndex(4);
                 return;
             }
 
@@ -1404,6 +1444,7 @@ namespace MedievalRPG.UI
                    $"• Tiến độ bản đồ: <b>Đợt {battleSystem.CurrentWaveNumber}/{battleSystem.TotalWaves}</b>  |  Tổng hiệp: <b>{battleSystem.TurnCount}</b>\n" +
                    $"• Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)  |  Chuỗi cao nhất: <b>{battleSystem.BestQuizStreak}</b>\n" +
                    $"• Thành viên sống sót: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>\n" +
+                   $"• Vàng kiếm được: <b>+{battleSystem.SessionGoldEarned} Vàng</b>  |  Tổng quỹ: <b>{battleSystem.TotalPlayerGold} Vàng</b>\n" +
                    $"{lootLine}{highlightLine}";
         }
 
@@ -1412,6 +1453,13 @@ namespace MedievalRPG.UI
             if (_isTransitioning) return;
             if (battleSystem != null) battleSystem.SetPaused(false);
             StartCoroutine(TransitionAndLoadSceneIndex(SceneManager.GetActiveScene().buildIndex));
+        }
+
+        public void ReturnToCampHub()
+        {
+            if (_isTransitioning) return;
+            if (battleSystem != null) battleSystem.SetPaused(false);
+            StartCoroutine(TransitionAndLoadSceneName("CampHub"));
         }
 
         public void ReturnToMainMenu()

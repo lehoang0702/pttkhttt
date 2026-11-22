@@ -86,6 +86,49 @@ namespace MedievalRPG.Visuals
             }
         }
 
+        public void SetSortingOrder(int order)
+        {
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null) spriteRenderer.sortingOrder = order;
+        }
+
+        public void StartMarchRun(float speedMultiplier = 1.2f)
+        {
+            if (_isDead) return;
+            _isActionLocked = true;
+            _currentState = PixelAnimState.Run;
+            if (spriteRenderer != null) spriteRenderer.color = _baseColor;
+            if (_currentAnimCoroutine != null) StopCoroutine(_currentAnimCoroutine);
+            _currentAnimCoroutine = StartCoroutine(ContinuousMarchRoutine(speedMultiplier));
+        }
+
+        public void StopMarchRun()
+        {
+            if (_isDead) return;
+            _isActionLocked = false;
+            transform.position = _originalPosition;
+            PlayIdle();
+        }
+
+        private IEnumerator ContinuousMarchRoutine(float speedMultiplier)
+        {
+            List<Sprite> walkList = (runFrames != null && runFrames.Count > 0) ? runFrames : idleFrames;
+            if (spriteRenderer == null || walkList == null || walkList.Count == 0) yield break;
+
+            int idx = 0;
+            float delay = 1f / Mathf.Max(1f, frameRate * Mathf.Max(0.5f, speedMultiplier));
+            float t = 0f;
+            while (!_isDead && _currentState == PixelAnimState.Run)
+            {
+                spriteRenderer.sprite = walkList[idx];
+                idx = (idx + 1) % walkList.Count;
+                t += delay;
+                float bob = Mathf.Abs(Mathf.Sin(t * 14f)) * 0.045f;
+                transform.position = _originalPosition + new Vector3(0f, bob, 0f);
+                yield return new WaitForSeconds(delay);
+            }
+        }
+
         public void SetTargetHighlight(bool highlighted)
         {
             _isTargetHighlighted = highlighted;

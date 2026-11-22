@@ -46,7 +46,16 @@ namespace MedievalRPG.Data
     {
         HealthPotion = 0,
         ManaElixir = 1,
-        PhoenixFeather = 2
+        PhoenixFeather = 2,
+        WarElixir = 3,
+        IronTonic = 4
+    }
+
+    public enum CampBuffType
+    {
+        VitalityBlessing = 0, // +35 Max HP toàn đội cả trận
+        FuryBlessing = 1,     // +8 ATK & +8 MAG toàn đội cả trận
+        AegisBlessing = 2     // +6 DEF, +6 MDEF & +2 SPD toàn đội cả trận
     }
 
     public enum ItemRarity

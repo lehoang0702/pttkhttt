@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using MedievalRPG.Combat;
 using MedievalRPG.Data;
+using MedievalRPG.Quiz;
 
 namespace MedievalRPG.Tests.EditMode
 {
@@ -206,6 +207,107 @@ namespace MedievalRPG.Tests.EditMode
             {
                 UnityEngine.Object.DestroyImmediate(g1);
                 UnityEngine.Object.DestroyImmediate(g2);
+            }
+        }
+
+        [Test]
+        public void QuizManager_DefaultQuestionsAreAllEnglishB1OrB2AndValid()
+        {
+            GameObject go = new GameObject("QuizManagerTest");
+            try
+            {
+                QuizManager qm = go.AddComponent<QuizManager>();
+                qm.LoadDefaultQuestions();
+
+                Assert.AreEqual(30, qm.questionBank.Count, "Phải có đúng 30 câu hỏi tiếng Anh (15 B1 + 15 B2)");
+
+                int b1Count = 0;
+                int b2Count = 0;
+                for (int i = 0; i < qm.questionBank.Count; i++)
+                {
+                    QuizQuestion q = qm.questionBank[i];
+                    Assert.IsNotNull(q);
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(q.category), $"Câu {i} thiếu category");
+
+                    bool isB1 = q.category.StartsWith("B1", StringComparison.OrdinalIgnoreCase);
+                    bool isB2 = q.category.StartsWith("B2", StringComparison.OrdinalIgnoreCase);
+                    Assert.IsTrue(isB1 || isB2, $"Câu {i} phải thuộc chuẩn B1 hoặc B2, đang là: {q.category}");
+                    if (isB1) b1Count++;
+                    if (isB2) b2Count++;
+
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(q.questionText), $"Câu {i} rỗng");
+                    Assert.IsNotNull(q.answers, $"Câu {i} thiếu danh sách đáp án");
+                    Assert.AreEqual(4, q.answers.Length, $"Câu {i} phải có đúng 4 lựa chọn");
+                    for (int a = 0; a < 4; a++)
+                    {
+                        Assert.IsFalse(string.IsNullOrWhiteSpace(q.answers[a]), $"Câu {i} đáp án {a} rỗng");
+                    }
+                    Assert.GreaterOrEqual(q.correctAnswerIndex, 0);
+                    Assert.Less(q.correctAnswerIndex, 4);
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(q.explanation), $"Câu {i} thiếu giải thích");
+                }
+
+                Assert.AreEqual(15, b1Count, "Phải có 15 câu trình độ B1");
+                Assert.AreEqual(15, b2Count, "Phải có 15 câu trình độ B2");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void PlayerCampProgressManager_ShopPurchaseBuffsAndBattleSyncWorkCorrectly()
+        {
+            PlayerCampProgressManager camp = new PlayerCampProgressManager();
+            camp.InitializeForTests(180);
+
+            Assert.AreEqual(180, camp.Gold);
+            Assert.IsTrue(camp.TryBuyConsumable(ConsumableItemType.WarElixir));
+            Assert.AreEqual(115, camp.Gold);
+            Assert.AreEqual(1, camp.GetConsumableCount(ConsumableItemType.WarElixir));
+
+            Assert.IsTrue(camp.TryBuyCampBuff(CampBuffType.VitalityBlessing));
+            Assert.AreEqual(55, camp.Gold);
+            Assert.IsTrue(camp.IsCampBuffActive(CampBuffType.VitalityBlessing));
+            Assert.IsFalse(camp.TryBuyCampBuff(CampBuffType.VitalityBlessing), "Không được mua trùng bùa đang bật");
+            Assert.IsFalse(camp.TryBuyCampBuff(CampBuffType.FuryBlessing), "Không đủ vàng (55 < 75) phải trả về false");
+
+            EquipmentStatBonus campBonus = camp.GetActiveCampBonusTotal();
+            Assert.AreEqual(35, campBonus.maxHP);
+            Assert.AreEqual(0, campBonus.physicalAttack);
+
+            BattleInventory inv = new BattleInventory();
+            camp.ApplyToBattleInventory(inv);
+            Assert.AreEqual(1, inv.GetCount(ConsumableItemType.WarElixir));
+            Assert.IsTrue(inv.TryConsume(ConsumableItemType.WarElixir));
+            Assert.AreEqual(0, inv.GetCount(ConsumableItemType.WarElixir));
+
+            camp.SyncAfterBattle(inv, consumeActiveBuffs: true);
+            Assert.AreEqual(0, camp.GetConsumableCount(ConsumableItemType.WarElixir));
+            Assert.IsFalse(camp.IsCampBuffActive(CampBuffType.VitalityBlessing), "Bùa 1 trận phải hết hiệu lực sau trận");
+        }
+
+        [Test]
+        public void BattleInventory_SupportsAll5ConsumablesIncludingWarElixirAndIronTonic()
+        {
+            BattleInventory defaultInv = new BattleInventory(3, 2, 1);
+            Assert.AreEqual(6, defaultInv.TotalItems);
+
+            defaultInv.Reset(2, 1, 1, 2, 3);
+            Assert.AreEqual(9, defaultInv.TotalItems);
+            Assert.AreEqual(2, defaultInv.GetCount(ConsumableItemType.WarElixir));
+            Assert.AreEqual(3, defaultInv.GetCount(ConsumableItemType.IronTonic));
+
+            Assert.IsTrue(defaultInv.TryConsume(ConsumableItemType.WarElixir));
+            Assert.IsTrue(defaultInv.TryConsume(ConsumableItemType.IronTonic));
+            Assert.AreEqual(1, defaultInv.GetCount(ConsumableItemType.WarElixir));
+            Assert.AreEqual(2, defaultInv.GetCount(ConsumableItemType.IronTonic));
+
+            foreach (ConsumableItemType t in (ConsumableItemType[])Enum.GetValues(typeof(ConsumableItemType)))
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(BattleInventory.GetDisplayName(t)));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(BattleInventory.GetEffectDescription(t)));
             }
         }
     }

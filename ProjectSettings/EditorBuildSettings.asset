@@ -9,8 +9,11 @@ EditorBuildSettings:
     path: Assets/MedievalRPG/Scenes/MainMenu.unity
     guid: 28166abf694fe065225935ab2b298ea5
   - enabled: 1
+    path: Assets/MedievalRPG/Scenes/CampHub.unity
+    guid: 0267576479f19b2c6883fa4adf9f87b4
+  - enabled: 1
     path: Assets/MedievalRPG/Scenes/MedievalBattleDemo.unity
-    guid: 4f52e7651db255efa145ed55cfcc07b3
+    guid: c5e00094573c8c9d407886589741bffc
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
