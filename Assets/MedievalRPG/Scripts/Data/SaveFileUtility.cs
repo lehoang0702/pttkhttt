@@ -162,7 +162,11 @@ namespace MedievalRPG.Data
             {
                 writer.Write(content);
                 writer.Flush();
+#if UNITY_WEBGL && !UNITY_EDITOR
+                fs.Flush();
+#else
                 fs.Flush(true);
+#endif
             }
         }
 

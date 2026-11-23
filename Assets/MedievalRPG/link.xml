@@ -1,0 +1,3 @@
+<linker>
+    <assembly fullname="MedievalRPG.Runtime" preserve="all"/>
+</linker>

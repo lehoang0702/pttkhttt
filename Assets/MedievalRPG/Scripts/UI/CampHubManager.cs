@@ -13,19 +13,6 @@ using MedievalRPG.Visuals;
 
 namespace MedievalRPG.UI
 {
-    public enum CampStationAction
-    {
-        Equipment = 0,
-        Shop = 1,
-        StartBattle = 2,
-        MistakeNotebook = 3
-    }
-
-    public class CampWorldStation : MonoBehaviour
-    {
-        public CampStationAction stationAction;
-    }
-
     /// <summary>
     /// Quản lý Sảnh Chờ Tiền Đồn (CampHub.unity):
     /// Nơi người chơi ngắm 3 anh hùng đứng trên con đường rừng, xem & mặc trang bị ([I]),
