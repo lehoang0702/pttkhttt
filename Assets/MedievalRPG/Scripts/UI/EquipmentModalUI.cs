@@ -22,6 +22,12 @@ namespace MedievalRPG.UI
         [SerializeField] private Sprite badgePillSprite;
         [SerializeField] private TMP_FontAsset fontBold;
         [SerializeField] private TMP_FontAsset fontBody;
+
+        public void OverrideFonts(TMP_FontAsset bold, TMP_FontAsset body)
+        {
+            if (bold != null) fontBold = bold;
+            if (body != null) fontBody = body;
+        }
         [SerializeField] private Sprite iconSword;
         [SerializeField] private Sprite iconMagic;
         [SerializeField] private Sprite iconArrow;
@@ -34,12 +40,20 @@ namespace MedievalRPG.UI
         [SerializeField] private TextMeshProUGUI selectedClassHeaderTMP;
         [SerializeField] private TextMeshProUGUI totalBonusesTMP;
 
-        [Header("3 Ô Trang Bị Đang Mặc (0=Weapon, 1=Armor, 2=Accessory)")]
-        [SerializeField] private Image[] slotBorders = new Image[3];
-        [SerializeField] private Image[] slotIcons = new Image[3];
-        [SerializeField] private TextMeshProUGUI[] slotItemNames = new TextMeshProUGUI[3];
-        [SerializeField] private TextMeshProUGUI[] slotItemStats = new TextMeshProUGUI[3];
-        [SerializeField] private Button[] slotUnequipButtons = new Button[3];
+        private static readonly EquipmentSlot[] SlotDisplayOrder =
+        {
+            EquipmentSlot.Weapon,
+            EquipmentSlot.Helmet,
+            EquipmentSlot.Armor,
+            EquipmentSlot.Accessory
+        };
+
+        [Header("4 Ô Trang Bị Đang Mặc (Vũ Khí, Mũ, Giáp, Phụ Kiện)")]
+        [SerializeField] private Image[] slotBorders = new Image[4];
+        [SerializeField] private Image[] slotIcons = new Image[4];
+        [SerializeField] private TextMeshProUGUI[] slotItemNames = new TextMeshProUGUI[4];
+        [SerializeField] private TextMeshProUGUI[] slotItemStats = new TextMeshProUGUI[4];
+        [SerializeField] private Button[] slotUnequipButtons = new Button[4];
 
         [Header("Cột Phải: Bộ Lọc & Danh Sách Kho Đồ")]
         [SerializeField] private Button[] filterButtons = new Button[4]; // 0=All, 1=Knight, 2=Mage, 3=Archer
@@ -72,6 +86,7 @@ namespace MedievalRPG.UI
         private CharacterClassType _selectedClass = CharacterClassType.Knight;
         private CharacterClassType? _inventoryFilter = null;
         private string _selectedInstanceId;
+        private bool _suppressRefresh;
         private Action _onCloseRequested;
 
         public bool IsOpen => gameObject.activeSelf;
@@ -158,18 +173,30 @@ namespace MedievalRPG.UI
 
         private void OnEnable()
         {
-            PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += RefreshAll;
-            PlayerCampProgressManager.EnsureLoaded().OnCampProgressChanged += RefreshDetailAndToolbar;
+            PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += HandleExternalEquipmentChanged;
+            PlayerCampProgressManager.EnsureLoaded().OnCampProgressChanged += HandleExternalCampChanged;
         }
 
         private void OnDisable()
         {
-            PlayerEquipmentManager.Instance.OnEquipmentChanged -= RefreshAll;
-            PlayerCampProgressManager.Instance.OnCampProgressChanged -= RefreshDetailAndToolbar;
+            PlayerEquipmentManager.Instance.OnEquipmentChanged -= HandleExternalEquipmentChanged;
+            PlayerCampProgressManager.Instance.OnCampProgressChanged -= HandleExternalCampChanged;
+        }
+
+        private void HandleExternalEquipmentChanged()
+        {
+            if (!_suppressRefresh && gameObject.activeInHierarchy) RefreshAll();
+        }
+
+        private void HandleExternalCampChanged()
+        {
+            if (!_suppressRefresh && gameObject.activeInHierarchy) RefreshDetailAndToolbar();
         }
 
         private void WireControls()
         {
+            EnsureFourSlotCards();
+
             if (classTabButtons != null)
             {
                 for (int i = 0; i < classTabButtons.Length; i++)
@@ -188,10 +215,11 @@ namespace MedievalRPG.UI
 
             if (slotUnequipButtons != null)
             {
-                for (int i = 0; i < slotUnequipButtons.Length; i++)
+                int count = Mathf.Min(slotUnequipButtons.Length, SlotDisplayOrder.Length);
+                for (int i = 0; i < count; i++)
                 {
                     if (slotUnequipButtons[i] == null) continue;
-                    EquipmentSlot slot = (EquipmentSlot)i;
+                    EquipmentSlot slot = SlotDisplayOrder[i];
                     slotUnequipButtons[i].onClick.RemoveAllListeners();
                     slotUnequipButtons[i].onClick.AddListener(() =>
                     {
@@ -286,7 +314,15 @@ namespace MedievalRPG.UI
                 _selectedClass = focusClass.Value;
             }
             gameObject.SetActive(true);
-            PlayerEquipmentManager.EnsureLoaded().MarkAllSeen();
+            _suppressRefresh = true;
+            try
+            {
+                PlayerEquipmentManager.EnsureLoaded().MarkAllSeen();
+            }
+            finally
+            {
+                _suppressRefresh = false;
+            }
             RefreshAll();
         }
 
@@ -330,12 +366,89 @@ namespace MedievalRPG.UI
             }
         }
 
+        /// <summary>
+        /// Nâng cấp runtime cho các scene dựng sẵn chỉ có 3 ô (Vũ khí/Giáp/Phụ kiện) lên đủ 4 ô có thêm ô Mũ.
+        /// </summary>
+        private void EnsureFourSlotCards()
+        {
+            if (slotBorders == null || slotBorders.Length != 3 || slotBorders[0] == null || slotBorders[1] == null || slotBorders[2] == null)
+            {
+                return;
+            }
+
+            Transform card0 = slotBorders[0].transform.parent;
+            Transform slotsBox = card0 != null ? card0.parent : null;
+            if (slotsBox == null) return;
+
+            Transform existingHelm = slotsBox.Find("EquipSlotCard_Helmet");
+            GameObject helmCard = existingHelm != null
+                ? existingHelm.gameObject
+                : Instantiate(slotBorders[2].transform.parent.gameObject, slotsBox, false);
+            helmCard.name = "EquipSlotCard_Helmet";
+            helmCard.transform.SetSiblingIndex(1);
+
+            RectTransform sbRt = slotsBox as RectTransform;
+            if (sbRt != null)
+            {
+                sbRt.anchorMin = new Vector2(0f, 0f);
+                sbRt.anchorMax = new Vector2(1f, 1f);
+                sbRt.pivot = new Vector2(0.5f, 0.5f);
+                sbRt.offsetMin = new Vector2(14f, 158f);
+                sbRt.offsetMax = new Vector2(-14f, -98f);
+            }
+            VerticalLayoutGroup vlg = slotsBox.GetComponent<VerticalLayoutGroup>();
+            if (vlg != null) vlg.spacing = 6f;
+
+            for (int c = 0; c < slotsBox.childCount; c++)
+            {
+                Transform iconBox = slotsBox.GetChild(c).Find("IconBox");
+                if (iconBox is RectTransform ibRt) ibRt.sizeDelta = new Vector2(46f, 46f);
+            }
+
+            slotBorders = new[]
+            {
+                slotBorders[0],
+                helmCard.transform.Find("Border")?.GetComponent<Image>(),
+                slotBorders[1],
+                slotBorders[2]
+            };
+            slotIcons = new[]
+            {
+                slotIcons != null && slotIcons.Length > 0 ? slotIcons[0] : null,
+                helmCard.transform.Find("IconBox/Icon")?.GetComponent<Image>(),
+                slotIcons != null && slotIcons.Length > 1 ? slotIcons[1] : null,
+                slotIcons != null && slotIcons.Length > 2 ? slotIcons[2] : null
+            };
+            slotItemNames = new[]
+            {
+                slotItemNames != null && slotItemNames.Length > 0 ? slotItemNames[0] : null,
+                helmCard.transform.Find("ItemName")?.GetComponent<TextMeshProUGUI>(),
+                slotItemNames != null && slotItemNames.Length > 1 ? slotItemNames[1] : null,
+                slotItemNames != null && slotItemNames.Length > 2 ? slotItemNames[2] : null
+            };
+            slotItemStats = new[]
+            {
+                slotItemStats != null && slotItemStats.Length > 0 ? slotItemStats[0] : null,
+                helmCard.transform.Find("ItemStats")?.GetComponent<TextMeshProUGUI>(),
+                slotItemStats != null && slotItemStats.Length > 1 ? slotItemStats[1] : null,
+                slotItemStats != null && slotItemStats.Length > 2 ? slotItemStats[2] : null
+            };
+            slotUnequipButtons = new[]
+            {
+                slotUnequipButtons != null && slotUnequipButtons.Length > 0 ? slotUnequipButtons[0] : null,
+                helmCard.GetComponentInChildren<Button>(true),
+                slotUnequipButtons != null && slotUnequipButtons.Length > 1 ? slotUnequipButtons[1] : null,
+                slotUnequipButtons != null && slotUnequipButtons.Length > 2 ? slotUnequipButtons[2] : null
+            };
+        }
+
         private void RefreshEquippedSlots()
         {
+            EnsureFourSlotCards();
             PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < SlotDisplayOrder.Length; i++)
             {
-                EquipmentSlot slot = (EquipmentSlot)i;
+                EquipmentSlot slot = SlotDisplayOrder[i];
                 OwnedEquipmentInstance eqInst = mgr.GetEquippedInstance(_selectedClass, slot);
                 EquipmentItemData equipped = mgr.ResolveData(eqInst);
                 int upLv = eqInst != null ? eqInst.upgradeLevel : 0;
@@ -460,8 +573,8 @@ namespace MedievalRPG.UI
             });
 
             LayoutElement le = rowGo.AddComponent<LayoutElement>();
-            le.preferredHeight = 72f;
-            le.minHeight = 72f;
+            le.preferredHeight = 80f;
+            le.minHeight = 80f;
 
             // Thanh viền màu độ hiếm bên trái thẻ
             GameObject stripeGo = new GameObject("RarityStripe");
@@ -535,14 +648,14 @@ namespace MedievalRPG.UI
             TextMeshProUGUI statsTMP = statsGo.AddComponent<TextMeshProUGUI>();
             if (fontBody != null) statsTMP.font = fontBody;
             statsTMP.text = data.GetStatsSummary(inst.upgradeLevel);
-            statsTMP.fontSize = 13f;
+            statsTMP.fontSize = 13.5f;
             statsTMP.enableAutoSizing = true;
-            statsTMP.fontSizeMin = 10f;
-            statsTMP.fontSizeMax = 13f;
+            statsTMP.fontSizeMin = 11f;
+            statsTMP.fontSizeMax = 13.5f;
             statsTMP.color = MedievalUITheme.IvoryText;
             statsTMP.alignment = TextAlignmentOptions.MidlineLeft;
-            statsTMP.textWrappingMode = TextWrappingModes.NoWrap;
-            statsTMP.overflowMode = TextOverflowModes.Truncate;
+            statsTMP.textWrappingMode = TextWrappingModes.Normal;
+            statsTMP.overflowMode = TextOverflowModes.Ellipsis;
             statsTMP.raycastTarget = false;
             RectTransform ssRt = statsTMP.rectTransform;
             ssRt.anchorMin = new Vector2(0f, 0f);
@@ -785,17 +898,31 @@ namespace MedievalRPG.UI
             PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
             PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
 
-            if (mgr.TryUpgradeItem(_selectedInstanceId, camp.Gold, out int goldSpent))
+            bool upgraded;
+            int goldSpent;
+            _suppressRefresh = true;
+            try
             {
-                camp.TrySpendGold(goldSpent);
-                AudioManager.Instance?.PlayForgeUpgradeSfx();
-
-                OwnedEquipmentInstance inst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
-                if (inst != null && inst.upgradeLevel >= 3)
+                upgraded = mgr.TryUpgradeItem(_selectedInstanceId, camp.Gold, out goldSpent);
+                if (upgraded)
                 {
-                    camp.UnlockAchievement(AchievementId.ForgePlusThree);
+                    camp.TrySpendGold(goldSpent);
+                    OwnedEquipmentInstance checkInst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
+                    if (checkInst != null && checkInst.upgradeLevel >= 3)
+                    {
+                        camp.UnlockAchievement(AchievementId.ForgePlusThree);
+                    }
                 }
+            }
+            finally
+            {
+                _suppressRefresh = false;
+            }
 
+            if (upgraded)
+            {
+                AudioManager.Instance?.PlayForgeUpgradeSfx();
+                OwnedEquipmentInstance inst = mgr.FindOwnedByInstanceId(_selectedInstanceId);
                 RefreshAll();
                 if (detailDiffTMP != null && inst != null)
                 {
@@ -812,10 +939,26 @@ namespace MedievalRPG.UI
         {
             if (string.IsNullOrEmpty(_selectedInstanceId)) return;
             PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
-            if (mgr.SellItem(_selectedInstanceId, out int goldEarned))
+
+            bool sold;
+            int goldEarned;
+            _suppressRefresh = true;
+            try
             {
-                PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
-                _selectedInstanceId = null;
+                sold = mgr.SellItem(_selectedInstanceId, out goldEarned);
+                if (sold)
+                {
+                    PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
+                    _selectedInstanceId = null;
+                }
+            }
+            finally
+            {
+                _suppressRefresh = false;
+            }
+
+            if (sold)
+            {
                 AudioManager.Instance?.PlayCoinRewardSfx();
                 RefreshAll();
                 if (detailDiffTMP != null)
@@ -828,14 +971,29 @@ namespace MedievalRPG.UI
         private void HandleBulkSellCommon()
         {
             PlayerEquipmentManager mgr = PlayerEquipmentManager.EnsureLoaded();
-            int count = mgr.SellAllUnequippedByMaxRarity(ItemRarity.Common, out int goldEarned);
+
+            int count;
+            int goldEarned;
+            _suppressRefresh = true;
+            try
+            {
+                count = mgr.SellAllUnequippedByMaxRarity(ItemRarity.Common, out goldEarned);
+                if (count > 0)
+                {
+                    PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
+                    if (!string.IsNullOrEmpty(_selectedInstanceId) && mgr.FindOwnedByInstanceId(_selectedInstanceId) == null)
+                    {
+                        _selectedInstanceId = null;
+                    }
+                }
+            }
+            finally
+            {
+                _suppressRefresh = false;
+            }
+
             if (count > 0)
             {
-                PlayerCampProgressManager.EnsureLoaded().AddGold(goldEarned);
-                if (!string.IsNullOrEmpty(_selectedInstanceId) && mgr.FindOwnedByInstanceId(_selectedInstanceId) == null)
-                {
-                    _selectedInstanceId = null;
-                }
                 AudioManager.Instance?.PlayCoinRewardSfx();
                 RefreshAll();
                 if (detailDiffTMP != null)
@@ -851,17 +1009,31 @@ namespace MedievalRPG.UI
             ItemRarity? source = GetForgeSourceRarity(mgr);
             if (!source.HasValue) return;
 
-            if (mgr.TryForgeThreeIntoNextRarity(source.Value, out EquipmentItemData forgedItem, out OwnedEquipmentInstance createdInst))
+            bool forged;
+            EquipmentItemData forgedItem;
+            OwnedEquipmentInstance createdInst;
+            _suppressRefresh = true;
+            try
             {
-                _selectedInstanceId = createdInst.instanceId;
-                _selectedClass = forgedItem.requiredClass;
-                AudioManager.Instance?.PlayForgeUpgradeSfx();
-
-                if (forgedItem.rarity == ItemRarity.Legendary)
+                forged = mgr.TryForgeThreeIntoNextRarity(source.Value, out forgedItem, out createdInst);
+                if (forged)
                 {
-                    PlayerCampProgressManager.EnsureLoaded().UnlockAchievement(AchievementId.FirstLegendary);
+                    _selectedInstanceId = createdInst.instanceId;
+                    _selectedClass = forgedItem.requiredClass;
+                    if (forgedItem.rarity == ItemRarity.Legendary)
+                    {
+                        PlayerCampProgressManager.EnsureLoaded().UnlockAchievement(AchievementId.FirstLegendary);
+                    }
                 }
+            }
+            finally
+            {
+                _suppressRefresh = false;
+            }
 
+            if (forged)
+            {
+                AudioManager.Instance?.PlayForgeUpgradeSfx();
                 RefreshAll();
                 if (detailDiffTMP != null)
                 {
@@ -873,9 +1045,14 @@ namespace MedievalRPG.UI
 
         private Sprite GetSpriteForItem(CharacterClassType cls, EquipmentSlot slot, EquipmentItemData data)
         {
-            if (data != null && data.icon != null) return data.icon;
+            if (data != null)
+            {
+                Sprite customSprite = EquipmentVisualCatalog.GetSpriteForItem(data.itemId);
+                if (customSprite != null) return customSprite;
+                if (data.icon != null) return data.icon;
+            }
             if (slot == EquipmentSlot.Armor) return iconShield;
-            if (slot == EquipmentSlot.Accessory) return iconCrown;
+            if (slot == EquipmentSlot.Accessory || slot == EquipmentSlot.Helmet) return iconCrown;
 
             switch (cls)
             {

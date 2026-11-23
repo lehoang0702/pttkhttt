@@ -373,11 +373,75 @@ namespace MedievalRPG.Quiz
                 availableIndices.AddRange(matchingIndices);
             }
 
-            int pickedIdx = availableIndices[UnityEngine.Random.Range(0, availableIndices.Count)];
+            PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+            int pickedIdx = SelectQuestionIndexForDraw(
+                questionBank,
+                availableIndices,
+                camp.MistakeQuestions,
+                camp.GetMistakeWrongCount,
+                spacedRepetitionChance: 0.25f,
+                roll01: UnityEngine.Random.value,
+                fallbackChoice: UnityEngine.Random.Range(0, availableIndices.Count));
             _usedQuestionIndices.Add(pickedIdx);
 
-            currentQuestion = questionBank[pickedIdx];
+            QuizQuestion source = questionBank[pickedIdx];
+            currentQuestion = source != null ? source.CreateShuffledCopy() : null;
             return currentQuestion;
+        }
+
+        /// <summary>
+        /// Chọn chỉ số câu hỏi từ tập chưa lặp trong vòng: với tỉ lệ spacedRepetitionChance,
+        /// ưu tiên rút lại câu đang nằm trong Sổ Tay Lỗi Sai (ưu tiên câu sai nhiều lần hơn).
+        /// </summary>
+        public static int SelectQuestionIndexForDraw(
+            IReadOnlyList<QuizQuestion> bank,
+            IReadOnlyList<int> availableIndices,
+            IReadOnlyList<string> mistakeTexts,
+            Func<string, int> getWrongCount,
+            float spacedRepetitionChance,
+            float roll01,
+            int fallbackChoice)
+        {
+            if (availableIndices == null || availableIndices.Count == 0) return 0;
+
+            if (bank != null && mistakeTexts != null && mistakeTexts.Count > 0 && roll01 < spacedRepetitionChance)
+            {
+                HashSet<string> mistakeSet = new HashSet<string>(mistakeTexts, StringComparer.Ordinal);
+                int bestIdx = -1;
+                int bestWrongCount = -1;
+                List<int> tiedBest = new List<int>();
+
+                for (int i = 0; i < availableIndices.Count; i++)
+                {
+                    int idx = availableIndices[i];
+                    if (idx < 0 || idx >= bank.Count || bank[idx] == null) continue;
+                    string qText = bank[idx].questionText;
+                    if (string.IsNullOrEmpty(qText) || !mistakeSet.Contains(qText)) continue;
+
+                    int wc = getWrongCount != null ? Mathf.Max(1, getWrongCount(qText)) : 1;
+                    if (wc > bestWrongCount)
+                    {
+                        bestWrongCount = wc;
+                        bestIdx = idx;
+                        tiedBest.Clear();
+                        tiedBest.Add(idx);
+                    }
+                    else if (wc == bestWrongCount)
+                    {
+                        tiedBest.Add(idx);
+                    }
+                }
+
+                if (tiedBest.Count > 0)
+                {
+                    int pick = Mathf.Abs(fallbackChoice) % tiedBest.Count;
+                    return tiedBest[pick];
+                }
+                if (bestIdx >= 0) return bestIdx;
+            }
+
+            int safeFallback = Mathf.Clamp(fallbackChoice, 0, availableIndices.Count - 1);
+            return availableIndices[safeFallback];
         }
 
         public static bool MatchesDifficultyFilter(QuizQuestion q, QuizDifficultyFilter filter)
@@ -388,6 +452,153 @@ namespace MedievalRPG.Quiz
             if (filter == QuizDifficultyFilter.OnlyB1) return cat.StartsWith("B1", StringComparison.OrdinalIgnoreCase);
             if (filter == QuizDifficultyFilter.OnlyB2) return cat.StartsWith("B2", StringComparison.OrdinalIgnoreCase);
             return true;
+        }
+
+        private static List<QuizQuestion> _staticFallbackBank;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticQuizBankCache()
+        {
+            _staticFallbackBank = null;
+        }
+
+        private static IReadOnlyList<QuizQuestion> ResolveBankForStaticLookup()
+        {
+            if (Instance != null)
+            {
+                if (Instance.questionBank == null || Instance.questionBank.Count == 0)
+                {
+                    Instance.LoadDefaultQuestions();
+                }
+                return Instance.questionBank;
+            }
+
+            if (_staticFallbackBank != null && _staticFallbackBank.Count > 0)
+            {
+                return _staticFallbackBank;
+            }
+
+            TextAsset jsonAsset = Resources.Load<TextAsset>("english_b1_b2");
+            if (jsonAsset == null || string.IsNullOrEmpty(jsonAsset.text))
+            {
+                return Array.Empty<QuizQuestion>();
+            }
+
+            try
+            {
+                QuizBankJsonPayload payload = JsonUtility.FromJson<QuizBankJsonPayload>(jsonAsset.text);
+                if (payload != null && payload.questions != null)
+                {
+                    _staticFallbackBank = payload.questions;
+                    return _staticFallbackBank;
+                }
+            }
+            catch
+            {
+                return Array.Empty<QuizQuestion>();
+            }
+
+            return Array.Empty<QuizQuestion>();
+        }
+
+        public List<string> GetAllTopicKeys()
+        {
+            if (questionBank == null || questionBank.Count == 0) LoadDefaultQuestions();
+            return CollectTopicKeys(questionBank);
+        }
+
+        public static List<string> GetAllTopicKeysStatic()
+        {
+            return CollectTopicKeys(ResolveBankForStaticLookup());
+        }
+
+        private static List<string> CollectTopicKeys(IReadOnlyList<QuizQuestion> bank)
+        {
+            List<string> topics = new List<string>();
+            if (bank == null) return topics;
+
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < bank.Count; i++)
+            {
+                if (bank[i] == null) continue;
+                string key = PlayerCampProgressManager.NormalizeTopicKey(bank[i].category);
+                if (seen.Add(key))
+                {
+                    topics.Add(key);
+                }
+            }
+            return topics;
+        }
+
+        public QuizQuestion GetQuestionForTopic(string topicKey, QuizDifficultyFilter filter = QuizDifficultyFilter.AllB1B2)
+        {
+            if (questionBank == null || questionBank.Count == 0) LoadDefaultQuestions();
+            return PickQuestionForTopicFromBank(questionBank, topicKey, filter, () => GetRandomQuestion(filter));
+        }
+
+        public static QuizQuestion GetQuestionForTopicStatic(string topicKey, QuizDifficultyFilter filter = QuizDifficultyFilter.AllB1B2)
+        {
+            IReadOnlyList<QuizQuestion> bank = ResolveBankForStaticLookup();
+            if (Instance != null)
+            {
+                return Instance.GetQuestionForTopic(topicKey, filter);
+            }
+            return PickQuestionForTopicFromBank(bank, topicKey, filter, null);
+        }
+
+        private static QuizQuestion PickQuestionForTopicFromBank(
+            IReadOnlyList<QuizQuestion> bank,
+            string topicKey,
+            QuizDifficultyFilter filter,
+            Func<QuizQuestion> fallbackPicker)
+        {
+            if (bank == null || bank.Count == 0) return fallbackPicker != null ? fallbackPicker() : null;
+
+            List<QuizQuestion> matches = new List<QuizQuestion>();
+            for (int i = 0; i < bank.Count; i++)
+            {
+                QuizQuestion q = bank[i];
+                if (q == null || !MatchesDifficultyFilter(q, filter)) continue;
+                string normalized = PlayerCampProgressManager.NormalizeTopicKey(q.category);
+                if (string.IsNullOrEmpty(topicKey) || string.Equals(normalized, topicKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    matches.Add(q);
+                }
+            }
+
+            if (matches.Count == 0)
+            {
+                for (int i = 0; i < bank.Count; i++)
+                {
+                    QuizQuestion q = bank[i];
+                    if (q == null) continue;
+                    string normalized = PlayerCampProgressManager.NormalizeTopicKey(q.category);
+                    if (string.IsNullOrEmpty(topicKey) || string.Equals(normalized, topicKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matches.Add(q);
+                    }
+                }
+            }
+
+            if (matches.Count == 0)
+            {
+                if (fallbackPicker != null) return fallbackPicker();
+                for (int i = 0; i < bank.Count; i++)
+                {
+                    if (bank[i] != null && MatchesDifficultyFilter(bank[i], filter))
+                    {
+                        matches.Add(bank[i]);
+                    }
+                }
+                if (matches.Count == 0)
+                {
+                    QuizQuestion first = bank[UnityEngine.Random.Range(0, bank.Count)];
+                    return first != null ? first.CreateShuffledCopy() : null;
+                }
+            }
+
+            QuizQuestion picked = matches[UnityEngine.Random.Range(0, matches.Count)];
+            return picked != null ? picked.CreateShuffledCopy() : null;
         }
 
         public QuizQuestion FindQuestionByText(string questionText)
@@ -427,29 +638,18 @@ namespace MedievalRPG.Quiz
             List<QuizQuestion> result = new List<QuizQuestion>();
             if (mistakeTexts == null || mistakeTexts.Count == 0) return result;
 
-            TextAsset jsonAsset = Resources.Load<TextAsset>("english_b1_b2");
-            if (jsonAsset == null || string.IsNullOrEmpty(jsonAsset.text)) return result;
-
-            QuizBankJsonPayload payload = null;
-            try
-            {
-                payload = JsonUtility.FromJson<QuizBankJsonPayload>(jsonAsset.text);
-            }
-            catch
-            {
-                return result;
-            }
-            if (payload == null || payload.questions == null) return result;
+            IReadOnlyList<QuizQuestion> bank = ResolveBankForStaticLookup();
+            if (bank == null || bank.Count == 0) return result;
 
             for (int i = 0; i < mistakeTexts.Count; i++)
             {
                 string key = mistakeTexts[i];
                 if (string.IsNullOrWhiteSpace(key)) continue;
-                for (int j = 0; j < payload.questions.Count; j++)
+                for (int j = 0; j < bank.Count; j++)
                 {
-                    if (string.Equals(payload.questions[j].questionText, key, StringComparison.Ordinal))
+                    if (bank[j] != null && string.Equals(bank[j].questionText, key, StringComparison.Ordinal))
                     {
-                        result.Add(payload.questions[j]);
+                        result.Add(bank[j]);
                         break;
                     }
                 }

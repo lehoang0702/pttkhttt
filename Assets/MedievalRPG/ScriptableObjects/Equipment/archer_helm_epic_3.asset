@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: archer_helm_epic_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: archer_helm_epic_3
+  itemName: "M\u0169 C\xE1nh B\u1EA1c Nguy\u1EC7t"
+  description: "M\u0169 g\u1EAFn \u0111\xF4i c\xE1nh \xE1nh tr\u0103ng gi\xFAp n\xE9 tr\xE1nh nh\u1EB9 t\u1EF1a l\xF4ng h\u1ED3ng."
+  requiredClass: 2
+  slot: 3
+  rarity: 2
+  icon: {fileID: 21300000, guid: ebe55611ba0ae44ffb292733f1161f53, type: 3}
+  bonusMaxHP: 31
+  bonusMaxMP: 12
+  bonusPhysicalAttack: 7
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 7
+  bonusMagicDefense: 7
+  bonusSpeed: 5
+  bonusCritRate: 0.07

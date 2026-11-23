@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: mage_weapon_common_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: mage_weapon_common_3
+  itemName: "Tr\u01B0\u1EE3ng \u0110\xF3ng N\u1EBFn"
+  description: "Ng\u1ECDn n\u1EBFn ma ph\xE1p d\u1EABn l\u1EEDa nh\u1ECF s\u01B0\u1EDFi \u1EA5m v\xE0 ph\xF3ng tia l\u1EEDa."
+  requiredClass: 1
+  slot: 0
+  rarity: 0
+  icon: {fileID: 21300000, guid: efc3140a8bb1088f9937e0f130707001, type: 3}
+  bonusMaxHP: 6
+  bonusMaxMP: 8
+  bonusPhysicalAttack: 0
+  bonusMagicAttack: 7
+  bonusPhysicalDefense: 0
+  bonusMagicDefense: 1
+  bonusSpeed: 0
+  bonusCritRate: 0.01

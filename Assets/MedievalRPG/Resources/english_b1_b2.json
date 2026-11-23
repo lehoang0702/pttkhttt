@@ -4,12 +4,12 @@
       "category": "B1 • Grammar",
       "questionText": "If it _____ tomorrow, we will delay our journey across the forest.",
       "answers": [
-        "rain",
         "rains",
-        "rained",
-        "will rain"
+        "will rain",
+        "rain",
+        "rained"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "First Conditional uses 'If + Present Simple (rains), will + V1'.",
       "bonusDamage": 7
     },
@@ -17,12 +17,12 @@
       "category": "B1 • Grammar",
       "questionText": "She has lived in this medieval town _____ nearly ten years.",
       "answers": [
-        "since",
+        "from",
         "during",
-        "for",
-        "from"
+        "since",
+        "for"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "Use 'for' with a duration of time and 'since' with a starting point.",
       "bonusDamage": 7
     },
@@ -30,10 +30,10 @@
       "category": "B1 • Grammar",
       "questionText": "The ancient bridge _____ by local villagers more than two centuries ago.",
       "answers": [
-        "built",
+        "was building",
         "was built",
         "has built",
-        "was building"
+        "built"
       ],
       "correctAnswerIndex": 1,
       "explanation": "Past Simple Passive ('was built') is needed for a completed past action.",
@@ -43,12 +43,12 @@
       "category": "B1 • Grammar",
       "questionText": "Would you mind _____ the gate before the night watch begins?",
       "answers": [
-        "close",
         "to close",
-        "closing",
-        "closed"
+        "close",
+        "closed",
+        "closing"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "'Would you mind + V-ing' always takes a gerund.",
       "bonusDamage": 7
     },
@@ -69,8 +69,8 @@
       "category": "B1 • Grammar",
       "questionText": "By the time the archers arrived at the camp, the scouts _____ the fire.",
       "answers": [
-        "already lit",
         "have already lit",
+        "already lit",
         "had already lit",
         "were lighting"
       ],
@@ -82,10 +82,10 @@
       "category": "B1 • Grammar",
       "questionText": "This mountain trail is much _____ than the path along the river.",
       "answers": [
-        "steep",
+        "steepest",
         "steeper",
         "more steeper",
-        "steepest"
+        "steep"
       ],
       "correctAnswerIndex": 1,
       "explanation": "Short adjectives take '-er' in comparative form ('steeper').",
@@ -95,12 +95,12 @@
       "category": "B1 • Grammar",
       "questionText": "The ranger _____ guided us through the mist knows every hidden cave.",
       "answers": [
+        "whose",
         "which",
         "whom",
-        "who",
-        "whose"
+        "who"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "Use 'who' as a relative pronoun for a person in subject position.",
       "bonusDamage": 7
     },
@@ -109,11 +109,11 @@
       "questionText": "You _____ carry heavy iron shields all day; the horses will transport them.",
       "answers": [
         "mustn't",
-        "don't have to",
         "can't",
+        "don't have to",
         "wouldn't"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'Don't have to' expresses lack of obligation, whereas 'mustn't' means prohibition.",
       "bonusDamage": 7
     },
@@ -121,12 +121,12 @@
       "category": "B1 • Grammar",
       "questionText": "Neither the mage nor the archer _____ been inside the dark fortress before.",
       "answers": [
-        "have",
         "has",
+        "have",
         "was",
         "were"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "With 'neither... nor...', the verb agrees with the closer noun ('the archer' -> 'has').",
       "bonusDamage": 7
     },
@@ -135,11 +135,11 @@
       "questionText": "While the knights _____ dinner, a goblin scout crept near the camp.",
       "answers": [
         "cooked",
-        "were cooking",
         "had cooked",
+        "were cooking",
         "cook"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Past Continuous ('were cooking') describes an ongoing background action interrupted by another.",
       "bonusDamage": 7
     },
@@ -147,12 +147,12 @@
       "category": "B1 • Grammar",
       "questionText": "The healing herbs _____ in fresh mountain water before they are brewed.",
       "answers": [
-        "wash",
-        "are washed",
+        "have washed",
         "were washing",
-        "have washed"
+        "wash",
+        "are washed"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Present Simple Passive ('are washed') describes a regular process.",
       "bonusDamage": 7
     },
@@ -160,12 +160,12 @@
       "category": "B1 • Grammar",
       "questionText": "This lantern isn't bright _____ to light up the entire underground tunnel.",
       "answers": [
-        "too",
-        "very",
         "enough",
-        "so"
+        "so",
+        "very",
+        "too"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "'Adjective + enough + to V' means having the sufficient degree.",
       "bonusDamage": 7
     },
@@ -173,12 +173,12 @@
       "category": "B1 • Grammar",
       "questionText": "The commander told his soldiers _____ the northern wall until dawn.",
       "answers": [
-        "guard",
-        "to guard",
+        "guarded",
         "guarding",
-        "guarded"
+        "guard",
+        "to guard"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Reported commands follow the pattern 'tell someone + to + infinitive'.",
       "bonusDamage": 7
     },
@@ -186,12 +186,12 @@
       "category": "B1 • Grammar",
       "questionText": "There are very _____ health potions left in the supply wagon.",
       "answers": [
-        "little",
-        "much",
         "few",
-        "amount"
+        "much",
+        "amount",
+        "little"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "Use 'few' with plural countable nouns like 'health potions'.",
       "bonusDamage": 7
     },
@@ -199,12 +199,12 @@
       "category": "B1 • Grammar",
       "questionText": "The map _____ I bought from the village merchant shows a secret tunnel.",
       "answers": [
+        "which",
         "who",
         "whose",
-        "where",
-        "which"
+        "where"
       ],
-      "correctAnswerIndex": 3,
+      "correctAnswerIndex": 0,
       "explanation": "Use 'which' (or 'that') as a relative pronoun referring to an object.",
       "bonusDamage": 7
     },
@@ -212,12 +212,12 @@
       "category": "B1 • Grammar",
       "questionText": "She enjoys _____ old legends by the campfire after a long march.",
       "answers": [
-        "read",
-        "to read",
         "reading",
-        "reads"
+        "reads",
+        "to read",
+        "read"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "Verbs of liking such as 'enjoy' are followed by a gerund (-ing).",
       "bonusDamage": 7
     },
@@ -225,12 +225,12 @@
       "category": "B1 • Grammar",
       "questionText": "That is the ancient tower _____ the wizard first discovered his magic.",
       "answers": [
-        "which",
-        "where",
         "who",
-        "when"
+        "which",
+        "when",
+        "where"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Use 'where' as a relative adverb referring to a place ('in that tower').",
       "bonusDamage": 7
     },
@@ -238,12 +238,12 @@
       "category": "B1 • Grammar",
       "questionText": "Unless we _____ now, we won't reach the outpost before sunset.",
       "answers": [
-        "leave",
+        "left",
         "don't leave",
-        "will leave",
-        "left"
+        "leave",
+        "will leave"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Unless' means 'if not', so it takes an affirmative Present Simple verb ('leave').",
       "bonusDamage": 7
     },
@@ -251,8 +251,8 @@
       "category": "B1 • Grammar",
       "questionText": "This is the most dangerous dragon I have _____ seen in my life.",
       "answers": [
-        "never",
         "already",
+        "never",
         "ever",
         "yet"
       ],
@@ -264,12 +264,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "Before entering the dungeon, check your gear to make sure nothing is _____.",
       "answers": [
-        "missing",
-        "losing",
+        "failing",
         "dropping",
-        "failing"
+        "losing",
+        "missing"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Missing' means not present or cannot be found.",
       "bonusDamage": 7
     },
@@ -277,10 +277,10 @@
       "category": "B1 • Vocabulary",
       "questionText": "He tried hard to _____ his teammates that taking the northern pass was safer.",
       "answers": [
-        "insist",
-        "convince",
         "suggest",
-        "advise"
+        "convince",
+        "advise",
+        "insist"
       ],
       "correctAnswerIndex": 1,
       "explanation": "'Convince someone that...' means to make someone believe something.",
@@ -290,12 +290,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "Our supplies won't last long unless we use our rations _____.",
       "answers": [
+        "closely",
         "carefully",
         "hardly",
-        "nearly",
-        "closely"
+        "nearly"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Carefully' means in a cautious, economical way.",
       "bonusDamage": 7
     },
@@ -304,9 +304,9 @@
       "questionText": "Although the monster looked fierce, the knight remained _____ under pressure.",
       "answers": [
         "calm",
-        "nervous",
         "anxious",
-        "confused"
+        "confused",
+        "nervous"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Although' signals contrast; 'calm' contrasts with fear.",
@@ -316,12 +316,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "The village blacksmith works daily to _____ broken swords and armor.",
       "answers": [
-        "repair",
+        "destroy",
         "injure",
         "invent",
-        "destroy"
+        "repair"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Repair' means to fix something damaged.",
       "bonusDamage": 7
     },
@@ -331,8 +331,8 @@
       "answers": [
         "exhausted",
         "excited",
-        "polite",
-        "ordinary"
+        "ordinary",
+        "polite"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Exhausted' means extremely tired.",
@@ -344,8 +344,8 @@
       "answers": [
         "remember",
         "remind",
-        "memorize",
-        "recognize"
+        "recognize",
+        "memorize"
       ],
       "correctAnswerIndex": 1,
       "explanation": "'Remind someone to do something' means to help them not forget.",
@@ -355,12 +355,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "The knight showed great _____ when he stood alone against three enemies.",
       "answers": [
-        "courage",
-        "shame",
         "laziness",
-        "doubt"
+        "doubt",
+        "shame",
+        "courage"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Courage' means bravery in the face of danger.",
       "bonusDamage": 7
     },
@@ -369,9 +369,9 @@
       "questionText": "We need to find a dry _____ before the thunderstorm hits the valley.",
       "answers": [
         "shelter",
-        "shadow",
+        "ladder",
         "mirror",
-        "ladder"
+        "shadow"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Shelter' is a place giving protection from bad weather or danger.",
@@ -381,12 +381,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "Every traveler must pay a small _____ to cross the royal river bridge.",
       "answers": [
-        "fee",
         "salary",
         "prize",
+        "fee",
         "tip"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "A 'fee' is a fixed payment charged for a service or crossing.",
       "bonusDamage": 7
     },
@@ -394,12 +394,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "The potion has a slightly bitter _____, but it heals wounds quickly.",
       "answers": [
-        "taste",
-        "sound",
         "weight",
-        "shape"
+        "sound",
+        "shape",
+        "taste"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Taste' refers to flavor experienced in the mouth.",
       "bonusDamage": 7
     },
@@ -407,12 +407,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "He was _____ when he saw the legendary chest glowing in the dark.",
       "answers": [
-        "amazed",
         "bored",
+        "jealous",
         "guilty",
-        "jealous"
+        "amazed"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Amazed' means filled with wonder or surprise.",
       "bonusDamage": 7
     },
@@ -421,9 +421,9 @@
       "questionText": "It takes several days to _____ across the wide central desert.",
       "answers": [
         "journey",
+        "enter",
         "arrive",
-        "reach",
-        "enter"
+        "reach"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Journey' fits with 'across' as a verb meaning to travel a long distance.",
@@ -433,12 +433,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "The watchman warned everyone to be _____ of wolves near the pine forest.",
       "answers": [
-        "aware",
         "afraid",
-        "fond",
-        "proud"
+        "aware",
+        "proud",
+        "fond"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Be aware of' means to know about and pay attention to a potential danger.",
       "bonusDamage": 7
     },
@@ -446,12 +446,12 @@
       "category": "B1 • Vocabulary",
       "questionText": "They decided to _____ their journey at sunrise once the fog cleared.",
       "answers": [
-        "continue",
         "postpone",
-        "cancel",
-        "avoid"
+        "continue",
+        "avoid",
+        "cancel"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Continue' means to keep going; the context says the fog cleared at sunrise.",
       "bonusDamage": 7
     },
@@ -459,12 +459,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Remember to _____ the campfire completely before leaving the woods.",
       "answers": [
-        "put out",
-        "put on",
         "put up",
-        "put away"
+        "put away",
+        "put out",
+        "put on"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Put out' means to extinguish a fire or light.",
       "bonusDamage": 7
     },
@@ -472,12 +472,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "The travelers decided to _____ early in the morning to avoid the midday heat.",
       "answers": [
-        "set off",
+        "turn down",
         "set up",
-        "give up",
-        "turn down"
+        "set off",
+        "give up"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Set off' means to start a journey.",
       "bonusDamage": 7
     },
@@ -485,12 +485,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Our scouts will _____ who took the missing scroll from the tent.",
       "answers": [
+        "break down",
         "find out",
         "look after",
-        "take off",
-        "break down"
+        "take off"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Find out' means to discover a fact or piece of information.",
       "bonusDamage": 7
     },
@@ -498,12 +498,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Please _____ the young healer while the knights fight on the front line.",
       "answers": [
-        "look after",
+        "turn on",
         "look for",
-        "give back",
-        "turn on"
+        "look after",
+        "give back"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Look after' means to take care of or protect someone.",
       "bonusDamage": 7
     },
@@ -511,12 +511,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Even when surrounded by skeletons, the brave squad refused to _____.",
       "answers": [
-        "give up",
         "give away",
-        "take after",
-        "get on"
+        "give up",
+        "get on",
+        "take after"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Give up' means to stop trying or surrender.",
       "bonusDamage": 7
     },
@@ -524,12 +524,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "The mage helped the injured knight _____ his heavy cloak.",
       "answers": [
-        "take off",
-        "take out",
         "put off",
-        "turn into"
+        "take off",
+        "turn into",
+        "take out"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Take off' means to remove clothing or equipment.",
       "bonusDamage": 7
     },
@@ -537,12 +537,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "We must _____ our supplies carefully so we don't run out of arrows.",
       "answers": [
-        "look over",
-        "break into",
         "fill in",
-        "pick up"
+        "look over",
+        "pick up",
+        "break into"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Look over' means to inspect or examine quickly.",
       "bonusDamage": 7
     },
@@ -550,12 +550,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "The wooden cart suddenly _____ halfway up the rocky hill.",
       "answers": [
-        "broke down",
-        "broke out",
         "came back",
-        "went on"
+        "broke out",
+        "went on",
+        "broke down"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Break down' means to stop functioning (for vehicles or machines).",
       "bonusDamage": 7
     },
@@ -563,12 +563,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Can you _____ the map on the table so everyone can see the route?",
       "answers": [
+        "lay out",
         "pick up",
-        "turn down",
         "hand out",
-        "lay out"
+        "turn down"
       ],
-      "correctAnswerIndex": 3,
+      "correctAnswerIndex": 0,
       "explanation": "'Lay out' means to spread something flat so it can be viewed clearly.",
       "bonusDamage": 7
     },
@@ -576,12 +576,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "I didn't expect to _____ an old friend from the academy in this forest!",
       "answers": [
-        "run into",
         "run over",
         "look up",
-        "get off"
+        "get off",
+        "run into"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Run into' means to meet someone unexpectedly.",
       "bonusDamage": 7
     },
@@ -589,12 +589,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "Please _____ the lantern; it's getting too dark to read the spellbook.",
       "answers": [
-        "turn on",
         "turn off",
-        "put out",
-        "shut down"
+        "shut down",
+        "turn on",
+        "put out"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Turn on' means to switch on a light or device.",
       "bonusDamage": 7
     },
@@ -602,12 +602,12 @@
       "category": "B1 • Phrasal Verbs",
       "questionText": "The apprentice promised to _____ the borrowed library book by Friday.",
       "answers": [
-        "give back",
         "give up",
-        "take back",
-        "call off"
+        "give back",
+        "call off",
+        "take back"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Give back' means to return something to its owner.",
       "bonusDamage": 7
     },
@@ -630,8 +630,8 @@
       "answers": [
         "for",
         "of",
-        "with",
-        "about"
+        "about",
+        "with"
       ],
       "correctAnswerIndex": 0,
       "explanation": "Fixed phrase: 'be responsible for + noun / V-ing'.",
@@ -642,11 +642,11 @@
       "questionText": "The archer is very keen _____ practicing her long-range shots.",
       "answers": [
         "at",
-        "on",
         "with",
-        "for"
+        "for",
+        "on"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Use 'keen on' + V-ing/noun to express enthusiasm.",
       "bonusDamage": 7
     },
@@ -654,12 +654,12 @@
       "category": "B1 • Prepositions",
       "questionText": "Everyone was surprised _____ how quickly the skeleton guard fell.",
       "answers": [
-        "in",
-        "at",
+        "to",
         "on",
-        "to"
+        "in",
+        "at"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Use 'surprised at / by' to indicate the cause of surprise.",
       "bonusDamage": 7
     },
@@ -667,12 +667,12 @@
       "category": "B1 • Prepositions",
       "questionText": "This enchanted forest is famous _____ its glowing blue mushrooms.",
       "answers": [
-        "of",
         "for",
         "with",
-        "by"
+        "by",
+        "of"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "Fixed collocation: 'be famous for'.",
       "bonusDamage": 7
     },
@@ -682,8 +682,8 @@
       "answers": [
         "on",
         "at",
-        "from",
-        "to"
+        "to",
+        "from"
       ],
       "correctAnswerIndex": 0,
       "explanation": "The verb 'rely' always pairs with the preposition 'on'.",
@@ -693,12 +693,12 @@
       "category": "B1 • Prepositions",
       "questionText": "The mage divided the gold coins equally _____ the three heroes.",
       "answers": [
+        "during",
         "between",
         "among",
-        "during",
         "through"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Use 'among' when sharing among three or more people.",
       "bonusDamage": 7
     },
@@ -706,12 +706,12 @@
       "category": "B1 • Modals",
       "questionText": "You _____ touch the cursed altar—anyone who does loses 20 HP!",
       "answers": [
-        "mustn't",
-        "needn't",
         "don't have to",
+        "needn't",
+        "mustn't",
         "might not"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Mustn't' expresses strict prohibition.",
       "bonusDamage": 7
     },
@@ -719,9 +719,9 @@
       "category": "B1 • Modals",
       "questionText": "When I was younger, I _____ climb tall oak trees with ease.",
       "answers": [
-        "can",
-        "could",
         "may",
+        "could",
+        "can",
         "should"
       ],
       "correctAnswerIndex": 1,
@@ -732,12 +732,12 @@
       "category": "B1 • Modals",
       "questionText": "You look exhausted; you _____ take a healing potion and rest.",
       "answers": [
+        "need",
         "ought",
         "should",
-        "need",
         "have"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'Should' gives friendly advice (followed directly by bare infinitive).",
       "bonusDamage": 7
     },
@@ -745,12 +745,12 @@
       "category": "B1 • Modals",
       "questionText": "Wait here—the caravan _____ arrive within the next ten minutes.",
       "answers": [
+        "couldn't have",
         "might",
         "mustn't",
-        "couldn't have",
         "ought"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Might' expresses present or future possibility.",
       "bonusDamage": 7
     },
@@ -758,12 +758,12 @@
       "category": "B1 • Prepositions",
       "questionText": "Our shield wall protects the backline _____ sudden goblin attacks.",
       "answers": [
-        "from",
         "with",
         "toward",
+        "from",
         "over"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "Collocation: 'protect someone from harm/danger'.",
       "bonusDamage": 7
     },
@@ -771,12 +771,12 @@
       "category": "B1 • Prepositions",
       "questionText": "Compared _____ yesterday's battle, today's enemies seem much stronger.",
       "answers": [
-        "against",
-        "with",
         "for",
-        "above"
+        "above",
+        "with",
+        "against"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'Compared with/to' is used to make comparisons.",
       "bonusDamage": 7
     },
@@ -786,8 +786,8 @@
       "answers": [
         "they breached",
         "did they breach",
-        "breached they",
-        "had they breach"
+        "had they breach",
+        "breached they"
       ],
       "correctAnswerIndex": 1,
       "explanation": "Negative adverbials like 'Not only' at the start trigger subject-auxiliary inversion.",
@@ -797,12 +797,12 @@
       "category": "B2 • Inversion",
       "questionText": "Seldom _____ encountered such a well-coordinated ambush in the deep woods.",
       "answers": [
-        "we have",
-        "have we",
         "did we had",
-        "we had"
+        "we had",
+        "have we",
+        "we have"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Restrictive adverbs ('Seldom', 'Rarely', 'Never') at the beginning invert the auxiliary ('have we').",
       "bonusDamage": 9
     },
@@ -810,12 +810,12 @@
       "category": "B2 • Inversion",
       "questionText": "Had the patrol noticed the tracks earlier, they _____ fallen into the ambush.",
       "answers": [
-        "wouldn't",
-        "hadn't",
         "wouldn't have",
-        "won't have"
+        "won't have",
+        "wouldn't",
+        "hadn't"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "Inverted Third Conditional: 'Had + S + V3, S + wouldn't have + V3'.",
       "bonusDamage": 9
     },
@@ -823,12 +823,12 @@
       "category": "B2 • Inversion",
       "questionText": "No sooner _____ the cave than the stone door slammed shut behind them.",
       "answers": [
+        "did they entered",
         "they had entered",
         "had they entered",
-        "did they entered",
         "they entered"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'No sooner + had + S + V3 ... than' requires Past Perfect inversion.",
       "bonusDamage": 9
     },
@@ -836,12 +836,12 @@
       "category": "B2 • Inversion",
       "questionText": "Little _____ realize that the ancient merchant was actually a disguised dragon.",
       "answers": [
-        "the knight did",
-        "did the knight",
         "realized the knight",
-        "was the knight"
+        "was the knight",
+        "did the knight",
+        "the knight did"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Negative adverb 'Little' at the start inverts the verb ('did the knight realize').",
       "bonusDamage": 9
     },
@@ -850,9 +850,9 @@
       "questionText": "Only after solving all three riddles _____ open the iron treasury.",
       "answers": [
         "can you",
-        "you can",
         "will can you",
-        "did you could"
+        "did you could",
+        "you can"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Only after + V-ing/clause' triggers inversion in the MAIN clause ('can you open').",
@@ -862,12 +862,12 @@
       "category": "B2 • Inversion",
       "questionText": "Hardly _____ the potion when his strength surged back.",
       "answers": [
-        "had he drunk",
+        "drunk he",
         "he had drunk",
-        "did he drank",
-        "drunk he"
+        "had he drunk",
+        "did he drank"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Hardly + had + S + V3 ... when' follows strict inversion rules.",
       "bonusDamage": 9
     },
@@ -875,12 +875,12 @@
       "category": "B2 • Inversion",
       "questionText": "Were the Dark Knight _____ today, our fortified garrison could withstand him.",
       "answers": [
-        "attack",
-        "to attack",
         "attacking",
-        "attacked"
+        "attacked",
+        "attack",
+        "to attack"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Formal Second Conditional inversion uses 'Were + S + to V1'.",
       "bonusDamage": 9
     },
@@ -889,11 +889,11 @@
       "questionText": "Under no circumstances _____ leave the healer unprotected during a boss fight.",
       "answers": [
         "you should",
+        "you must",
         "should you",
-        "must you to",
-        "you must"
+        "must you to"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Phrases with 'no' ('Under no circumstances') at the start trigger inversion.",
       "bonusDamage": 9
     },
@@ -902,11 +902,11 @@
       "questionText": "So intense _____ that even the stone towers began to tremble.",
       "answers": [
         "the spell was",
+        "has the spell",
         "was the spell",
-        "did the spell",
-        "has the spell"
+        "did the spell"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'So + adj + be + S + that...' uses inversion for dramatic emphasis.",
       "bonusDamage": 9
     },
@@ -914,8 +914,8 @@
       "category": "B2 • Cleft",
       "questionText": "It was the elven archer _____ spotted the hidden trap on the trail.",
       "answers": [
-        "which",
         "whom",
+        "which",
         "who",
         "what"
       ],
@@ -927,12 +927,12 @@
       "category": "B2 • Cleft",
       "questionText": "What the party truly lacks at this stage _____ reliable magical defense.",
       "answers": [
+        "have been",
         "are",
-        "is",
         "were",
-        "have been"
+        "is"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Wh-cleft clause ('What + clause') takes a singular verb ('is') here.",
       "bonusDamage": 9
     },
@@ -940,9 +940,9 @@
       "category": "B2 • Inversion",
       "questionText": "Not until midnight _____ the distant signal fire from the citadel.",
       "answers": [
-        "they saw",
-        "did they see",
         "saw they",
+        "did they see",
+        "they saw",
         "had they seen"
       ],
       "correctAnswerIndex": 1,
@@ -953,10 +953,10 @@
       "category": "B2 • Inversion",
       "questionText": "On no account _____ enter the cursed ruins without carrying a Phoenix Feather.",
       "answers": [
-        "explorers must",
+        "do must explorers",
         "must explorers",
         "should explorers to",
-        "do must explorers"
+        "explorers must"
       ],
       "correctAnswerIndex": 1,
       "explanation": "'On no account' requires modal inversion ('must explorers').",
@@ -967,9 +967,9 @@
       "questionText": "Should you _____ any rare armor on the ground, collect it immediately.",
       "answers": [
         "spot",
-        "spotted",
+        "spotting",
         "to spot",
-        "spotting"
+        "spotted"
       ],
       "correctAnswerIndex": 0,
       "explanation": "Inverted First Conditional: 'Should + S + V1' replaces 'If + S + V1'.",
@@ -979,10 +979,10 @@
       "category": "B2 • Grammar",
       "questionText": "_____ exhausted after the long march, the heroes still stood ready to fight.",
       "answers": [
-        "Despite",
+        "However",
         "Although",
-        "Even",
-        "However"
+        "Despite",
+        "Even"
       ],
       "correctAnswerIndex": 1,
       "explanation": "Reduced concessive clause: 'Although (they were) exhausted'.",
@@ -992,12 +992,12 @@
       "category": "B2 • Modal Verbs",
       "questionText": "The torch is still warm; the dark knights _____ left the campsite moments ago.",
       "answers": [
-        "should have",
         "must have",
         "needn't have",
+        "should have",
         "would rather"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "'Must have + V3' expresses strong logical deduction about the past.",
       "bonusDamage": 9
     },
@@ -1005,12 +1005,12 @@
       "category": "B2 • Grammar",
       "questionText": "The blacksmith can't have forged this blade yesterday; he _____ all week.",
       "answers": [
-        "was travelling",
-        "has been travelling",
+        "had travel",
         "travels",
-        "had travel"
+        "has been travelling",
+        "was travelling"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "Present Perfect Continuous ('has been travelling') expresses continuous action up to now.",
       "bonusDamage": 9
     },
@@ -1018,12 +1018,12 @@
       "category": "B2 • Grammar",
       "questionText": "It is essential that every warrior _____ equipped with a healing potion.",
       "answers": [
-        "is",
-        "be",
         "was",
-        "will be"
+        "will be",
+        "is",
+        "be"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "Mandative subjunctive uses the bare infinitive ('be') after 'It is essential that...'.",
       "bonusDamage": 9
     },
@@ -1031,12 +1031,12 @@
       "category": "B2 • Grammar",
       "questionText": "I wish I _____ more mana potions before we climbed the cursed hill.",
       "answers": [
+        "had bought",
         "bought",
         "have bought",
-        "had bought",
         "would buy"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "'Wish + Past Perfect' expresses regret about a past action.",
       "bonusDamage": 9
     },
@@ -1059,8 +1059,8 @@
       "answers": [
         "didn't",
         "don't",
-        "won't",
-        "haven't"
+        "haven't",
+        "won't"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Would rather + S + Past Simple' expresses a preference about someone's present/future action.",
@@ -1070,12 +1070,12 @@
       "category": "B2 • Modal Verbs",
       "questionText": "You _____ carried so many iron bricks; the forge had plenty waiting for us.",
       "answers": [
-        "needn't have",
-        "mustn't have",
         "should have",
-        "can't have"
+        "mustn't have",
+        "can't have",
+        "needn't have"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Needn't have + V3' means an action was done in the past but proved unnecessary.",
       "bonusDamage": 9
     },
@@ -1083,12 +1083,12 @@
       "category": "B2 • Conditionals",
       "questionText": "_____ your timely healing spell, the vanguard would certainly have collapsed.",
       "answers": [
+        "In case",
         "But for",
         "If only",
-        "Provided that",
-        "In case"
+        "Provided that"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'But for + noun phrase' means 'If it hadn't been for...'.",
       "bonusDamage": 9
     },
@@ -1096,12 +1096,12 @@
       "category": "B2 • Grammar",
       "questionText": "The castle gates are high time we _____ repairing before winter arrives.",
       "answers": [
-        "start",
-        "started",
         "will start",
-        "have started"
+        "have started",
+        "start",
+        "started"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "'It's high time + S + Past Simple' emphasizes that something should be done now.",
       "bonusDamage": 9
     },
@@ -1109,12 +1109,12 @@
       "category": "B2 • Usage",
       "questionText": "The scouts worked tirelessly _____ they could map the boss's fortress before dusk.",
       "answers": [
-        "in order to",
         "so that",
+        "regardless of",
         "due to",
-        "regardless of"
+        "in order to"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "Use 'so that + clause' to express purpose; 'in order to' takes V1.",
       "bonusDamage": 9
     },
@@ -1123,9 +1123,9 @@
       "questionText": "Supposing the bridge _____ out overnight, how would our supply convoy cross?",
       "answers": [
         "washes",
-        "washed",
+        "had washed",
         "were washed",
-        "had washed"
+        "washed"
       ],
       "correctAnswerIndex": 2,
       "explanation": "'Supposing' acts as a conditional ('Suppose the bridge were washed out...').",
@@ -1137,10 +1137,10 @@
       "answers": [
         "defeat",
         "defeating",
-        "defeated",
-        "been defeated"
+        "been defeated",
+        "defeated"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "Perfect participle ('Having + V3') shows an action completed prior to the main verb.",
       "bonusDamage": 9
     },
@@ -1148,12 +1148,12 @@
       "category": "B2 • Modal Verbs",
       "questionText": "He _____ seen the trap—if he had, he wouldn't have stepped right onto it.",
       "answers": [
+        "ought to have",
         "can't have",
         "must have",
-        "ought to have",
         "might have"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Can't have + V3' expresses near certainty that something did NOT happen in the past.",
       "bonusDamage": 9
     },
@@ -1161,12 +1161,12 @@
       "category": "B2 • Grammar",
       "questionText": "The strategist insisted that the flanks _____ reinforced without delay.",
       "answers": [
-        "are",
-        "were",
         "be",
+        "were",
+        "are",
         "have been"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 0,
       "explanation": "Subjunctive after verbs of urgency ('insist that...'): use bare infinitive 'be'.",
       "bonusDamage": 9
     },
@@ -1176,8 +1176,8 @@
       "answers": [
         "put off",
         "called on",
-        "taken over",
-        "broken into"
+        "broken into",
+        "taken over"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Put off' means to postpone or delay.",
@@ -1187,12 +1187,12 @@
       "category": "B2 • Phrasal Verbs",
       "questionText": "While searching the ruins, the mage _____ a forgotten scroll hidden in a chest.",
       "answers": [
-        "came across",
-        "looked up to",
         "made up for",
+        "looked up to",
+        "came across",
         "got away with"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Come across' means to discover something unexpectedly by chance.",
       "bonusDamage": 9
     },
@@ -1200,10 +1200,10 @@
       "category": "B2 • Vocabulary",
       "questionText": "The general gave a _____ account of the battle, leaving out no crucial detail.",
       "answers": [
-        "vague",
+        "temporary",
         "comprehensive",
         "reluctant",
-        "temporary"
+        "vague"
       ],
       "correctAnswerIndex": 1,
       "explanation": "'Comprehensive' means complete and covering every important detail.",
@@ -1213,12 +1213,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "New recruits should _____ the courage of veteran knights in battle.",
       "answers": [
-        "look up to",
-        "look down on",
+        "run out of",
         "put up with",
-        "run out of"
+        "look down on",
+        "look up to"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Look up to' means to admire and respect someone.",
       "bonusDamage": 9
     },
@@ -1228,8 +1228,8 @@
       "answers": [
         "make up",
         "take part",
-        "keep pace",
-        "give way"
+        "give way",
+        "keep pace"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Make up for' means to compensate for something negative.",
@@ -1239,12 +1239,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Their plan was rejected because the costs far _____ the expected benefits.",
       "answers": [
-        "outweighed",
+        "withstood",
         "overcame",
         "undertook",
-        "withstood"
+        "outweighed"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Outweigh' means to be greater or more significant than something else.",
       "bonusDamage": 9
     },
@@ -1252,12 +1252,12 @@
       "category": "B2 • Collocations",
       "questionText": "The patrol didn't _____ much attention to the faint footprints beside the stream.",
       "answers": [
-        "pay",
-        "make",
         "give",
-        "do"
+        "do",
+        "make",
+        "pay"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "Standard collocation: 'pay attention to'.",
       "bonusDamage": 9
     },
@@ -1265,12 +1265,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Heavy rainfall has _____ our progress along the muddy forest road.",
       "answers": [
-        "hindered",
-        "promoted",
         "rewarded",
-        "confirmed"
+        "hindered",
+        "confirmed",
+        "promoted"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Hinder' means to make progress slower or more difficult.",
       "bonusDamage": 9
     },
@@ -1279,8 +1279,8 @@
       "questionText": "The guild must _____ a way to break the Shadow Shield without wasting mana.",
       "answers": [
         "come up with",
-        "catch up on",
         "drop out of",
+        "catch up on",
         "stand up to"
       ],
       "correctAnswerIndex": 0,
@@ -1291,12 +1291,12 @@
       "category": "B2 • Collocations",
       "questionText": "After a tense negotiation, the rival clans finally _____ a compromise.",
       "answers": [
-        "reached",
         "did",
+        "earned",
         "arrived",
-        "earned"
+        "reached"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "Collocation: 'reach a compromise / agreement'.",
       "bonusDamage": 9
     },
@@ -1304,12 +1304,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Because potions are _____ in this barren canyon, use every drop wisely.",
       "answers": [
-        "scarce",
         "abundant",
-        "excessive",
-        "permanent"
+        "permanent",
+        "scarce",
+        "excessive"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Scarce' means rare and available only in small quantities.",
       "bonusDamage": 9
     },
@@ -1317,12 +1317,12 @@
       "category": "B2 • Phrasal Verbs",
       "questionText": "The bandits tried to _____ the stolen treasure, yet the archers blocked the exit.",
       "answers": [
-        "get away with",
         "put up with",
-        "cut down on",
-        "look forward to"
+        "get away with",
+        "look forward to",
+        "cut down on"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Get away with' means to escape punishment after doing something wrong.",
       "bonusDamage": 9
     },
@@ -1330,12 +1330,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Despite stiff resistance, the squad showed _____ determination to defeat the Boss.",
       "answers": [
-        "unwavering",
-        "fragile",
         "careless",
-        "hostile"
+        "hostile",
+        "fragile",
+        "unwavering"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "'Unwavering' means steady, firm, and not weakening.",
       "bonusDamage": 9
     },
@@ -1343,12 +1343,12 @@
       "category": "B2 • Collocations",
       "questionText": "Experienced explorers never _____ risks for granted in uncharted territory.",
       "answers": [
-        "take",
         "make",
         "hold",
+        "take",
         "keep"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "Fixed idiom: 'take something for granted'.",
       "bonusDamage": 9
     },
@@ -1356,12 +1356,12 @@
       "category": "B2 • Phrasal Verbs",
       "questionText": "We can't _____ such reckless mistakes if we hope to survive Floor 10.",
       "answers": [
+        "live up to",
         "put up with",
         "keep up with",
-        "get along with",
-        "live up to"
+        "get along with"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Put up with' means to tolerate or endure something unpleasant.",
       "bonusDamage": 9
     },
@@ -1369,12 +1369,12 @@
       "category": "B2 • Usage",
       "questionText": "_____ the heavy snowfall, the courier delivered the royal decree on time.",
       "answers": [
-        "Although",
-        "Notwithstanding",
+        "Unless",
         "Even though",
-        "Unless"
+        "Notwithstanding",
+        "Although"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'Notwithstanding' (like 'Despite') functions as a preposition before a noun phrase.",
       "bonusDamage": 9
     },
@@ -1382,12 +1382,12 @@
       "category": "B2 • Usage",
       "questionText": "This enchanted shield is made of lightweight mithril; _____, it absorbs huge impacts.",
       "answers": [
-        "nevertheless",
         "therefore",
-        "moreover",
-        "otherwise"
+        "nevertheless",
+        "otherwise",
+        "moreover"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "'Moreover' adds a further positive point in the same direction.",
       "bonusDamage": 9
     },
@@ -1395,9 +1395,9 @@
       "category": "B2 • Usage",
       "questionText": "Pack two extra healing potions _____ one of the heroes is poisoned mid-battle.",
       "answers": [
-        "provided that",
-        "in case",
         "so long as",
+        "in case",
+        "provided that",
         "even if"
       ],
       "correctAnswerIndex": 1,
@@ -1410,8 +1410,8 @@
       "answers": [
         "what",
         "how",
-        "which",
-        "whose"
+        "whose",
+        "which"
       ],
       "correctAnswerIndex": 1,
       "explanation": "'No matter how + adjective + S + verb' means 'however cunning he is'.",
@@ -1421,12 +1421,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "A sudden flare of torchlight _____ the hidden doorway carved into the cliff.",
       "answers": [
-        "revealed",
         "concealed",
-        "forbade",
-        "neglected"
+        "revealed",
+        "neglected",
+        "forbade"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Reveal' means to uncover or make previously hidden things visible.",
       "bonusDamage": 9
     },
@@ -1435,11 +1435,11 @@
       "questionText": "The new bow, _____ string was woven from phoenix silk, fires twice as fast.",
       "answers": [
         "who",
-        "whose",
         "which",
-        "whom"
+        "whom",
+        "whose"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 3,
       "explanation": "'Whose' shows possession for both people and objects ('whose string').",
       "bonusDamage": 9
     },
@@ -1448,9 +1448,9 @@
       "questionText": "You may borrow this legendary tome _____ you return it unharmed after the raid.",
       "answers": [
         "as long as",
-        "in spite of",
         "owing to",
-        "rather than"
+        "rather than",
+        "in spite of"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'As long as' introduces a strict condition ('provided that').",
@@ -1460,12 +1460,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Their victory was largely _____ to the archer's incredible precision.",
       "answers": [
+        "resulted",
         "attributed",
         "consisted",
-        "resulted",
         "belonged"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "Use 'be attributed to' to state the cause or credit for an outcome.",
       "bonusDamage": 9
     },
@@ -1473,12 +1473,12 @@
       "category": "B2 • Grammar",
       "questionText": "The more challenging the enemy wave, _____ the rarity of the dropped loot.",
       "answers": [
-        "higher",
         "the higher",
+        "the highest",
         "highest",
-        "the highest"
+        "higher"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 0,
       "explanation": "Double comparative structure: 'The + comparative..., the + comparative...'.",
       "bonusDamage": 9
     },
@@ -1486,12 +1486,12 @@
       "category": "B2 • Usage",
       "questionText": "The fortress fell not because the walls were weak, _____ because morale collapsed.",
       "answers": [
-        "and",
+        "or",
         "so",
-        "but",
-        "or"
+        "and",
+        "but"
       ],
-      "correctAnswerIndex": 2,
+      "correctAnswerIndex": 3,
       "explanation": "Correlative contrast pair: 'not because X, but because Y'.",
       "bonusDamage": 9
     },
@@ -1499,12 +1499,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "Reading grammar notes carefully helps _____ careless mistakes during boss phases.",
       "answers": [
-        "eliminate",
         "encourage",
+        "eliminate",
         "generate",
         "multiply"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 1,
       "explanation": "'Eliminate' means to completely remove or get rid of.",
       "bonusDamage": 9
     },
@@ -1512,12 +1512,12 @@
       "category": "B2 • Grammar",
       "questionText": "_____ to reach the summit before nightfall, the guides doubled their pace.",
       "answers": [
-        "Aiming",
         "Aimed",
         "Having aimed",
-        "To be aimed"
+        "To be aimed",
+        "Aiming"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 3,
       "explanation": "Active participle clause ('Aiming to...') explains the guides' intention.",
       "bonusDamage": 9
     },
@@ -1526,9 +1526,9 @@
       "questionText": "His explanation was clear, _____ brief enough for every recruit to grasp quickly.",
       "answers": [
         "yet",
-        "for",
         "nor",
-        "lest"
+        "lest",
+        "for"
       ],
       "correctAnswerIndex": 0,
       "explanation": "'Yet' connects two contrasting adjectives ('clear, yet brief').",
@@ -1538,12 +1538,12 @@
       "category": "B2 • Vocabulary",
       "questionText": "The ancient ruins have remained _____ for centuries, untouched by passing armies.",
       "answers": [
-        "intact",
+        "abrupt",
         "shattered",
-        "decayed",
-        "abrupt"
+        "intact",
+        "decayed"
       ],
-      "correctAnswerIndex": 0,
+      "correctAnswerIndex": 2,
       "explanation": "'Intact' means whole, undamaged, and untouched.",
       "bonusDamage": 9
     },
@@ -1552,11 +1552,11 @@
       "questionText": "It is high time the council _____ more rangers to patrol the eastern bridge.",
       "answers": [
         "sends",
-        "sent",
         "will send",
+        "sent",
         "has sent"
       ],
-      "correctAnswerIndex": 1,
+      "correctAnswerIndex": 2,
       "explanation": "'It is high time + S + Past Simple' ('sent') urges prompt present action.",
       "bonusDamage": 9
     }

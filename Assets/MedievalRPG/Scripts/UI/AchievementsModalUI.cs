@@ -18,6 +18,12 @@ namespace MedievalRPG.UI
         [SerializeField] private TMP_FontAsset fontBold;
         [SerializeField] private TMP_FontAsset fontBody;
 
+        public void OverrideFonts(TMP_FontAsset bold, TMP_FontAsset body)
+        {
+            if (bold != null) fontBold = bold;
+            if (body != null) fontBody = body;
+        }
+
         [Header("Thành phần hiển thị")]
         [SerializeField] private TextMeshProUGUI summaryTMP;
         [SerializeField] private Transform listContent;
@@ -131,8 +137,8 @@ namespace MedievalRPG.UI
                 : (claimed ? new Color(0.09f, 0.16f, 0.13f, 0.94f) : new Color(0.08f, 0.10f, 0.14f, 0.94f));
 
             LayoutElement le = rowGo.AddComponent<LayoutElement>();
-            le.preferredHeight = 76f;
-            le.minHeight = 76f;
+            le.preferredHeight = 84f;
+            le.minHeight = 84f;
 
             // Thanh trạng thái bên trái
             GameObject stripeGo = new GameObject("Stripe");
@@ -179,14 +185,14 @@ namespace MedievalRPG.UI
             TextMeshProUGUI descTMP = descGo.AddComponent<TextMeshProUGUI>();
             if (fontBody != null) descTMP.font = fontBody;
             descTMP.text = def.description;
-            descTMP.fontSize = 13f;
+            descTMP.fontSize = 13.5f;
             descTMP.enableAutoSizing = true;
-            descTMP.fontSizeMin = 10f;
-            descTMP.fontSizeMax = 13f;
+            descTMP.fontSizeMin = 11.5f;
+            descTMP.fontSizeMax = 13.5f;
             descTMP.color = unlocked ? MedievalUITheme.IvoryText : MedievalUITheme.SlateMuted;
             descTMP.alignment = TextAlignmentOptions.MidlineLeft;
-            descTMP.textWrappingMode = TextWrappingModes.NoWrap;
-            descTMP.overflowMode = TextOverflowModes.Truncate;
+            descTMP.textWrappingMode = TextWrappingModes.Normal;
+            descTMP.overflowMode = TextOverflowModes.Ellipsis;
             descTMP.raycastTarget = false;
             RectTransform dRt = descTMP.rectTransform;
             dRt.anchorMin = new Vector2(0f, 0.04f);

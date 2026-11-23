@@ -143,9 +143,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Goblin Raider
   unitLevel: 1
-  damage: 14
-  maxHP: 80
-  currentHP: 80
+  damage: 17
+  maxHP: 95
+  currentHP: 95
   characterClass: 0
   maxMP: 20
   currentMP: 20

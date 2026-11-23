@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: archer_weapon_epic_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: archer_weapon_epic_2
+  itemName: "Cung Nguy\u1EC7t \u1EA2nh"
+  description: "L\u1EA5p l\xE1nh \xE1nh tr\u0103ng t\xEDm gi\xFAp m\u0169i t\xEAn b\xE1m \u0111u\u1ED5i m\u1EE5c ti\xEAu."
+  requiredClass: 2
+  slot: 0
+  rarity: 2
+  icon: {fileID: 21300000, guid: 252533d86e31535af98409258adbedc2, type: 3}
+  bonusMaxHP: 23
+  bonusMaxMP: 12
+  bonusPhysicalAttack: 20
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 3
+  bonusMagicDefense: 3
+  bonusSpeed: 4
+  bonusCritRate: 0.11

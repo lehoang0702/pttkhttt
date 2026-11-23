@@ -18,7 +18,7 @@ MonoBehaviour:
   requiredClass: 0
   slot: 2
   rarity: 3
-  icon: {fileID: 21300000, guid: ee476b3ddbb13497f90693f6095f26fb, type: 3}
+  icon: {fileID: 21300000, guid: 815a7b683fee540b1940a3d69b32c130, type: 3}
   bonusMaxHP: 80
   bonusMaxMP: 18
   bonusPhysicalAttack: 12

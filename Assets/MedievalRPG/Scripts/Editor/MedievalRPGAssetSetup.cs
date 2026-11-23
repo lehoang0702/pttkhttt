@@ -20,6 +20,12 @@ namespace MedievalRPG.EditorTools
         private const string ResourcesRoot = "Assets/MedievalRPG/Resources";
         private const string EquipmentCatalogPath = ResourcesRoot + "/MedievalEquipmentCatalog.asset";
 
+        // Chuẩn hóa tỉ lệ hiển thị để 3 anh hùng (Knight / Mage / Archer) có chiều cao cơ thể tương đương (~0.80 world units)
+        public const float KnightVisualScale = 1.45f;
+        public const float MageVisualScale = 0.96f;
+        public const float ArcherVisualScale = 1.32f;
+        public const float DarkKnightBossVisualScale = 1.75f;
+
         [MenuItem("MedievalRPG/Setup RPG Skills & Waves")]
         public static void EnsureCombatDataSetup()
         {
@@ -150,11 +156,25 @@ namespace MedievalRPG.EditorTools
                 powerMult: 0.85f, flatBonus: 3, heal: 0, defBonus: 0, bonusCrit: 0f, effTurns: 0,
                 StatusEffectType.Burn, statusTurns: 2, statusPotency: 6, toSelf: false);
 
+            SkillData shadowAegis = CreateOrUpdateSkill(
+                $"{SkillsRoot}/ShadowMage_DarkAegis.asset",
+                "Dark Aegis",
+                "Hồi máu và tạo khiên hắc ám tăng +10 Giáp cho đồng minh quái thấp máu nhất.",
+                CharacterClassType.Mage,
+                manaCost: 14, cooldown: 3, SkillTargetType.SingleAlly, DamageType.Magical,
+                powerMult: 0f, flatBonus: 0, heal: 24, defBonus: 10, bonusCrit: 0f, effTurns: 2,
+                StatusEffectType.None, statusTurns: 0, statusPotency: 0, toSelf: false);
+
             // 3. Gán kỹ năng cho cả 3 Anh hùng & 3 Quái vật/Boss
             SkillData knightSlash = AssetDatabase.LoadAssetAtPath<SkillData>($"{SkillsRoot}/Knight_Slash.asset");
             AssignSkillsListOnly($"{ClassesRoot}/KnightClass.asset", knightSlash, shieldSlam, ironBulwark);
 
             SkillData mageBolt = AssetDatabase.LoadAssetAtPath<SkillData>($"{SkillsRoot}/Mage_ArcaneBolt.asset");
+            if (mageBolt != null && mageBolt.manaCost != 0)
+            {
+                mageBolt.manaCost = 0;
+                EditorUtility.SetDirty(mageBolt);
+            }
             SkillData mageHeal = AssetDatabase.LoadAssetAtPath<SkillData>($"{SkillsRoot}/Mage_HealingLight.asset");
             AssignSkillsListOnly($"{ClassesRoot}/MageClass.asset", mageBolt, fireball, mageHeal);
 
@@ -171,14 +191,14 @@ namespace MedievalRPG.EditorTools
                 $"{ClassesRoot}/SkeletonArcherClass.asset",
                 "Xương Cung Thủ",
                 CharacterClassType.Archer,
-                baseLevel: 2, hp: 105, mp: 45, atk: 20, mag: 8, def: 9, mdef: 8, spd: 16, crit: 0.14f,
+                baseLevel: 2, hp: 125, mp: 45, atk: 24, mag: 9, def: 9, mdef: 8, spd: 16, crit: 0.14f,
                 skelArrow, skelVolley);
             EnsureEnemyClassAsset(
                 $"{ClassesRoot}/ShadowMageClass.asset",
                 "Pháp Sư Hắc Ám",
                 CharacterClassType.Mage,
-                baseLevel: 3, hp: 112, mp: 75, atk: 8, mag: 24, def: 7, mdef: 22, spd: 14, crit: 0.08f,
-                shadowOrb, shadowBlast);
+                baseLevel: 3, hp: 130, mp: 75, atk: 9, mag: 28, def: 7, mdef: 22, spd: 14, crit: 0.08f,
+                shadowOrb, shadowBlast, shadowAegis);
 
             EnsureVariantEnemyPrefab(
                 "Assets/MedievalRPG/Prefabs/Archer.prefab",
@@ -192,6 +212,7 @@ namespace MedievalRPG.EditorTools
                 new Color(0.58f, 0.38f, 0.94f, 1f));
 
             // 4. Đồng bộ ClassData, Material, Sprites & BoxCollider2D trên toàn bộ 8 Prefab nhân vật/quái
+            ConfigureHeroFramesAndEquipmentSpriteImports();
             SyncAllUnitPrefabs();
 
             // 5. Sinh 36 món Trang Bị (3 Class x 3 Slot x 4 Độ hiếm) và Resources/MedievalEquipmentCatalog.asset
@@ -316,9 +337,23 @@ namespace MedievalRPG.EditorTools
                 }
 
                 EquipmentCatalog.ApplyBlueprint(item, bp);
-                if (bp.slot == EquipmentSlot.Armor) item.icon = iconShield;
-                else if (bp.slot == EquipmentSlot.Accessory) item.icon = iconCrown;
-                else item.icon = bp.cls == CharacterClassType.Mage ? iconMagic : (bp.cls == CharacterClassType.Archer ? iconArrow : iconSword);
+                Sprite customSprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/MedievalRPG/Resources/EquipmentSprites/eq_{bp.id}.png");
+                if (customSprite != null)
+                {
+                    item.icon = customSprite;
+                }
+                else if (bp.slot == EquipmentSlot.Armor)
+                {
+                    item.icon = iconShield;
+                }
+                else if (bp.slot == EquipmentSlot.Accessory || bp.slot == EquipmentSlot.Helmet)
+                {
+                    item.icon = iconCrown;
+                }
+                else
+                {
+                    item.icon = bp.cls == CharacterClassType.Mage ? iconMagic : (bp.cls == CharacterClassType.Archer ? iconArrow : iconSword);
+                }
 
                 EditorUtility.SetDirty(item);
                 catalog.allItems.Add(item);
@@ -408,14 +443,14 @@ namespace MedievalRPG.EditorTools
                 spriteLitMat = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
             }
 
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Knight.prefab", $"{ClassesRoot}/KnightClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Mage.prefab", $"{ClassesRoot}/MageClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Archer.prefab", $"{ClassesRoot}/ArcherClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/GoblinRaider.prefab", $"{ClassesRoot}/GoblinClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Skeleton.prefab", $"{ClassesRoot}/SkeletonClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/SkeletonArcher.prefab", $"{ClassesRoot}/SkeletonArcherClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/ShadowMage.prefab", $"{ClassesRoot}/ShadowMageClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f));
-            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/DarkKnightBoss.prefab", $"{ClassesRoot}/DarkKnightBossClass.asset", true, spriteLitMat, knightAnimTemplate, new Vector2(1.45f, 1.75f));
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Knight.prefab", $"{ClassesRoot}/KnightClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f), KnightVisualScale);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Mage.prefab", $"{ClassesRoot}/MageClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f), MageVisualScale);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Archer.prefab", $"{ClassesRoot}/ArcherClass.asset", false, spriteLitMat, null, new Vector2(1.2f, 1.45f), ArcherVisualScale);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/GoblinRaider.prefab", $"{ClassesRoot}/GoblinClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f), 1f);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/Skeleton.prefab", $"{ClassesRoot}/SkeletonClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f), 1f);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/SkeletonArcher.prefab", $"{ClassesRoot}/SkeletonArcherClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f), ArcherVisualScale);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/ShadowMage.prefab", $"{ClassesRoot}/ShadowMageClass.asset", true, spriteLitMat, null, new Vector2(1.25f, 1.45f), MageVisualScale);
+            SyncUnitPrefab("Assets/MedievalRPG/Prefabs/DarkKnightBoss.prefab", $"{ClassesRoot}/DarkKnightBossClass.asset", true, spriteLitMat, knightAnimTemplate, new Vector2(1.45f, 1.75f), DarkKnightBossVisualScale);
         }
 
         private static void EnsureEnemyClassAsset(
@@ -507,7 +542,8 @@ namespace MedievalRPG.EditorTools
             bool isEnemy,
             Material fallbackSpriteMat,
             PixelCharacterAnimator bossSpriteSource,
-            Vector2 minColliderSize)
+            Vector2 targetWorldColliderSize,
+            float uniformScale = 1f)
         {
             if (!System.IO.File.Exists(prefabPath)) return;
             CharacterClassData cls = AssetDatabase.LoadAssetAtPath<CharacterClassData>(classPath);
@@ -515,6 +551,9 @@ namespace MedievalRPG.EditorTools
             GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
+                float safeScale = Mathf.Max(0.1f, uniformScale);
+                root.transform.localScale = new Vector3(safeScale, safeScale, 1f);
+
                 Unit unit = root.GetComponent<Unit>();
                 if (unit != null)
                 {
@@ -555,8 +594,8 @@ namespace MedievalRPG.EditorTools
                 BoxCollider2D col = root.GetComponent<BoxCollider2D>();
                 if (col == null) col = root.AddComponent<BoxCollider2D>();
                 col.size = new Vector2(
-                    Mathf.Max(col.size.x, minColliderSize.x),
-                    Mathf.Max(col.size.y, minColliderSize.y));
+                    Mathf.Round((targetWorldColliderSize.x / safeScale) * 100f) / 100f,
+                    Mathf.Round((targetWorldColliderSize.y / safeScale) * 100f) / 100f);
                 EditorUtility.SetDirty(col);
 
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
@@ -575,6 +614,53 @@ namespace MedievalRPG.EditorTools
                 if (frames[i] == null) return true;
             }
             return false;
+        }
+
+        private static void ConfigureHeroFramesAndEquipmentSpriteImports()
+        {
+            string[] heroFolders =
+            {
+                "Assets/MedievalRPG/Characters/Knight",
+                "Assets/MedievalRPG/Characters/Mage",
+                "Assets/MedievalRPG/Characters/Archer"
+            };
+            string[] heroGuids = AssetDatabase.FindAssets("t:Texture2D", heroFolders);
+            foreach (string guid in heroGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer == null) continue;
+                bool changed = false;
+                if (!importer.isReadable) { importer.isReadable = true; changed = true; }
+                if (importer.filterMode != FilterMode.Point) { importer.filterMode = FilterMode.Point; changed = true; }
+                if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+                {
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    changed = true;
+                }
+                if (changed) importer.SaveAndReimport();
+            }
+
+            string equipSpriteDir = "Assets/MedievalRPG/Resources/EquipmentSprites";
+            if (!AssetDatabase.IsValidFolder(equipSpriteDir)) return;
+            string[] eqGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { equipSpriteDir });
+            foreach (string guid in eqGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer == null) continue;
+                bool changed = false;
+                if (importer.textureType != TextureImporterType.Sprite) { importer.textureType = TextureImporterType.Sprite; changed = true; }
+                if (importer.spriteImportMode != SpriteImportMode.Single) { importer.spriteImportMode = SpriteImportMode.Single; changed = true; }
+                if (Mathf.Abs(importer.spritePixelsPerUnit - 100f) > 0.1f) { importer.spritePixelsPerUnit = 100f; changed = true; }
+                if (importer.filterMode != FilterMode.Point) { importer.filterMode = FilterMode.Point; changed = true; }
+                if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+                {
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    changed = true;
+                }
+                if (changed) importer.SaveAndReimport();
+            }
         }
     }
 }

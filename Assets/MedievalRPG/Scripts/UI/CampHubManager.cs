@@ -94,7 +94,7 @@ namespace MedievalRPG.UI
         private readonly List<Unit> _previewHeroes = new List<Unit>();
         private readonly List<StationSpot> _stationSpots = new List<StationSpot>();
         private readonly float[] _partyFormationOffsets = { 0f, -1.25f, -2.45f };
-        private readonly float[] _partyLaneY = { -1.24f, -1.04f, -1.26f };
+        private readonly float[] _partyLaneY = { -1.36f, -1.08f, -1.27f };
         private float _campPartyX = -0.1f;
         private bool _isWalkingOnRoad;
         private CampStationAction? _nearestStation;
@@ -177,7 +177,7 @@ namespace MedievalRPG.UI
 
         private void Start()
         {
-            Time.timeScale = 1f;
+            TimeScaleController.Reset();
             AudioManager audio = AudioManager.EnsureExists();
             audio.SetPausedDuck(false);
             audio.PlayMenuMusic();
@@ -337,7 +337,7 @@ namespace MedievalRPG.UI
             c.renderMode = RenderMode.WorldSpace;
             c.sortingOrder = 15;
             RectTransform cRt = lblGo.GetComponent<RectTransform>();
-            cRt.sizeDelta = new Vector2(230f, 38f);
+            cRt.sizeDelta = new Vector2(248f, 40f);
 
             Image bg = lblGo.AddComponent<Image>();
             bg.color = new Color(0.06f, 0.08f, 0.13f, 0.92f);
@@ -352,10 +352,10 @@ namespace MedievalRPG.UI
             if (worldLabelFont != null) tmp.font = worldLabelFont;
             else if (TMP_Settings.defaultFontAsset != null) tmp.font = TMP_Settings.defaultFontAsset;
             tmp.text = labelText;
-            tmp.fontSize = 15f;
+            tmp.fontSize = 16f;
             tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 11f;
-            tmp.fontSizeMax = 15f;
+            tmp.fontSizeMin = 12.5f;
+            tmp.fontSizeMax = 16.5f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = accent;
             tmp.alignment = TextAlignmentOptions.Center;
@@ -808,6 +808,7 @@ namespace MedievalRPG.UI
         private IEnumerator LoadSceneWithFade(string targetScene)
         {
             _isTransitioning = true;
+            StopCampWalking();
             if (fadeOverlay != null) yield return FadeRoutine(0f, 1f, 0.25f);
             SceneManager.LoadScene(targetScene);
         }

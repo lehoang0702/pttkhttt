@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_helm_rare_4
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_helm_rare_4
+  itemName: "M\u0169 S\u1EEBng B\xF2 Chi\u1EBFn"
+  description: "\u0110\xF4i s\u1EEBng nh\u1ECDn t\u0103ng uy th\u1EBF \xE1p \u0111\u1EA3o khi lao v\xE0o gi\u1EEFa tr\u1EADn."
+  requiredClass: 0
+  slot: 3
+  rarity: 1
+  icon: {fileID: 21300000, guid: cde8df1df8d0e96a6ab3fe52db042fb3, type: 3}
+  bonusMaxHP: 27
+  bonusMaxMP: 0
+  bonusPhysicalAttack: 3
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 5
+  bonusMagicDefense: 3
+  bonusSpeed: 1
+  bonusCritRate: 0.02

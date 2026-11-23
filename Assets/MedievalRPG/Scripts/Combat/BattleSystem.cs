@@ -91,9 +91,14 @@ namespace MedievalRPG.Combat
         private bool _quizAnswerSubmitted;
         private bool _skipQuizFeedback;
         private bool _isQuickMindActive;
+        private bool _quizWasSkipped;
+        private bool _streakIncludedB2;
         private float _battleSpeed = 1f;
         private List<BattleWave> _runtimeStageWaves;
         private readonly List<CharacterClassType> _leveledUpClasses = new List<CharacterClassType>();
+        private int _lastDefensiveQuizTurn = -10;
+        private bool _roadsideChoicePending;
+        private RoadsideChoiceOption _selectedRoadsideOption;
 
         public BattleInventory Inventory { get; private set; } = new BattleInventory(3, 2, 1);
 
@@ -107,6 +112,10 @@ namespace MedievalRPG.Combat
         public int BestQuizStreak { get; private set; }
         public int SessionGoldEarned { get; private set; }
         public int SessionExpEarned { get; private set; }
+        public int KnowledgeGauge { get; private set; }
+        public bool IsSynergyReady => KnowledgeGauge >= CombatCalculator.MaxKnowledgeGauge;
+        public int FreeHintsRemaining { get; private set; } = 1;
+        public QuizPromptMode ActiveQuizMode { get; private set; } = QuizPromptMode.AttackSkill;
         public CampaignStageId ActiveStageId { get; private set; }
         public StageDefinition ActiveStage { get; private set; }
         public int LastEarnedStars { get; private set; }
@@ -158,8 +167,14 @@ namespace MedievalRPG.Combat
         public event Action<Unit, Unit> OnTargetsChanged;
         public event Action<string> OnDialogueChanged;
         public event Action<QuizQuestion, string> OnQuizStarted;
+        public event Action<QuizQuestion, string, QuizPromptMode> OnQuizStartedWithMode;
         public event Action<bool, int, int, int, string, float> OnQuizResultShown;
         public event Action OnQuizEnded;
+        public event Action<int, int> OnKnowledgeGaugeChanged;
+        public event Action<int> OnFreeHintsChanged;
+        public event Action<RoadsideEventOffer> OnRoadsideEventStarted;
+        public event Action OnRoadsideEventEnded;
+        public event Action OnSynergyUltimateExecuted;
         public event Action<Unit, int, bool> OnDamageDealt;
         public event Action<Unit, int> OnUnitHealed;
         public event Action<Unit, string, Color> OnUnitStatusPop;
@@ -180,10 +195,7 @@ namespace MedievalRPG.Combat
         private void OnDestroy()
         {
             PlayerEquipmentManager.Instance.OnEquipmentChanged -= ApplyPartyEquipment;
-            if (Time.timeScale != 1f)
-            {
-                Time.timeScale = 1f;
-            }
+            TimeScaleController.Reset();
         }
 
         private void Update()
@@ -261,16 +273,13 @@ namespace MedievalRPG.Combat
             enableQuizSystem = PlayerPrefs.GetInt("QuizEnabled", enableQuizSystem ? 1 : 0) == 1;
             _battleSpeed = PlayerPrefs.GetFloat("BattleSpeed", 1f);
             if (_battleSpeed < 0.5f) _battleSpeed = 1f;
-            if (!IsPaused)
-            {
-                Time.timeScale = _battleSpeed;
-            }
+            TimeScaleController.SetBaseSpeed(_battleSpeed);
         }
 
         public void SetPaused(bool paused)
         {
             IsPaused = paused;
-            Time.timeScale = paused ? 0f : _battleSpeed;
+            TimeScaleController.SetPaused(paused);
             AudioManager.Instance?.SetPausedDuck(paused);
         }
 
@@ -294,6 +303,15 @@ namespace MedievalRPG.Combat
             campMgr.ApplyToBattleInventory(Inventory);
             SessionGoldEarned = 0;
             SessionExpEarned = 0;
+            TotalQuestionsAnswered = 0;
+            CorrectAnswersCount = 0;
+            CurrentQuizStreak = 0;
+            BestQuizStreak = 0;
+            _streakIncludedB2 = false;
+            KnowledgeGauge = 0;
+            FreeHintsRemaining = 1;
+            _lastDefensiveQuizTurn = -10;
+            ActiveQuizMode = QuizPromptMode.AttackSkill;
             LastEarnedStars = 0;
             LastFirstClearGoldBonus = 0;
             LastUnlockedNewStage = false;
@@ -356,6 +374,9 @@ namespace MedievalRPG.Combat
             OnWaveChanged?.Invoke();
             OnGroundLootCountChanged?.Invoke(0);
             OnGoldChanged?.Invoke(campMgr.Gold);
+            OnKnowledgeGaugeChanged?.Invoke(KnowledgeGauge, CombatCalculator.MaxKnowledgeGauge);
+            OnFreeHintsChanged?.Invoke(FreeHintsRemaining);
+            RefreshPartyComboAuras();
 
             bool isBossWave = IsCurrentWaveBoss();
             forestRoad?.SetMilestone(1, Mathf.Max(1, TotalWaves), isBossWave);
@@ -562,6 +583,7 @@ namespace MedievalRPG.Combat
                 if (eUnit != null)
                 {
                     eUnit.isEnemy = true;
+                    eUnit.RefreshEquipmentVisuals();
                     if (Mathf.Abs(statMult - 1f) > 0.01f || isEliteWave)
                     {
                         eUnit.ApplyWaveScale(statMult, isEliteWave);
@@ -668,22 +690,64 @@ namespace MedievalRPG.Combat
         private List<Unit> GetAliveHeroes() => partyUnits.FindAll(h => h != null && h.IsAlive);
         private Unit GetFirstAliveEnemy() => enemyUnits.Find(e => e != null && e.IsAlive);
 
-        private Unit GetMostWoundedAliveAlly()
+        private static Unit FindMostWoundedUnit(IReadOnlyList<Unit> units, float maxHpRatioInclusive = float.MaxValue)
         {
+            if (units == null) return null;
             Unit best = null;
             float lowestPct = float.MaxValue;
 
-            foreach (Unit ally in partyUnits)
+            for (int i = 0; i < units.Count; i++)
             {
-                if (ally == null || !ally.IsAlive) continue;
-                float pct = (float)ally.currentHP / Mathf.Max(1, ally.maxHP);
-                if (pct < lowestPct)
+                Unit u = units[i];
+                if (u == null || !u.IsAlive) continue;
+                float pct = (float)u.currentHP / Mathf.Max(1, u.maxHP);
+                if (pct <= maxHpRatioInclusive && pct < lowestPct)
                 {
                     lowestPct = pct;
-                    best = ally;
+                    best = u;
                 }
             }
             return best;
+        }
+
+        private Unit GetMostWoundedAliveAlly() => FindMostWoundedUnit(partyUnits);
+        private Unit GetMostWoundedAliveEnemy() => FindMostWoundedUnit(enemyUnits);
+
+        private bool HasWoundedAliveEnemy(float hpThresholdRatio = 0.78f)
+        {
+            Unit wounded = GetMostWoundedAliveEnemy();
+            return wounded != null && ((float)wounded.currentHP / Mathf.Max(1, wounded.maxHP)) < hpThresholdRatio;
+        }
+
+        /// <summary>
+        /// AI chọn mục tiêu tấn công đơn cho quái vật (tuân thủ Khiêu Khích của Kỵ Sĩ trước):
+        /// - Xương Cung Thủ (Archer) tỉa anh hùng có tỉ lệ HP thấp nhất.
+        /// - Boss ưu tiên dứt điểm anh hùng đang thấp máu (&lt;= 35% HP).
+        /// </summary>
+        public static Unit SelectSmartEnemyTarget(Unit enemy, IReadOnlyList<Unit> aliveHeroes, int randomPickIndex)
+        {
+            if (aliveHeroes == null || aliveHeroes.Count == 0) return null;
+
+            for (int i = 0; i < aliveHeroes.Count; i++)
+            {
+                Unit h = aliveHeroes[i];
+                if (h != null && h.IsAlive && h.HasTaunt) return h;
+            }
+
+            if (enemy != null && enemy.characterClass == CharacterClassType.Archer)
+            {
+                Unit lowestHero = FindMostWoundedUnit(aliveHeroes);
+                if (lowestHero != null) return lowestHero;
+            }
+
+            if (enemy != null && enemy.isBoss)
+            {
+                Unit finisherTarget = FindMostWoundedUnit(aliveHeroes, 0.35f);
+                if (finisherTarget != null) return finisherTarget;
+            }
+
+            int idx = Mathf.Clamp(randomPickIndex, 0, aliveHeroes.Count - 1);
+            return aliveHeroes[idx];
         }
 
         private Unit GetFirstDeadAlly() => partyUnits.Find(h => h != null && !h.IsAlive);
@@ -700,11 +764,12 @@ namespace MedievalRPG.Combat
             _turnQueue.Sort(CombatCalculator.CompareTurnOrder);
 
             // Quái vật lên kế hoạch Intent cho vòng này
+            bool enemyWounded = HasWoundedAliveEnemy();
             foreach (Unit e in enemyUnits)
             {
                 if (e != null && e.IsAlive)
                 {
-                    e.PlanNextIntent(TurnCount);
+                    e.PlanNextIntent(TurnCount, enemyWounded);
                 }
             }
 
@@ -790,8 +855,69 @@ namespace MedievalRPG.Combat
         }
 
         // =====================================================================
-        // CƠ CHẾ CÂU HỎI TRẮC NGHIỆM GIÁO DỤC (QUIZ SYSTEM)
+        // CƠ CHẾ CÂU HỎI TRẮC NGHIỆM GIÁO DỤC (QUIZ SYSTEM) & NỘ TRI THỨC
         // =====================================================================
+        public bool TryConsumeFreeHint()
+        {
+            if (FreeHintsRemaining <= 0) return false;
+            FreeHintsRemaining--;
+            OnFreeHintsChanged?.Invoke(FreeHintsRemaining);
+            return true;
+        }
+
+        private void AddKnowledgeGauge(int delta)
+        {
+            int next = CombatCalculator.CalculateNextKnowledgeGauge(KnowledgeGauge, delta);
+            if (next == KnowledgeGauge) return;
+            KnowledgeGauge = next;
+            OnKnowledgeGaugeChanged?.Invoke(KnowledgeGauge, CombatCalculator.MaxKnowledgeGauge);
+        }
+
+        private void RefreshPartyComboAuras()
+        {
+            bool comboActive = enableQuizSystem && CurrentQuizStreak >= 3;
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                Unit h = partyUnits[i];
+                if (h == null) continue;
+                UnitStatusVFX vfx = h.GetComponent<UnitStatusVFX>();
+                if (vfx != null) vfx.SetComboAuraActive(comboActive && h.IsAlive);
+            }
+        }
+
+        private QuizQuestion DrawActiveQuizQuestion()
+        {
+            if (QuizManager.Instance != null)
+            {
+                return QuizManager.Instance.GetRandomQuestion();
+            }
+
+            return new QuizQuestion(
+                "B1 • Grammar",
+                "By the time we reached the castle, the gates _____ already.",
+                new[] { "closed", "had closed", "have closed", "close" },
+                1,
+                "Past Perfect ('had closed') describes an event completed before another past action.",
+                7
+            ).CreateShuffledCopy();
+        }
+
+        private void DispatchQuizStartUI(QuizQuestion q, string actionContext, QuizPromptMode mode)
+        {
+            if (OnQuizStartedWithMode != null)
+            {
+                OnQuizStartedWithMode.Invoke(q, actionContext, mode);
+            }
+            else if (OnQuizStarted != null)
+            {
+                OnQuizStarted.Invoke(q, actionContext);
+            }
+            else if (BattleUIManager.Instance != null)
+            {
+                BattleUIManager.Instance.ShowQuizPrompt(q);
+            }
+        }
+
         private void TriggerQuizForAction(PendingActionType actionType, int skillIndex = 0)
         {
             if (!enableQuizSystem)
@@ -802,24 +928,11 @@ namespace MedievalRPG.Combat
 
             _pendingAction = actionType;
             _pendingSkillIndex = skillIndex;
+            ActiveQuizMode = QuizPromptMode.AttackSkill;
             _quizAnswerSubmitted = false;
             _skipQuizFeedback = false;
-
-            if (QuizManager.Instance != null)
-            {
-                _activeQuestion = QuizManager.Instance.GetRandomQuestion();
-            }
-            else
-            {
-                _activeQuestion = new QuizQuestion(
-                    "B1 • Grammar",
-                    "By the time we reached the castle, the gates _____ already.",
-                    new[] { "closed", "had closed", "have closed", "close" },
-                    1,
-                    "Past Perfect ('had closed') describes an event completed before another past action.",
-                    7
-                );
-            }
+            _quizWasSkipped = false;
+            _activeQuestion = DrawActiveQuizQuestion();
 
             SetState(BattleState.WAITING_FOR_QUIZ);
             string heroLabel = CurrentHero != null ? MedievalUITheme.FormatHeroDisplayName(CurrentHero.unitName) : "Anh Hùng";
@@ -828,15 +941,7 @@ namespace MedievalRPG.Combat
 
             AudioManager.Instance?.PlayQuizOpen();
             SetDialogue($"<b>{heroLabel}</b> đang tập trung! Trả lời câu hỏi để thi triển <b>{actionLabel}</b>.");
-
-            if (OnQuizStarted != null)
-            {
-                OnQuizStarted.Invoke(_activeQuestion, actionContext);
-            }
-            else if (BattleUIManager.Instance != null)
-            {
-                BattleUIManager.Instance.ShowQuizPrompt(_activeQuestion);
-            }
+            DispatchQuizStartUI(_activeQuestion, actionContext, QuizPromptMode.AttackSkill);
         }
 
         private string GetPendingActionDisplayName(PendingActionType actionType, int skillIndex)
@@ -849,18 +954,26 @@ namespace MedievalRPG.Combat
             return actionType == PendingActionType.Attack ? "Tấn Công" : "Kỹ Năng";
         }
 
-        public void ProcessQuizAnswer(int answerIndex) => ProcessQuizAnswer(answerIndex, false);
+        public void ProcessQuizAnswer(int answerIndex) => ProcessQuizAnswer(answerIndex, false, false);
 
-        public void ProcessQuizAnswer(int answerIndex, bool isQuickMind)
+        public void ProcessQuizAnswer(int answerIndex, bool isQuickMind) => ProcessQuizAnswer(answerIndex, isQuickMind, false);
+
+        public void ProcessQuizAnswer(int answerIndex, bool isQuickMind, bool wasSkipped)
         {
             if (state != BattleState.WAITING_FOR_QUIZ || _activeQuestion == null || _quizAnswerSubmitted) return;
             _quizAnswerSubmitted = true;
+            _quizWasSkipped = wasSkipped;
 
             int bonusDamage = 0;
             string feedback = "";
-            bool timedOut = answerIndex < 0;
+            bool timedOut = answerIndex < 0 && !wasSkipped;
 
-            if (QuizManager.Instance != null)
+            if (wasSkipped)
+            {
+                _isQuizAnswerCorrect = false;
+                feedback = $"<b>CHỌN NHẬN ĐÒN!</b> Đáp án đúng: <b>{_activeQuestion.GetCorrectAnswerString()}</b>.\n<i>{_activeQuestion.explanation}</i>";
+            }
+            else if (QuizManager.Instance != null)
             {
                 _isQuizAnswerCorrect = QuizManager.Instance.SubmitAnswer(answerIndex, out feedback, out bonusDamage);
             }
@@ -877,42 +990,72 @@ namespace MedievalRPG.Combat
             }
 
             PlayerCampProgressManager campMgr = PlayerCampProgressManager.EnsureLoaded();
-            TotalQuestionsAnswered++;
             _isQuickMindActive = _isQuizAnswerCorrect && isQuickMind;
+
+            if (!wasSkipped)
+            {
+                TotalQuestionsAnswered++;
+                campMgr.RecordQuizAttemptStats(_activeQuestion.category, _isQuizAnswerCorrect, saveImmediate: false);
+            }
 
             if (_isQuizAnswerCorrect)
             {
+                bool resolvedMistake = campMgr.HasQuizMistake(_activeQuestion.questionText)
+                    && campMgr.ResolveQuizMistake(_activeQuestion.questionText);
+
                 CorrectAnswersCount++;
                 CurrentQuizStreak++;
                 if (CurrentQuizStreak > BestQuizStreak) BestQuizStreak = CurrentQuizStreak;
-
-                int goldGain = 10 + (_isQuickMindActive ? 5 : 0);
-                int expGain = 12 + (_isQuickMindActive ? 6 : 0);
-                AwardSessionGold(goldGain);
-                SessionExpEarned += expGain;
-
-                if (CurrentHero != null)
+                if (!string.IsNullOrEmpty(_activeQuestion.category)
+                    && _activeQuestion.category.StartsWith("B2", StringComparison.OrdinalIgnoreCase))
                 {
-                    string popLabel = _isQuickMindActive ? $"QUICK MIND! +{goldGain}V" : $"+{goldGain} VÀNG!";
-                    OnUnitStatusPop?.Invoke(CurrentHero, popLabel, MedievalUITheme.GoldSoft);
+                    _streakIncludedB2 = true;
                 }
 
-                if (CurrentQuizStreak >= 5 && !string.IsNullOrEmpty(_activeQuestion.category)
-                    && _activeQuestion.category.StartsWith("B2", StringComparison.OrdinalIgnoreCase))
+                bool isGuard = ActiveQuizMode == QuizPromptMode.DefensiveGuard;
+                int goldGain = isGuard
+                    ? (_isQuickMindActive ? 8 : 5)
+                    : (ActiveQuizMode == QuizPromptMode.RoadsideEvent ? 0 : (10 + (_isQuickMindActive ? 5 : 0)));
+                int expGain = isGuard ? 8 : (12 + (_isQuickMindActive ? 6 : 0));
+
+                if (goldGain > 0) AwardSessionGold(goldGain);
+                SessionExpEarned += expGain;
+                AddKnowledgeGauge(CombatCalculator.CalculateKnowledgeGain(true, true, _isQuickMindActive, isGuard));
+
+                if (ActiveQuizMode == QuizPromptMode.AttackSkill && CurrentHero != null)
+                {
+                    string popLabel = resolvedMistake
+                        ? $"KHẮC PHỤC LỖI SAI! +{goldGain}V"
+                        : (_isQuickMindActive ? $"QUICK MIND! +{goldGain}V" : $"+{goldGain} VÀNG!");
+                    OnUnitStatusPop?.Invoke(CurrentHero, popLabel, resolvedMistake ? MedievalUITheme.SuccessGreen : MedievalUITheme.GoldSoft);
+                }
+
+                if (resolvedMistake)
+                {
+                    feedback += "\n<color=#8BE08B><b>★ ĐÃ KHẮC PHỤC CÂU TỪ SỔ TAY LỖI SAI!</b></color>";
+                }
+
+                if (CurrentQuizStreak >= 5 && _streakIncludedB2)
                 {
                     campMgr.UnlockAchievement(AchievementId.StreakFiveB2);
                 }
             }
-            else
+            else if (!wasSkipped)
             {
                 CurrentQuizStreak = 0;
+                _streakIncludedB2 = false;
                 campMgr.RecordQuizMistake(_activeQuestion.questionText);
+                AddKnowledgeGauge(CombatCalculator.CalculateKnowledgeGain(true, false, false, ActiveQuizMode == QuizPromptMode.DefensiveGuard));
             }
 
-            AudioManager.Instance?.PlayQuizResult(_isQuizAnswerCorrect, CurrentQuizStreak);
+            RefreshPartyComboAuras();
+            if (!wasSkipped)
+            {
+                AudioManager.Instance?.PlayQuizResult(_isQuizAnswerCorrect, CurrentQuizStreak);
+            }
             SetDialogue(feedback);
 
-            float waitTime = 2.4f;
+            float waitTime = wasSkipped ? 0.55f : (ActiveQuizMode == QuizPromptMode.AttackSkill ? 2.4f : 1.85f);
             OnQuizResultShown?.Invoke(
                 _isQuizAnswerCorrect,
                 answerIndex,
@@ -922,7 +1065,10 @@ namespace MedievalRPG.Combat
                 waitTime
             );
 
-            StartCoroutine(HandleQuizResultRoutine(_isQuizAnswerCorrect, bonusDamage, waitTime));
+            if (ActiveQuizMode == QuizPromptMode.AttackSkill)
+            {
+                StartCoroutine(HandleQuizResultRoutine(_isQuizAnswerCorrect, bonusDamage, waitTime));
+            }
         }
 
         private IEnumerator HandleQuizResultRoutine(bool isCorrect, int bonusDamage, float waitTime)
@@ -1006,6 +1152,11 @@ namespace MedievalRPG.Combat
             else
             {
                 SetDialogue($"<b>{heroDisplay}</b> lao lên tấn công!");
+            }
+
+            if (!enableQuizSystem)
+            {
+                AddKnowledgeGauge(CombatCalculator.CalculateKnowledgeGain(false, true, false, false));
             }
 
             // 1. Kỹ năng tự hỗ trợ (VD: Knight Iron Bulwark)
@@ -1394,7 +1545,7 @@ namespace MedievalRPG.Combat
             _isActionInProgress = true;
 
             Unit hero = CurrentHero;
-            hero.isDefending = true;
+            hero.SetDefending(true);
             hero.RestoreMana(8);
 
             // Hiệp Sĩ khi Phòng Thủ thu hút 1 lượt đòn đánh
@@ -1443,14 +1594,78 @@ namespace MedievalRPG.Combat
                 }
                 AudioManager.Instance?.PlayEnemyAttackSfx(skill);
                 SetDialogue($"<b>{enemy.unitName}</b> kích hoạt <b>{skill.skillName}</b>!");
-                enemy.PlanNextIntent(TurnCount + 1);
+                enemy.PlanNextIntent(TurnCount + 1, HasWoundedAliveEnemy());
                 yield return new WaitForSeconds(0.75f);
                 _isActionInProgress = false;
                 AdvanceTurn();
                 yield break;
             }
 
-            // Chọn mục tiêu (ưu tiên Taunt hoặc AoE)
+            // Nếu quái hồi máu / tạo khiên cho đồng minh (vd: Pháp Sư Hắc Ám - Dark Aegis)
+            if (skill != null && skill.IsHealSkill)
+            {
+                if (skill.manaCost > 0) enemy.UseMana(skill.manaCost);
+                enemy.StartSkillCooldown(skill);
+
+                List<Unit> healTargets = new List<Unit>();
+                if (skill.targetType == SkillTargetType.AllAllies)
+                {
+                    healTargets.AddRange(GetAliveEnemies());
+                }
+                else
+                {
+                    Unit woundedEnemy = GetMostWoundedAliveEnemy();
+                    if (woundedEnemy != null) healTargets.Add(woundedEnemy);
+                }
+
+                bool healAnimDone = false;
+                Vector3 focusPos = healTargets.Count > 0 ? healTargets[0].transform.position : enemy.transform.position;
+
+                void ApplyEnemyHeals()
+                {
+                    AudioManager.Instance?.PlayHealSfx();
+                    int healValue = CombatCalculator.CalculateHealAmount(skill.baseHealAmount, enemy.magicDamage, 0);
+                    foreach (Unit ally in healTargets)
+                    {
+                        if (ally == null || !ally.IsAlive) continue;
+                        if (healValue > 0)
+                        {
+                            int gained = ally.Heal(healValue);
+                            OnUnitHealed?.Invoke(ally, gained);
+                        }
+                        if (skill.defenseBonus > 0)
+                        {
+                            ally.ApplyDefenseBuff(skill.defenseBonus, Mathf.Max(1, skill.effectDurationTurns));
+                            OnUnitStatusPop?.Invoke(ally, $"+{skill.defenseBonus} GIÁP!", MedievalUITheme.GoldSoft);
+                        }
+                        PixelCombatVFXManager.Instance?.PlayHealColumn(ally.transform.position);
+                    }
+
+                    string targetLabel = healTargets.Count > 1
+                        ? "đồng minh"
+                        : (healTargets.Count == 1 ? $"<b>{healTargets[0].unitName}</b>" : "bản thân");
+                    string shieldNote = skill.defenseBonus > 0 ? $" và +{skill.defenseBonus} Giáp" : "";
+                    SetDialogue($"<b>{enemy.unitName}</b> thi triển <b>{skill.skillName}</b> hồi <b>+{healValue} HP</b>{shieldNote} cho {targetLabel}!");
+                }
+
+                if (enemy.pixelAnimator != null)
+                {
+                    enemy.pixelAnimator.PlayAttack(focusPos, ApplyEnemyHeals, () => healAnimDone = true, customStepDistance: 0.14f);
+                    while (!healAnimDone) yield return null;
+                }
+                else
+                {
+                    ApplyEnemyHeals();
+                }
+
+                enemy.PlanNextIntent(TurnCount + 1, HasWoundedAliveEnemy());
+                yield return new WaitForSeconds(0.65f);
+                _isActionInProgress = false;
+                AdvanceTurn();
+                yield break;
+            }
+
+            // Chọn mục tiêu thông minh (ưu tiên Taunt, tiếp đến tỉa/dứt điểm hoặc AoE)
             List<Unit> targets = new List<Unit>();
             if (skill != null && skill.targetType == SkillTargetType.AllEnemies)
             {
@@ -1458,9 +1673,8 @@ namespace MedievalRPG.Combat
             }
             else
             {
-                Unit tauntTarget = aliveHeroes.Find(h => h.HasTaunt);
-                Unit picked = tauntTarget != null ? tauntTarget : aliveHeroes[UnityEngine.Random.Range(0, aliveHeroes.Count)];
-                targets.Add(picked);
+                Unit picked = SelectSmartEnemyTarget(enemy, aliveHeroes, UnityEngine.Random.Range(0, aliveHeroes.Count));
+                if (picked != null) targets.Add(picked);
             }
 
             if (skill != null)
@@ -1474,6 +1688,46 @@ namespace MedievalRPG.Combat
             string enemySkillLower = skill != null && skill.skillName != null ? skill.skillName.ToLowerInvariant() : "";
             bool isEnemyRanged = skill != null && (skill.damageType == DamageType.Magical || enemySkillLower.Contains("arrow") || enemySkillLower.Contains("volley") || enemySkillLower.Contains("dagger"));
 
+            bool defensiveGuardActive = false;
+            bool defensiveQuickParry = false;
+            if (ShouldTriggerDefensiveQuiz(enableQuizSystem, enemy, skill, targets.Count, TurnCount, _lastDefensiveQuizTurn))
+            {
+                _lastDefensiveQuizTurn = TurnCount;
+                ActiveQuizMode = QuizPromptMode.DefensiveGuard;
+                _quizAnswerSubmitted = false;
+                _skipQuizFeedback = false;
+                _quizWasSkipped = false;
+                _isQuizAnswerCorrect = false;
+                _isQuickMindActive = false;
+                _activeQuestion = DrawActiveQuizQuestion();
+
+                SetState(BattleState.WAITING_FOR_QUIZ);
+                string skillTitle = skill != null ? skill.skillName : "Đòn Đánh Nặng";
+                string warnContext = $"CẢNH BÁO: {enemy.unitName} sắp tung [{skillTitle}]! Trả lời trong 8s để ĐỠ ĐÒN!";
+                AudioManager.Instance?.PlayQuizOpen();
+                SetDialogue($"<color=#FF7A7A><b>CẢNH BÁO PHẢN XẠ!</b></color> <b>{enemy.unitName}</b> chuẩn bị tung <b>{skillTitle}</b>!");
+                DispatchQuizStartUI(_activeQuestion, warnContext, QuizPromptMode.DefensiveGuard);
+
+                while (!_quizAnswerSubmitted)
+                {
+                    yield return null;
+                }
+
+                float fbWait = _quizWasSkipped ? 0.55f : 1.75f;
+                float elapsed = 0f;
+                while (elapsed < fbWait && !_skipQuizFeedback)
+                {
+                    if (!IsPaused) elapsed += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+
+                OnQuizEnded?.Invoke();
+                SetState(BattleState.ENEMYTURN);
+                ActiveQuizMode = QuizPromptMode.AttackSkill;
+                defensiveGuardActive = _isQuizAnswerCorrect;
+                defensiveQuickParry = _isQuickMindActive;
+            }
+
             void ApplyEnemyStrike()
             {
                 AudioManager.Instance?.PlayEnemyAttackSfx(skill);
@@ -1481,6 +1735,7 @@ namespace MedievalRPG.Combat
                 int baseAtk = dmgType == DamageType.Magical ? enemy.magicDamage : enemy.damage;
                 float mult = skill != null ? Mathf.Max(0.5f, skill.powerMultiplier) : 1f;
                 int flat = skill != null ? skill.flatBonusDamage : 0;
+                float guardMult = defensiveGuardActive ? (defensiveQuickParry ? 0.35f : 0.50f) : 1f;
 
                 int totalDmg = 0;
                 bool anyCrit = false;
@@ -1488,7 +1743,7 @@ namespace MedievalRPG.Combat
                 {
                     if (h == null || !h.IsAlive) continue;
 
-                    bool isCrit = UnityEngine.Random.value < (enemy.critRate + (skill != null ? skill.bonusCritRate : 0f));
+                    bool isCrit = !defensiveGuardActive && UnityEngine.Random.value < (enemy.critRate + (skill != null ? skill.bonusCritRate : 0f));
                     if (isCrit) anyCrit = true;
                     int raw = CombatCalculator.CalculateSkillRawDamage(
                         baseAtk,
@@ -1500,11 +1755,16 @@ namespace MedievalRPG.Combat
                         0,
                         enemy.AttackBonusPercent);
 
-                    int actual = h.TakeDamage(raw, dmgType, out bool heroDied);
+                    int actual = h.TakeDamage(raw, dmgType, out bool heroDied, guardMult);
                     totalDmg += actual;
                     OnDamageDealt?.Invoke(h, actual, isCrit);
 
-                    if (!isEnemyRanged)
+                    if (defensiveGuardActive)
+                    {
+                        PixelCombatVFXManager.Instance?.PlayPerfectGuardBurst(h.transform.position, defensiveQuickParry);
+                        OnUnitStatusPop?.Invoke(h, defensiveQuickParry ? "PARRY -65%!" : "ĐỠ ĐÒN -50%!", MedievalUITheme.GoldSoft);
+                    }
+                    else if (!isEnemyRanged)
                     {
                         PixelCombatVFXManager.Instance?.PlaySlashArc(h.transform.position, new Color(1f, 0.35f, 0.32f, 1f), true, 1.15f);
                     }
@@ -1514,7 +1774,7 @@ namespace MedievalRPG.Combat
                         PixelCombatVFXManager.Instance?.PlayExplosionBurst(h.transform.position, hitCol, 0.75f);
                     }
 
-                    if (!heroDied && skill != null && skill.statusEffect != StatusEffectType.None && !skill.applyStatusToSelf && skill.statusDurationTurns > 0)
+                    if (!heroDied && !defensiveQuickParry && skill != null && skill.statusEffect != StatusEffectType.None && !skill.applyStatusToSelf && skill.statusDurationTurns > 0)
                     {
                         h.ApplyStatus(skill.statusEffect, skill.statusDurationTurns, skill.statusPotency);
                         OnUnitStatusPop?.Invoke(h, skill.statusEffect == StatusEffectType.Burn ? "THIÊU ĐỐT!" : "CHOÁNG!", MedievalUITheme.DangerRed);
@@ -1526,13 +1786,30 @@ namespace MedievalRPG.Combat
                     }
                 }
 
+                if (defensiveGuardActive && enemy != null && enemy.IsAlive)
+                {
+                    AudioManager.Instance?.PlayDefendSfx();
+                    CombatCalculator.CalculatePerfectGuardDamage(Mathf.Max(16, totalDmg), defensiveQuickParry, out int reflected);
+                    int actualReflect = enemy.TakeDamage(reflected, DamageType.TrueDamage, out bool enemyDiedFromParry);
+                    OnDamageDealt?.Invoke(enemy, actualReflect, defensiveQuickParry);
+                    OnUnitStatusPop?.Invoke(enemy, "PHẢN ĐÒN!", MedievalUITheme.GoldSoft);
+                    if (enemyDiedFromParry)
+                    {
+                        AudioManager.Instance?.PlayDeathSfx();
+                        TriggerEnemyLootDrop(enemy);
+                    }
+                }
+
                 if (anyCrit) PixelCombatVFXManager.Instance?.TriggerCameraShake(0.11f, 0.16f);
 
                 string skillLabel = skill != null ? $" dùng <b>{skill.skillName}</b>" : " tấn công";
                 string targetLabel = targets.Count > 1
                     ? "toàn bộ đội hình"
                     : $"<b>{MedievalUITheme.FormatHeroDisplayName(targets[0].unitName)}</b>";
-                SetDialogue($"<b>{enemy.unitName}</b>{skillLabel} trúng {targetLabel}, gây <b>{totalDmg}</b> sát thương!");
+                string guardNote = defensiveGuardActive
+                    ? (defensiveQuickParry ? " <color=#F2CA6B>[PARRY HOÀN HẢO!]</color>" : " <color=#5CE09A>[ĐỠ ĐÒN!]</color>")
+                    : "";
+                SetDialogue($"<b>{enemy.unitName}</b>{skillLabel} trúng {targetLabel}, gây <b>{totalDmg}</b> sát thương!{guardNote}");
             }
 
             if (enemy.pixelAnimator != null)
@@ -1564,7 +1841,7 @@ namespace MedievalRPG.Combat
                 ApplyEnemyStrike();
             }
 
-            enemy.PlanNextIntent(TurnCount + 1);
+            enemy.PlanNextIntent(TurnCount + 1, HasWoundedAliveEnemy());
             yield return new WaitForSeconds(0.55f);
 
             _isActionInProgress = false;
@@ -1658,6 +1935,11 @@ namespace MedievalRPG.Combat
                 {
                     partyUnits[i].pixelAnimator?.StopMarchRun();
                 }
+            }
+
+            if (RoadsideEventCatalog.ShouldTriggerEventBeforeWave(_currentWaveIndex, ActiveStage.isEndless, waves.Count))
+            {
+                yield return RunRoadsideEventRoutine(_currentWaveIndex);
             }
 
             yield return SpawnWaveRoutine(_currentWaveIndex, animateEntrance: true);
@@ -1811,15 +2093,20 @@ namespace MedievalRPG.Combat
 
             if (state == BattleState.WON)
             {
-                int winGold = Mathf.RoundToInt(80f * Mathf.Max(1f, ActiveStage.rewardMultiplier));
-                AwardSessionGold(winGold);
-                finalExp += 65;
+                bool awardStageClearBonus = !ActiveStage.isEndless || _currentWaveIndex > 0;
+                if (awardStageClearBonus)
+                {
+                    int winGold = Mathf.RoundToInt(80f * Mathf.Max(1f, ActiveStage.rewardMultiplier));
+                    AwardSessionGold(winGold);
+                    finalExp += 65;
+                }
 
                 int aliveCount = GetAliveHeroes().Count;
-                float quizRatio = TotalQuestionsAnswered > 0 ? (float)CorrectAnswersCount / TotalQuestionsAnswered : 1f;
-                int stars = 1;
-                if (quizRatio >= 0.75f) stars++;
-                if (aliveCount >= partyUnits.Count && partyUnits.Count > 0) stars++;
+                int stars = CombatCalculator.CalculateStageStars(
+                    TotalQuestionsAnswered,
+                    CorrectAnswersCount,
+                    aliveCount,
+                    partyUnits.Count);
                 LastEarnedStars = stars;
 
                 campMgr.RecordStageResult(ActiveStageId, true, CurrentWaveNumber, stars, out int firstGold, out bool unlocked);
@@ -1833,6 +2120,15 @@ namespace MedievalRPG.Combat
 
                 if (_leveledUpClasses.Count > 0) AudioManager.Instance?.PlayLevelUpSfx();
                 else AudioManager.Instance?.PlayVictoryFanfare();
+
+                for (int i = 0; i < partyUnits.Count; i++)
+                {
+                    if (partyUnits[i] != null && partyUnits[i].IsAlive)
+                    {
+                        partyUnits[i].pixelAnimator?.PlayVictoryJump();
+                    }
+                }
+                PixelCombatVFXManager.Instance?.PlayConfettiWorldBurst(new Vector3(-2.4f, -0.5f, 0f), 36);
 
                 SetDialogue($"<color=#5CE09A><b>CHIẾN THẮNG VANG DỘI!</b></color> Nhận <color=#F2CA6B><b>+{SessionGoldEarned} Vàng</b></color> & <color=#6ED2FF><b>+{finalExp} EXP</b></color>!");
             }
@@ -1913,10 +2209,318 @@ namespace MedievalRPG.Combat
             StartCoroutine(PlayerDefend());
         }
 
+        public void OnSynergyUltimateButton()
+        {
+            if (state != BattleState.PLAYERTURN || _isActionInProgress || !IsSynergyReady) return;
+            if (GetAliveHeroes().Count == 0 || GetAliveEnemies().Count == 0) return;
+            StartCoroutine(ExecuteSynergyUltimateRoutine());
+        }
+
+        public static bool ShouldTriggerDefensiveQuiz(
+            bool quizEnabled,
+            Unit enemy,
+            SkillData skill,
+            int targetCount,
+            int currentRound,
+            int lastDefensiveRound)
+        {
+            if (!quizEnabled || enemy == null || !enemy.IsAlive || targetCount <= 0) return false;
+            if (currentRound - lastDefensiveRound < 1) return false;
+            if (enemy.isBoss) return true;
+            if (!string.IsNullOrEmpty(enemy.unitName) && enemy.unitName.StartsWith("Tinh Anh")) return true;
+            return skill != null && (skill.targetType == SkillTargetType.AllEnemies || skill.powerMultiplier >= 1.15f);
+        }
+
+        public void SelectRoadsideEventChoice(RoadsideChoiceOption option)
+        {
+            if (!_roadsideChoicePending) return;
+            _selectedRoadsideOption = option;
+            _roadsideChoicePending = false;
+        }
+
+        private IEnumerator RunRoadsideEventRoutine(int nextWaveIndex)
+        {
+            RoadsideEventType eventType = RoadsideEventCatalog.PickEventTypeForWave(
+                nextWaveIndex, ActiveStage.isEndless, TurnCount + CorrectAnswersCount);
+            RoadsideEventOffer offer = RoadsideEventCatalog.CreateOffer(eventType);
+
+            forestRoad?.ShowRoadsideEventProp(eventType);
+            SetDialogue($"<color=#F2CA6B><b>SỰ KIỆN DỌC ĐƯỜNG: {offer.title}!</b></color> {offer.description}");
+
+            _roadsideChoicePending = true;
+            _selectedRoadsideOption = null;
+
+            if (OnRoadsideEventStarted != null)
+            {
+                OnRoadsideEventStarted.Invoke(offer);
+                while (_roadsideChoicePending) yield return null;
+                OnRoadsideEventEnded?.Invoke();
+            }
+            else
+            {
+                _roadsideChoicePending = false;
+            }
+
+            RoadsideChoiceOption choice = _selectedRoadsideOption;
+            if (choice == null || choice.actionType == RoadsideChoiceAction.Leave)
+            {
+                forestRoad?.HideRoadsideEventProp();
+                yield break;
+            }
+
+            if (choice.actionType == RoadsideChoiceAction.QuizForReward)
+            {
+                if (enableQuizSystem)
+                {
+                    ActiveQuizMode = QuizPromptMode.RoadsideEvent;
+                    _quizAnswerSubmitted = false;
+                    _skipQuizFeedback = false;
+                    _quizWasSkipped = false;
+                    _isQuizAnswerCorrect = false;
+                    _activeQuestion = DrawActiveQuizQuestion();
+
+                    SetState(BattleState.WAITING_FOR_QUIZ);
+                    AudioManager.Instance?.PlayQuizOpen();
+                    DispatchQuizStartUI(_activeQuestion, $"{offer.title} — Giải đúng để nhận thưởng!", QuizPromptMode.RoadsideEvent);
+
+                    while (!_quizAnswerSubmitted) yield return null;
+
+                    float elapsed = 0f;
+                    while (elapsed < 1.85f && !_skipQuizFeedback)
+                    {
+                        if (!IsPaused) elapsed += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+                    OnQuizEnded?.Invoke();
+                    ActiveQuizMode = QuizPromptMode.AttackSkill;
+                    SetState(BattleState.START);
+
+                    if (_isQuizAnswerCorrect)
+                    {
+                        ApplyRoadsideMajorReward(eventType);
+                    }
+                    else
+                    {
+                        SetDialogue($"Giải mã <b>{offer.title}</b> thất bại, đội hình tiếp tục tiến bước.");
+                    }
+                }
+                else
+                {
+                    ApplyRoadsideMajorReward(eventType);
+                }
+            }
+            else if (choice.actionType == RoadsideChoiceAction.SafeRestOrSmallReward)
+            {
+                if (eventType == RoadsideEventType.SacredForestShrine)
+                {
+                    HealAllAliveHeroes(0.15f, 12);
+                    AudioManager.Instance?.PlayHealSfx();
+                    SetDialogue("Đội hình nghỉ chân bên Đền Thờ, hồi nhẹ <b>15% HP & +12 MP</b>!");
+                }
+                else
+                {
+                    AwardSessionGold(15);
+                    AudioManager.Instance?.PlayCoinRewardSfx();
+                    SetDialogue("Nhặt được túi tiền bên vệ đường (<b>+15 Vàng</b>)!");
+                }
+            }
+            else if (choice.actionType == RoadsideChoiceAction.PayGoldForPotion)
+            {
+                PlayerCampProgressManager camp = PlayerCampProgressManager.EnsureLoaded();
+                if (camp.TrySpendGold(choice.goldCost))
+                {
+                    Inventory.AddItem(ConsumableItemType.HealthPotion, 1);
+                    OnGoldChanged?.Invoke(camp.Gold);
+                    AudioManager.Instance?.PlayLootPickupSfx();
+                    SetDialogue($"Đã mua <b>+1 Thảo Dược Máu</b> với giá ưu đãi <b>-{choice.goldCost} Vàng</b>!");
+                }
+                else
+                {
+                    SetDialogue("Không đủ Vàng để mua Thảo Dược dọc đường!");
+                }
+            }
+
+            yield return new WaitForSeconds(0.75f);
+            forestRoad?.HideRoadsideEventProp();
+        }
+
+        private void ApplyRoadsideMajorReward(RoadsideEventType eventType)
+        {
+            if (eventType == RoadsideEventType.AncientRuneChest)
+            {
+                AwardSessionGold(45);
+                AudioManager.Instance?.PlayLootDropSfx(ItemRarity.Epic);
+                PlayerEquipmentManager equipMgr = PlayerEquipmentManager.EnsureLoaded();
+                LootDropResult bonusLoot = LootSystem.RollGuaranteedEquipmentDrop(
+                    equipMgr.Catalog,
+                    Mathf.Max(3, _currentWaveIndex),
+                    Mathf.Max(6, TotalWaves),
+                    0.22f,
+                    CurrentQuizStreak);
+                if (bonusLoot.equipment != null)
+                {
+                    OwnedEquipmentInstance inst = equipMgr.AddItem(bonusLoot.equipment, bonusLoot.waveNumber);
+                    _sessionLootCollected.Add(bonusLoot);
+                    OnLootPickedUp?.Invoke(bonusLoot, inst);
+                    SetDialogue($"<color=#F2CA6B><b>MỞ RƯƠNG CỔ THÀNH CÔNG!</b></color> Nhận <b>+45 Vàng</b> & <b>{bonusLoot.equipment.itemName}</b>!");
+                }
+                else
+                {
+                    SetDialogue("<color=#F2CA6B><b>MỞ RƯƠNG CỔ THÀNH CÔNG!</b></color> Nhận <b>+45 Vàng</b>!");
+                }
+            }
+            else if (eventType == RoadsideEventType.SacredForestShrine)
+            {
+                AudioManager.Instance?.PlayHealSfx();
+                for (int i = 0; i < partyUnits.Count; i++)
+                {
+                    Unit h = partyUnits[i];
+                    if (h == null) continue;
+                    if (!h.IsAlive)
+                    {
+                        int revHp = h.Revive(Mathf.RoundToInt(h.maxHP * 0.30f));
+                        OnUnitHealed?.Invoke(h, revHp);
+                        OnUnitStatusPop?.Invoke(h, "HỒI SINH!", MedievalUITheme.GoldSoft);
+                    }
+                    else
+                    {
+                        int hpGain = h.Heal(Mathf.Max(15, Mathf.RoundToInt(h.maxHP * 0.35f)));
+                        h.RestoreMana(30);
+                        if (hpGain > 0) OnUnitHealed?.Invoke(h, hpGain);
+                    }
+                    PixelCombatVFXManager.Instance?.PlayHealColumn(h.transform.position);
+                }
+                AddKnowledgeGauge(20);
+                SetDialogue("<color=#5CE09A><b>PHƯỚC LÀNH ĐỀN THỜ!</b></color> Toàn đội hồi <b>35% HP, +30 MP</b> & <b>+20 Nộ Tri Thức</b>!");
+            }
+            else
+            {
+                AwardSessionGold(60);
+                Inventory.AddItem(ConsumableItemType.HealthPotion, 1);
+                AddKnowledgeGauge(20);
+                AudioManager.Instance?.PlayCoinRewardSfx();
+                SetDialogue("<color=#6ED2FF><b>HỌC GIẢ KHEN NGỢI!</b></color> Nhận <b>+60 Vàng, +1 Thảo Dược Máu</b> & <b>+20 Nộ</b>!");
+            }
+        }
+
+        private void HealAllAliveHeroes(float hpRatio, int mpAmount)
+        {
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                Unit h = partyUnits[i];
+                if (h == null || !h.IsAlive) continue;
+                int hpGain = h.Heal(Mathf.Max(10, Mathf.RoundToInt(h.maxHP * hpRatio)));
+                h.RestoreMana(mpAmount);
+                if (hpGain > 0) OnUnitHealed?.Invoke(h, hpGain);
+                PixelCombatVFXManager.Instance?.PlayHealColumn(h.transform.position);
+            }
+        }
+
+        private IEnumerator ExecuteSynergyUltimateRoutine()
+        {
+            _isActionInProgress = true;
+            KnowledgeGauge = 0;
+            OnKnowledgeGaugeChanged?.Invoke(KnowledgeGauge, CombatCalculator.MaxKnowledgeGauge);
+            OnSynergyUltimateExecuted?.Invoke();
+
+            List<Unit> aliveHeroes = GetAliveHeroes();
+            List<Unit> aliveEnemies = GetAliveEnemies();
+
+            int totalPartyPower = 0;
+            Vector3 heroesCenter = Vector3.zero;
+            for (int i = 0; i < aliveHeroes.Count; i++)
+            {
+                Unit h = aliveHeroes[i];
+                totalPartyPower += h.characterClass == CharacterClassType.Mage ? h.magicDamage : h.damage;
+                heroesCenter += h.transform.position;
+            }
+            if (aliveHeroes.Count > 0) heroesCenter /= aliveHeroes.Count;
+
+            List<Vector3> enemyPositions = new List<Vector3>(aliveEnemies.Count);
+            for (int i = 0; i < aliveEnemies.Count; i++)
+            {
+                enemyPositions.Add(aliveEnemies[i].transform.position);
+            }
+
+            SetDialogue("<color=#F2CA6B><b>TUYỆT KỸ HỢP KÍCH: TAM HÙNG PHÁ THIÊN!</b></color> Cả đội hội tụ tri thức tung đòn hủy diệt!");
+
+            if (CurrentHero != null && CurrentHero.pixelAnimator != null && enemyPositions.Count > 0)
+            {
+                bool animFinished = false;
+                CurrentHero.pixelAnimator.PlayAttack(enemyPositions[0], null, () => animFinished = true, customStepDistance: 0.45f);
+                while (!animFinished) yield return null;
+            }
+
+            AudioManager.Instance?.PlayAttackForHero(CharacterClassType.Knight, null, true);
+            AudioManager.Instance?.PlayHealSfx();
+
+            yield return PixelCombatVFXManager.EnsureExists().PlaySynergyUltimateRoutine(heroesCenter, enemyPositions);
+
+            int rawSynergy = CombatCalculator.CalculateSynergyStrikeDamage(
+                Mathf.Max(20, totalPartyPower),
+                aliveHeroes.Count,
+                enableQuizSystem ? CurrentQuizStreak : 0);
+
+            int totalDealt = 0;
+            for (int i = 0; i < aliveEnemies.Count; i++)
+            {
+                Unit target = aliveEnemies[i];
+                if (target == null || !target.IsAlive) continue;
+
+                int actual = target.TakeDamage(rawSynergy, DamageType.TrueDamage, out bool died);
+                totalDealt += actual;
+                OnDamageDealt?.Invoke(target, actual, true);
+
+                if (!died)
+                {
+                    target.ApplyStatus(StatusEffectType.Burn, 2, 8);
+                    OnUnitStatusPop?.Invoke(target, "THIÊU ĐỐT!", MedievalUITheme.HpWarning);
+
+                    if (target.ShadowShieldStacks > 0 && target.StripShadowShield(out bool broken))
+                    {
+                        if (broken)
+                        {
+                            OnUnitStatusPop?.Invoke(target, "PHÁ KHIÊN • CHOÁNG!", MedievalUITheme.GoldSoft);
+                            PixelCombatVFXManager.Instance?.PlayShieldShatter(target.transform.position);
+                        }
+                        else
+                        {
+                            OnUnitStatusPop?.Invoke(target, $"KHIÊN CÒN {target.ShadowShieldStacks}", MedievalUITheme.BtnSkill);
+                        }
+                    }
+                    else if (!target.isBoss)
+                    {
+                        target.ApplyStatus(StatusEffectType.Stun, 1, 0);
+                        OnUnitStatusPop?.Invoke(target, "CHOÁNG!", MedievalUITheme.GoldSoft);
+                    }
+                }
+                else
+                {
+                    AudioManager.Instance?.PlayDeathSfx();
+                    TriggerEnemyLootDrop(target);
+                }
+            }
+
+            HealAllAliveHeroes(0.20f, 15);
+            SetDialogue($"<color=#F2CA6B><b>TAM HÙNG PHÁ THIÊN!</b></color> Gây tổng <b>{totalDealt}</b> sát thương chuẩn & hồi <b>20% HP + 15 MP</b> toàn đội!");
+
+            yield return new WaitForSeconds(0.70f);
+            _isActionInProgress = false;
+            EnsureValidTargets();
+            AdvanceTurn();
+        }
+
         public void FinishEndlessExpedition()
         {
             if (!ActiveStage.isEndless || state == BattleState.WON || state == BattleState.LOST) return;
             StopAllCoroutines();
+            for (int i = 0; i < partyUnits.Count; i++)
+            {
+                if (partyUnits[i] != null && partyUnits[i].IsAlive)
+                {
+                    partyUnits[i].pixelAnimator?.StopMarchRun();
+                }
+            }
             SetPaused(false);
             _isActionInProgress = false;
             SetState(BattleState.WON);

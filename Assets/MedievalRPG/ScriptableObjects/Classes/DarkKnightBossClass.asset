@@ -17,10 +17,10 @@ MonoBehaviour:
   baseLevel: 5
   isBoss: 1
   loreDescription: "Th\u1EE7 l\u0129nh k\u1EF5 s\u0129 b\xF3ng \u0111\xEAm cai tr\u1ECB t\u1EA7ng s\xE2u nh\u1EA5t h\u1EA7m ng\u1EE5c, s\u1EDF h\u1EEFu \u0111\xF2n ch\xE9m h\u1EE7y di\u1EC7t."
-  maxHealth: 320
+  maxHealth: 380
   maxMana: 100
-  physicalAttack: 32
-  magicAttack: 18
+  physicalAttack: 38
+  magicAttack: 21
   physicalDefense: 20
   magicDefense: 16
   speed: 11

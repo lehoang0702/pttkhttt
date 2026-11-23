@@ -39,12 +39,16 @@ namespace MedievalRPG.Visuals
         private PixelAnimState _currentState = PixelAnimState.Idle;
         private Coroutine _currentAnimCoroutine;
         private Vector3 _originalPosition;
+        private Vector3 _baseScale = Vector3.one;
         private Color _baseColor = Color.white;
         private Quaternion _baseRotation = Quaternion.identity;
         private bool _isActionLocked;
         private bool _isDead;
         private bool _isTargetHighlighted;
         private GameObject _footShadowGo;
+        private int _currentFrameIndex;
+        private Sprite _lastRawSprite;
+        private Func<Sprite, Sprite> _spriteOverrideResolver;
 
         private static Sprite _cachedShadowSprite;
 
@@ -55,7 +59,43 @@ namespace MedievalRPG.Visuals
         }
 
         public PixelAnimState CurrentState => _currentState;
+        public int CurrentFrameIndex => _currentFrameIndex;
         public Vector3 HomePosition => _originalPosition;
+        public SpriteRenderer SpriteRendererComponent
+        {
+            get
+            {
+                if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+                return spriteRenderer;
+            }
+        }
+
+        public void SetSpriteOverrideResolver(Func<Sprite, Sprite> resolver)
+        {
+            _spriteOverrideResolver = resolver;
+            RefreshCurrentFrameSprite();
+        }
+
+        public void RefreshCurrentFrameSprite()
+        {
+            SpriteRenderer sr = SpriteRendererComponent;
+            if (sr == null) return;
+            Sprite source = _lastRawSprite != null ? _lastRawSprite : sr.sprite;
+            if (source == null) return;
+            sr.sprite = _spriteOverrideResolver != null ? _spriteOverrideResolver(source) : source;
+        }
+
+        private void ApplyFrameSprite(Sprite rawFrame, int frameIndex)
+        {
+            if (rawFrame == null) return;
+            _lastRawSprite = rawFrame;
+            _currentFrameIndex = frameIndex;
+            SpriteRenderer sr = SpriteRendererComponent;
+            if (sr != null)
+            {
+                sr.sprite = _spriteOverrideResolver != null ? _spriteOverrideResolver(rawFrame) : rawFrame;
+            }
+        }
 
         private void Awake()
         {
@@ -68,7 +108,13 @@ namespace MedievalRPG.Visuals
                 _baseColor = spriteRenderer.color;
             }
             _originalPosition = transform.position;
+            _baseScale = transform.localScale;
             _baseRotation = transform.rotation;
+        }
+
+        public void CaptureBaseScale()
+        {
+            _baseScale = transform.localScale;
         }
 
         private void Start()
@@ -82,22 +128,44 @@ namespace MedievalRPG.Visuals
 
         private void EnsureFootShadow()
         {
-            if (_footShadowGo != null) return;
-            Transform existing = transform.Find("FootShadow");
-            if (existing != null)
+            if (_footShadowGo == null)
             {
-                _footShadowGo = existing.gameObject;
-                return;
+                Transform existing = transform.Find("FootShadow");
+                if (existing != null)
+                {
+                    _footShadowGo = existing.gameObject;
+                }
+                else
+                {
+                    _footShadowGo = new GameObject("FootShadow");
+                    _footShadowGo.transform.SetParent(transform, false);
+                    SpriteRenderer shadowSr = _footShadowGo.AddComponent<SpriteRenderer>();
+                    shadowSr.sprite = GetOrCreateShadowSprite();
+                    shadowSr.color = new Color(0.03f, 0.04f, 0.07f, 0.42f);
+                    shadowSr.sortingOrder = -1;
+                }
             }
 
-            _footShadowGo = new GameObject("FootShadow");
-            _footShadowGo.transform.SetParent(transform, false);
-            _footShadowGo.transform.localPosition = new Vector3(0f, -0.34f, 0.02f);
-            _footShadowGo.transform.localScale = new Vector3(1.1f, 0.42f, 1f);
-            SpriteRenderer shadowSr = _footShadowGo.AddComponent<SpriteRenderer>();
-            shadowSr.sprite = GetOrCreateShadowSprite();
-            shadowSr.color = new Color(0.03f, 0.04f, 0.07f, 0.42f);
-            shadowSr.sortingOrder = -1;
+            Sprite refSprite = (idleFrames != null && idleFrames.Count > 0 && idleFrames[0] != null)
+                ? idleFrames[0]
+                : (spriteRenderer != null ? spriteRenderer.sprite : null);
+
+            if (refSprite != null)
+            {
+                float sx = Mathf.Max(0.1f, Mathf.Abs(transform.localScale.x));
+                float sy = Mathf.Max(0.1f, Mathf.Abs(transform.localScale.y));
+                Bounds b = refSprite.bounds;
+                float worldShadowW = Mathf.Clamp(b.size.x * sx * 1.12f, 0.72f, 1.32f);
+                float worldShadowH = worldShadowW * 0.28f;
+                // Sprite bóng gốc có kích thước 1.0 x 0.5 world units (32x16 @ 32 PPU)
+                _footShadowGo.transform.localPosition = new Vector3(0f, b.min.y - (0.02f / sy), 0.02f);
+                _footShadowGo.transform.localScale = new Vector3(worldShadowW / sx, (worldShadowH / 0.5f) / sy, 1f);
+            }
+            else
+            {
+                _footShadowGo.transform.localPosition = new Vector3(0f, -0.34f, 0.02f);
+                _footShadowGo.transform.localScale = new Vector3(1.1f, 0.42f, 1f);
+            }
         }
 
         private static Sprite GetOrCreateShadowSprite()
@@ -166,6 +234,7 @@ namespace MedievalRPG.Visuals
             if (_isDead) return;
             _isActionLocked = false;
             transform.position = _originalPosition;
+            transform.localScale = _baseScale;
             PlayIdle();
         }
 
@@ -179,7 +248,7 @@ namespace MedievalRPG.Visuals
             float t = 0f;
             while (!_isDead && _currentState == PixelAnimState.Run)
             {
-                spriteRenderer.sprite = walkList[idx];
+                ApplyFrameSprite(walkList[idx], idx);
                 idx = (idx + 1) % walkList.Count;
                 t += delay;
                 float bob = Mathf.Abs(Mathf.Sin(t * 14f)) * 0.045f;
@@ -232,7 +301,7 @@ namespace MedievalRPG.Visuals
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
-                float eased = 1f - Mathf.Pow(1f - t, 2f);
+                float eased = MedievalEase.OutCubic(t);
                 transform.position = Vector3.Lerp(startPos, destPos, eased);
 
                 if (walkList != null && walkList.Count > 0 && spriteRenderer != null)
@@ -241,7 +310,7 @@ namespace MedievalRPG.Visuals
                     if (frameTimer >= frameDelay)
                     {
                         frameTimer -= frameDelay;
-                        spriteRenderer.sprite = walkList[idx];
+                        ApplyFrameSprite(walkList[idx], idx);
                         idx = (idx + 1) % walkList.Count;
                     }
                 }
@@ -249,6 +318,21 @@ namespace MedievalRPG.Visuals
             }
 
             transform.position = destPos;
+            PixelCombatVFXManager.Instance?.SpawnDustPuff(destPos);
+
+            // Landing squash & recovery
+            float sqElapsed = 0f;
+            const float sqDur = 0.11f;
+            while (sqElapsed < sqDur)
+            {
+                sqElapsed += Time.deltaTime;
+                float k = Mathf.Clamp01(sqElapsed / sqDur);
+                float sx = Mathf.Lerp(1.12f, 1.0f, MedievalEase.OutBack(k));
+                float sy = Mathf.Lerp(0.86f, 1.0f, MedievalEase.OutBack(k));
+                transform.localScale = new Vector3(_baseScale.x * sx, _baseScale.y * sy, _baseScale.z);
+                yield return null;
+            }
+            transform.localScale = _baseScale;
             _isActionLocked = false;
             PlayIdle();
             onComplete?.Invoke();
@@ -302,6 +386,7 @@ namespace MedievalRPG.Visuals
             _isDead = false;
             _isActionLocked = false;
             transform.position = _originalPosition;
+            transform.localScale = _baseScale;
             transform.rotation = _baseRotation;
             if (_footShadowGo != null) _footShadowGo.SetActive(true);
             if (spriteRenderer != null)
@@ -310,6 +395,33 @@ namespace MedievalRPG.Visuals
                 spriteRenderer.color = _baseColor;
             }
             PlayIdle();
+        }
+
+        public void PlayVictoryJump()
+        {
+            if (_isDead || _isActionLocked) return;
+            StartCoroutine(VictoryJumpRoutine());
+        }
+
+        private IEnumerator VictoryJumpRoutine()
+        {
+            _isActionLocked = true;
+            float elapsed = 0f;
+            const float dur = 0.42f;
+            while (elapsed < dur && !_isDead)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / dur);
+                float yOffset = Mathf.Sin(t * Mathf.PI) * 0.32f;
+                float stretch = t < 0.5f ? Mathf.Lerp(1.0f, 1.09f, t * 2f) : Mathf.Lerp(1.09f, 0.94f, (t - 0.5f) * 2f);
+                transform.position = _originalPosition + new Vector3(0f, yOffset, 0f);
+                transform.localScale = new Vector3(_baseScale.x * (2f - stretch), _baseScale.y * stretch, _baseScale.z);
+                yield return null;
+            }
+            transform.position = _originalPosition;
+            transform.localScale = _baseScale;
+            _isActionLocked = false;
+            if (!_isDead) PlayIdle();
         }
 
         private IEnumerator LoopAnimationRoutine(List<Sprite> frames)
@@ -321,7 +433,7 @@ namespace MedievalRPG.Visuals
 
             while (!_isDead)
             {
-                spriteRenderer.sprite = frames[index];
+                ApplyFrameSprite(frames[index], index);
                 index = (index + 1) % frames.Count;
                 yield return new WaitForSeconds(delay);
             }
@@ -342,17 +454,37 @@ namespace MedievalRPG.Visuals
             float stepDist = customStepDistance >= 0f ? customStepDistance : Mathf.Abs(attackStepDistance);
             Vector3 stepTarget = _originalPosition + dir * stepDist;
 
-            // 1. Lao nhanh về phía mục tiêu
-            float lungeTime = 0.14f;
+            // 0. Nhún nhẹ lấy đà (Squash anticipation)
+            float anticElapsed = 0f;
+            const float anticTime = 0.045f;
+            while (anticElapsed < anticTime)
+            {
+                anticElapsed += Time.deltaTime;
+                float k = Mathf.Clamp01(anticElapsed / anticTime);
+                transform.localScale = new Vector3(
+                    _baseScale.x * Mathf.Lerp(1f, 1.09f, k),
+                    _baseScale.y * Mathf.Lerp(1f, 0.89f, k),
+                    _baseScale.z);
+                yield return null;
+            }
+
+            // 1. Lao nhanh về phía mục tiêu (OutCubic + slight stretch)
+            float lungeTime = 0.13f;
             float elapsed = 0f;
             while (elapsed < lungeTime)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / lungeTime);
-                transform.position = Vector3.Lerp(_originalPosition, stepTarget, t);
+                float eased = MedievalEase.OutCubic(t);
+                transform.position = Vector3.Lerp(_originalPosition, stepTarget, eased);
+                transform.localScale = new Vector3(
+                    _baseScale.x * Mathf.Lerp(1.09f, 1.04f, eased),
+                    _baseScale.y * Mathf.Lerp(0.89f, 0.96f, eased),
+                    _baseScale.z);
                 yield return null;
             }
             transform.position = stepTarget;
+            transform.localScale = _baseScale;
 
             // 2. Phát chuỗi frame tấn công và kích hoạt impact ở giữa đòn
             bool impactFired = false;
@@ -363,7 +495,7 @@ namespace MedievalRPG.Visuals
 
                 for (int i = 0; i < attackFrames.Count; i++)
                 {
-                    spriteRenderer.sprite = attackFrames[i];
+                    ApplyFrameSprite(attackFrames[i], i);
                     if (i == impactFrameIndex && !impactFired)
                     {
                         impactFired = true;
@@ -384,17 +516,18 @@ namespace MedievalRPG.Visuals
                 onImpact?.Invoke();
             }
 
-            // 3. Lùi về vị trí đứng
+            // 3. Lùi về vị trí đứng mượt mà (OutCubic)
             float returnTime = 0.16f;
             elapsed = 0f;
             while (elapsed < returnTime)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / returnTime);
-                transform.position = Vector3.Lerp(stepTarget, _originalPosition, t);
+                transform.position = Vector3.Lerp(stepTarget, _originalPosition, MedievalEase.OutCubic(t));
                 yield return null;
             }
             transform.position = _originalPosition;
+            transform.localScale = _baseScale;
 
             _isActionLocked = false;
             PlayIdle();
@@ -411,16 +544,22 @@ namespace MedievalRPG.Visuals
                 spriteRenderer.color = hitFlashColor;
             }
 
-            // Rung nhẹ khi nhận sát thương
+            // Rung nhẹ + squash khi nhận sát thương
             Vector3 knockOffset = new Vector3(transform.position.x >= 0f ? 0.08f : -0.08f, 0f, 0f);
             transform.position = _originalPosition + knockOffset;
+            transform.localScale = new Vector3(_baseScale.x * 1.13f, _baseScale.y * 0.87f, _baseScale.z);
 
             if (hitFrames != null && hitFrames.Count > 0 && spriteRenderer != null)
             {
                 float frameDelay = 1f / Mathf.Max(1f, frameRate);
                 for (int i = 0; i < hitFrames.Count; i++)
                 {
-                    spriteRenderer.sprite = hitFrames[i];
+                    ApplyFrameSprite(hitFrames[i], i);
+                    float k = (i + 1f) / hitFrames.Count;
+                    transform.localScale = Vector3.Lerp(
+                        new Vector3(_baseScale.x * 1.13f, _baseScale.y * 0.87f, _baseScale.z),
+                        _baseScale,
+                        MedievalEase.OutBack(k));
                     yield return new WaitForSeconds(frameDelay);
                 }
             }
@@ -430,6 +569,7 @@ namespace MedievalRPG.Visuals
             }
 
             transform.position = _originalPosition;
+            transform.localScale = _baseScale;
             _isActionLocked = false;
 
             if (!_isDead)
@@ -448,7 +588,7 @@ namespace MedievalRPG.Visuals
                 float delay = 1f / Mathf.Max(1f, frameRate);
                 for (int i = 0; i < deathFrames.Count; i++)
                 {
-                    spriteRenderer.sprite = deathFrames[i];
+                    ApplyFrameSprite(deathFrames[i], i);
                     yield return new WaitForSeconds(delay);
                 }
             }
@@ -457,7 +597,7 @@ namespace MedievalRPG.Visuals
                 // Fallback cho quái không có frame Death (Goblin / Skeleton): chớp hit -> nghiêng ngã & mờ dần
                 if (hitFrames != null && hitFrames.Count > 0)
                 {
-                    spriteRenderer.sprite = hitFrames[hitFrames.Count - 1];
+                    ApplyFrameSprite(hitFrames[hitFrames.Count - 1], hitFrames.Count - 1);
                 }
 
                 float elapsed = 0f;

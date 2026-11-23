@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_weapon_common_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_weapon_common_2
+  itemName: "R\xECu G\u1ED7 Chi\u1EBFn Binh"
+  description: "L\u01B0\u1EE1i r\xECu s\u1EAFt c\xE1n g\u1ED7 n\u1EB7ng tay, b\u1ED5 m\u1EA1nh v\xE0o gi\xE1p \u0111\u1ECBch."
+  requiredClass: 0
+  slot: 0
+  rarity: 0
+  icon: {fileID: 21300000, guid: 71520a68db2cb37daa34e7b8fcd1acc8, type: 3}
+  bonusMaxHP: 8
+  bonusMaxMP: 0
+  bonusPhysicalAttack: 6
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 1
+  bonusMagicDefense: 0
+  bonusSpeed: 0
+  bonusCritRate: 0.02

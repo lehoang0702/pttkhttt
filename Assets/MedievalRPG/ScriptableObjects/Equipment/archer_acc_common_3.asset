@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: archer_acc_common_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: archer_acc_common_3
+  itemName: "M\xF3c D\xE2y Cung G\u1ED7"
+  description: "M\xF3c nh\u1ECF b\u1EB1ng g\u1ED7 s\u1ED3i gi\xFAp th\u1EA3 d\xE2y m\u01B0\u1EE3t m\xE0 v\xE0 \u1ED5n \u0111\u1ECBnh h\u01A1n."
+  requiredClass: 2
+  slot: 2
+  rarity: 0
+  icon: {fileID: 21300000, guid: aeefcbe2ec2008bee930d5480cad4ad5, type: 3}
+  bonusMaxHP: 6
+  bonusMaxMP: 3
+  bonusPhysicalAttack: 3
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 1
+  bonusMagicDefense: 0
+  bonusSpeed: 2
+  bonusCritRate: 0.03

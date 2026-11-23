@@ -72,6 +72,13 @@ namespace MedievalRPG.UI
             Refresh(false);
         }
 
+        public static string FormatAttackStatLabel(int physicalDamage, int magicDamage)
+        {
+            if (magicDamage > physicalDamage) return $"MAG {magicDamage}";
+            if (magicDamage >= 12 && physicalDamage >= 12) return $"ATK {physicalDamage}/MAG {magicDamage}";
+            return $"ATK {physicalDamage}";
+        }
+
         public void Refresh(bool isEnemyTurn)
         {
             _isEnemyTurn = isEnemyTurn;
@@ -90,7 +97,8 @@ namespace MedievalRPG.UI
             }
             if (statsText != null)
             {
-                statsText.text = $"Cấp {_boundEnemy.unitLevel} • ATK {_boundEnemy.damage} • DEF {_boundEnemy.EffectiveDefense} • SPD {_boundEnemy.speed}";
+                string atkLabel = FormatAttackStatLabel(_boundEnemy.damage, _boundEnemy.magicDamage);
+                statsText.text = $"Cấp {_boundEnemy.unitLevel} • {atkLabel} • DEF {_boundEnemy.EffectiveDefense} • SPD {_boundEnemy.speed}";
             }
 
             if (statusPillRoot != null && statusPillText != null)

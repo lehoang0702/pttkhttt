@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_acc_legendary_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_acc_legendary_2
+  itemName: "Th\xE1nh Thu\u1EABn B\u1EA5t Ho\u1EA1i"
+  description: "\u0110\u1EA1i thu\u1EABn b\u1EA5t kh\u1EA3 x\xE2m ph\u1EA1m c\u1EE7a th\u1EA7n h\u1ED9 m\u1EC7nh th\xE0nh c\u1ED5."
+  requiredClass: 0
+  slot: 2
+  rarity: 3
+  icon: {fileID: 21300000, guid: 7a9d8b8353a9517aa8e14ba1e87f758f, type: 3}
+  bonusMaxHP: 88
+  bonusMaxMP: 16
+  bonusPhysicalAttack: 10
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 18
+  bonusMagicDefense: 12
+  bonusSpeed: 3
+  bonusCritRate: 0.05

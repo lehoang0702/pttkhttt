@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: archer_weapon_rare_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: archer_weapon_rare_2
+  itemName: "Cung Th\xE9p B\u1EA1c"
+  description: "C\xE1nh cung r\xE8n th\xE9p \u0111\xE0n h\u1ED3i cao ph\xF3ng m\u0169i t\xEAn bay c\u1EF1c xa."
+  requiredClass: 2
+  slot: 0
+  rarity: 1
+  icon: {fileID: 21300000, guid: c3ebf0c66c7470e119a16b5d0352cc7d, type: 3}
+  bonusMaxHP: 14
+  bonusMaxMP: 4
+  bonusPhysicalAttack: 13
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 2
+  bonusMagicDefense: 1
+  bonusSpeed: 2
+  bonusCritRate: 0.06

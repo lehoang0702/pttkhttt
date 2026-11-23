@@ -143,9 +143,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Skeleton Warrior
   unitLevel: 2
-  damage: 22
-  maxHP: 130
-  currentHP: 130
+  damage: 26
+  maxHP: 155
+  currentHP: 155
   characterClass: 0
   maxMP: 30
   currentMP: 30

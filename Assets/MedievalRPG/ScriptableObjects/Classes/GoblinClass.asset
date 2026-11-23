@@ -17,9 +17,9 @@ MonoBehaviour:
   baseLevel: 1
   isBoss: 0
   loreDescription: "Qu\xE1i v\u1EADt ti\u1EC3u y\xEAu ranh m\xE3nh chuy\xEAn ph\u1EE5c k\xEDch trong h\u1EA7m ng\u1EE5c."
-  maxHealth: 80
+  maxHealth: 95
   maxMana: 20
-  physicalAttack: 14
+  physicalAttack: 17
   magicAttack: 2
   physicalDefense: 8
   magicDefense: 4

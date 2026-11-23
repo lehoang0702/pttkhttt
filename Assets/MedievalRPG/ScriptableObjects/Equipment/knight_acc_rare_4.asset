@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_acc_rare_4
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_acc_rare_4
+  itemName: "Th\u1EAFt L\u01B0ng Chi\u1EBFn Binh"
+  description: "Kh\xF3a th\xE9p ch\u1EAFc ch\u1EAFn gi\u1EEF v\u1EEFng tr\u1ECDng t\xE2m khi tung tr\u1ECDng k\xEDch."
+  requiredClass: 0
+  slot: 2
+  rarity: 1
+  icon: {fileID: 21300000, guid: 1b78cf98737e5b4f5a090d99f3dc9353, type: 3}
+  bonusMaxHP: 28
+  bonusMaxMP: 8
+  bonusPhysicalAttack: 4
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 6
+  bonusMagicDefense: 3
+  bonusSpeed: 1
+  bonusCritRate: 0.02

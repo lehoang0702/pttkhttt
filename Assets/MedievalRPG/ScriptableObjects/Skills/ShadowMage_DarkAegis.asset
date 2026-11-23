@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7138d861f5124da1638d97ad620766b5, type: 3}
+  m_Name: ShadowMage_DarkAegis
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.SkillData
+  skillName: Dark Aegis
+  description: "H\u1ED3i m\xE1u v\xE0 t\u1EA1o khi\xEAn h\u1EAFc \xE1m t\u0103ng +10 Gi\xE1p cho \u0111\u1ED3ng minh qu\xE1i th\u1EA5p m\xE1u nh\u1EA5t."
+  requiredClass: 1
+  icon: {fileID: 0}
+  manaCost: 14
+  cooldownTurns: 3
+  targetType: 2
+  damageType: 1
+  powerMultiplier: 0
+  flatBonusDamage: 0
+  baseHealAmount: 24
+  defenseBonus: 10
+  bonusCritRate: 0
+  effectDurationTurns: 2
+  statusEffect: 0
+  statusDurationTurns: 0
+  statusPotency: 0
+  applyStatusToSelf: 0

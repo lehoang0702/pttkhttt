@@ -99,6 +99,34 @@ namespace MedievalRPG.Combat
             }
         }
 
+        private void Start()
+        {
+            RefreshEquipmentVisuals();
+            if (Application.isPlaying)
+            {
+                UnitStatusVFX.AttachOrRefresh(this);
+            }
+        }
+
+        public void SetDefending(bool defending)
+        {
+            isDefending = defending;
+            OnStatsChanged?.Invoke(this);
+        }
+
+        public void RefreshEquipmentVisuals()
+        {
+            if (!Application.isPlaying) return;
+            if (isEnemy)
+            {
+                CharacterEquipmentVisuals existing = GetComponent<CharacterEquipmentVisuals>();
+                if (existing != null) existing.ClearVisuals();
+                return;
+            }
+
+            CharacterEquipmentVisuals.AttachOrRefresh(this);
+        }
+
         private void CaptureBaseStats()
         {
             _baseMaxHP = maxHP;
@@ -140,6 +168,7 @@ namespace MedievalRPG.Combat
             if (mpDelta > 0 && currentHP > 0) currentMP += mpDelta;
             currentMP = Mathf.Clamp(currentMP, 0, maxMP);
 
+            RefreshEquipmentVisuals();
             OnStatsChanged?.Invoke(this);
         }
 
@@ -167,6 +196,7 @@ namespace MedievalRPG.Combat
                 if (pixelAnimator == null) pixelAnimator = GetComponent<PixelCharacterAnimator>();
                 if (pixelAnimator != null)
                 {
+                    pixelAnimator.CaptureBaseScale();
                     pixelAnimator.SetBaseColor(eliteTint);
                 }
                 else
@@ -224,6 +254,11 @@ namespace MedievalRPG.Combat
 
         public int TakeDamage(int rawDmg, DamageType damageType, out bool died)
         {
+            return TakeDamage(rawDmg, damageType, out died, 1f);
+        }
+
+        public int TakeDamage(int rawDmg, DamageType damageType, out bool died, float externalMultiplier)
+        {
             died = false;
             if (currentHP <= 0)
             {
@@ -242,6 +277,11 @@ namespace MedievalRPG.Combat
             if (ShadowShieldStacks > 0 && damageType != DamageType.TrueDamage)
             {
                 finalDamage = Mathf.Max(1, Mathf.RoundToInt(finalDamage * 0.65f));
+            }
+
+            if (externalMultiplier > 0f && Mathf.Abs(externalMultiplier - 1f) > 0.001f && damageType != DamageType.TrueDamage)
+            {
+                finalDamage = Mathf.Max(1, Mathf.RoundToInt(finalDamage * externalMultiplier));
             }
 
             LastDamageTaken = finalDamage;
@@ -464,6 +504,11 @@ namespace MedievalRPG.Combat
         // =====================================================================
         public void PlanNextIntent(int currentRound)
         {
+            PlanNextIntent(currentRound, false);
+        }
+
+        public void PlanNextIntent(int currentRound, bool hasWoundedEnemyAlly)
+        {
             if (!isEnemy || currentHP <= 0)
             {
                 ClearPlannedIntent();
@@ -479,7 +524,7 @@ namespace MedievalRPG.Combat
                 return;
             }
 
-            SkillData chosen = PickIntentSkill(currentRound);
+            SkillData chosen = PickIntentSkill(currentRound, hasWoundedEnemyAlly);
             PlannedSkill = chosen;
 
             if (chosen == null)
@@ -487,7 +532,7 @@ namespace MedievalRPG.Combat
                 PlannedIntent = EnemyIntentType.SingleAttack;
                 PlannedDamagePreview = Mathf.RoundToInt(damage * (1f + AttackBonusPercent * 0.01f));
             }
-            else if (chosen.IsSelfSupport)
+            else if (chosen.IsSelfSupport || chosen.IsHealSkill)
             {
                 PlannedIntent = EnemyIntentType.Buff;
                 PlannedDamagePreview = 0;
@@ -523,21 +568,44 @@ namespace MedievalRPG.Combat
             PlannedDamagePreview = 0;
         }
 
-        private SkillData PickIntentSkill(int currentRound)
+        private SkillData PickIntentSkill(int currentRound, bool hasWoundedEnemyAlly)
         {
             if (skills == null || skills.Count == 0) return null;
 
             List<SkillData> usable = new List<SkillData>();
+            List<SkillData> healSkills = new List<SkillData>();
             for (int i = 0; i < skills.Count; i++)
             {
                 SkillData s = skills[i];
                 if (s == null) continue;
                 if (currentMP < s.manaCost || IsSkillOnCooldown(s)) continue;
+                if (s.IsHealSkill)
+                {
+                    if (hasWoundedEnemyAlly)
+                    {
+                        healSkills.Add(s);
+                        usable.Add(s);
+                    }
+                    continue;
+                }
                 if (s.IsSelfSupport && bonusDefense > 0) continue; // Không spam buff giáp khi đang còn giáp
                 usable.Add(s);
             }
 
-            if (usable.Count == 0) return skills[0];
+            if (usable.Count == 0)
+            {
+                for (int i = 0; i < skills.Count; i++)
+                {
+                    if (skills[i] != null && !skills[i].IsHealSkill) return skills[i];
+                }
+                return null;
+            }
+
+            // Pháp sư / quái hỗ trợ ưu tiên hồi máu & tạo khiên khi có đồng minh bị thương
+            if (hasWoundedEnemyAlly && healSkills.Count > 0 && (currentRound % 2 == 1 || UnityEngine.Random.value < 0.6f))
+            {
+                return healSkills[0];
+            }
 
             // Boss trong Phase 2 ưu tiên dùng kỹ năng mạnh / AoE khi hồi xong
             if (isBoss && HasTriggeredPhase2)
@@ -565,10 +633,16 @@ namespace MedievalRPG.Combat
             if (IsStunned) return "BỊ CHOÁNG";
             switch (PlannedIntent)
             {
-                case EnemyIntentType.SingleAttack: return $"ĐÁNH ~{PlannedDamagePreview}";
+                case EnemyIntentType.SingleAttack:
+                    return characterClass == CharacterClassType.Archer
+                        ? $"BẮN TỈA ~{PlannedDamagePreview}"
+                        : $"ĐÁNH ~{PlannedDamagePreview}";
                 case EnemyIntentType.DebuffAttack: return $"ĐỘC/ÁM ~{PlannedDamagePreview}";
                 case EnemyIntentType.AoEAttack:    return $"DIỆN RỘNG ~{PlannedDamagePreview}";
-                case EnemyIntentType.Buff:         return "TỤ LỰC / THỦ";
+                case EnemyIntentType.Buff:
+                    return PlannedSkill != null && PlannedSkill.IsHealSkill
+                        ? "HỒI PHỤC / HỘ THÂN"
+                        : "TỤ LỰC / THỦ";
                 default:                           return string.Empty;
             }
         }

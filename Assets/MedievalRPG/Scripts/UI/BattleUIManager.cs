@@ -9,6 +9,7 @@ using MedievalRPG.Audio;
 using MedievalRPG.Combat;
 using MedievalRPG.Data;
 using MedievalRPG.Quiz;
+using MedievalRPG.Visuals;
 
 namespace MedievalRPG.UI
 {
@@ -153,13 +154,34 @@ namespace MedievalRPG.UI
         {
             ("BƯỚC 1/4: CHIẾN ĐẤU THEO LƯỢT & TỐC ĐỘ",
              "Thứ tự hành động hiển thị ở dải chân dung góc trên bên trái.\nChọn [1] Đánh thường, [2]/[3] Kỹ năng, [4] Túi đồ hoặc [5] Phòng thủ để bảo toàn đội hình."),
-            ("BƯỚC 2/4: QUIZ TIẾNG ANH B1/B2 & QUICK MIND",
-             "Trả lời đúng câu B1/B2 để tung chiêu tối đa sức mạnh và nhận +10 Vàng + EXP.\nĐặc biệt: Trả lời đúng trong 5 giây đầu kích hoạt QUICK MIND (+15 Vàng, +18 EXP, +15% Chí mạng)!"),
+            ("BƯỚC 2/4: QUIZ B1/B2, PHẢN XẠ & NỘ HỢP KÍCH [Q]",
+             "Trả lời đúng câu B1/B2 (nhất là 5s đầu: QUICK MIND) để tung chiêu mạnh, nhận Vàng & tích Nộ Tri Thức.\nKhi Nộ đạt 100/100, bấm [Q] để cả 3 anh hùng tung TUYỆT KỸ HỢP KÍCH! Boss đánh mạnh còn kích hoạt ĐỠ ĐÒN PHẢN XẠ (8s)!"),
             ("BƯỚC 3/4: NHẶT ĐỒ, CƯỜNG HÓA & LÒ RÈN",
              "Quái gục sẽ rớt Vàng và Trang bị Thường -> Hiếm -> Sử Thi -> Huyền Thoại.\nMở Kho Đồ [I] để xem So Sánh Chỉ Số, Cường Hóa (+1..+5), Bán hoặc Ghép 3 đồ thành phẩm chất cao hơn!"),
-            ("BƯỚC 4/4: CHIẾN THUẬT BOSS & SỔ ÔN TẬP",
-             "Boss kích hoạt Khiên Bóng Tối ở nửa máu: hãy trả lời đúng Quiz hoặc tung đòn phá giáp.\nNếu trả lời sai, câu hỏi tự động lưu vào Sổ Ôn Tập [N] tại Sảnh Chờ để bạn luyện lại (+15 Vàng/câu)!")
+            ("BƯỚC 4/4: SỰ KIỆN DỌC ĐƯỜNG & SỔ ÔN TẬP",
+             "Giữa các đợt hành quân có thể gặp Rương Cổ, Đền Thờ hoặc Học Giả dọc đường.\nBoss bật Khiên Bóng Tối ở nửa máu: hãy trả lời đúng Quiz hoặc tung Hợp Kích để phá giáp. Câu sai được lưu vào Sổ Ôn Tập [N]!")
         };
+
+        [Header("V3: Nộ Tri Thức [Q], Sự Kiện Dọc Đường & Milestone Flash")]
+        [SerializeField] private UnityEngine.UI.Button synergyUltimateButton;
+        [SerializeField] private UnityEngine.UI.Image synergyButtonBackground;
+        [SerializeField] private UnityEngine.UI.Image synergyGaugeFill;
+        [SerializeField] private TextMeshProUGUI synergyLabelTMP;
+
+        [SerializeField] private GameObject roadsideEventRoot;
+        [SerializeField] private TextMeshProUGUI roadsideTitleTMP;
+        [SerializeField] private TextMeshProUGUI roadsideDescTMP;
+        [SerializeField] private UnityEngine.UI.Button[] roadsideOptionButtons = new UnityEngine.UI.Button[3];
+        [SerializeField] private TextMeshProUGUI[] roadsideOptionLabels = new TextMeshProUGUI[3];
+        [SerializeField] private TextMeshProUGUI[] roadsideOptionSubtitles = new TextMeshProUGUI[3];
+
+        [SerializeField] private UnityEngine.UI.Image screenFlashOverlay;
+
+        private float _displayedKnowledgeRatio;
+        private float _targetKnowledgeRatio;
+        private RoadsideEventOffer _activeRoadsideOffer;
+        private Coroutine _flashCoroutine;
+        private Coroutine _celebrationCoroutine;
 
         [Header("Sprites Chân Dung & Biểu Tượng")]
         [SerializeField] private Sprite knightPortrait;
@@ -288,6 +310,25 @@ namespace MedievalRPG.UI
             campBuffBadgeTMP = buffPillTMP;
         }
 
+        public void ConfigureSynergyAndEventUI(
+            UnityEngine.UI.Button synBtn, UnityEngine.UI.Image synBg, UnityEngine.UI.Image synFill, TextMeshProUGUI synLbl,
+            GameObject evRoot, TextMeshProUGUI evTitle, TextMeshProUGUI evDesc,
+            UnityEngine.UI.Button[] evOptBtns, TextMeshProUGUI[] evOptLbls, TextMeshProUGUI[] evOptSubs,
+            UnityEngine.UI.Image flashImg)
+        {
+            synergyUltimateButton = synBtn;
+            synergyButtonBackground = synBg;
+            synergyGaugeFill = synFill;
+            synergyLabelTMP = synLbl;
+            roadsideEventRoot = evRoot;
+            roadsideTitleTMP = evTitle;
+            roadsideDescTMP = evDesc;
+            roadsideOptionButtons = evOptBtns;
+            roadsideOptionLabels = evOptLbls;
+            roadsideOptionSubtitles = evOptSubs;
+            screenFlashOverlay = flashImg;
+        }
+
         public void ConfigureV2Features(
             GameObject tutRoot, TextMeshProUGUI tutTitle, TextMeshProUGUI tutBody, TextMeshProUGUI tutStep,
             UnityEngine.UI.Button tutNextBtn, TextMeshProUGUI tutNextLbl, UnityEngine.UI.Button tutSkipBtn,
@@ -346,6 +387,8 @@ namespace MedievalRPG.UI
             WirePauseControls();
             WireLootAndEquipmentControls();
             WireTutorialControls();
+            EnsureSynergyAndEventUI();
+            WireSynergyAndEventControls();
 
             if (victoryScreen != null) victoryScreen.SetActive(false);
             if (gameOverScreen != null) gameOverScreen.SetActive(false);
@@ -358,10 +401,13 @@ namespace MedievalRPG.UI
             if (lootToastRoot != null) lootToastRoot.SetActive(false);
             if (statusTooltipRoot != null) statusTooltipRoot.SetActive(false);
             if (tutorialOverlayRoot != null) tutorialOverlayRoot.SetActive(false);
+            if (roadsideEventRoot != null) roadsideEventRoot.SetActive(false);
+            if (screenFlashOverlay != null) screenFlashOverlay.gameObject.SetActive(false);
 
             RefreshEquipmentButtonBadge();
             RefreshGoldDisplay();
             RefreshCampBuffBadge();
+            RefreshKnowledgeGaugeUI(battleSystem != null ? battleSystem.KnowledgeGauge : 0, CombatCalculator.MaxKnowledgeGauge);
 
             if (tutorialOverlayRoot != null && !PlayerCampProgressManager.EnsureLoaded().TutorialCompleted)
             {
@@ -385,8 +431,13 @@ namespace MedievalRPG.UI
             battleSystem.OnTargetsChanged += HandleTargetsChanged;
             battleSystem.OnDialogueChanged += HandleDialogueChanged;
             battleSystem.OnQuizStarted += HandleQuizStarted;
+            battleSystem.OnQuizStartedWithMode += HandleQuizStartedWithMode;
             battleSystem.OnQuizResultShown += HandleQuizResultShown;
             battleSystem.OnQuizEnded += HandleQuizEnded;
+            battleSystem.OnKnowledgeGaugeChanged += HandleKnowledgeGaugeChanged;
+            battleSystem.OnRoadsideEventStarted += HandleRoadsideEventStarted;
+            battleSystem.OnRoadsideEventEnded += HandleRoadsideEventEnded;
+            battleSystem.OnSynergyUltimateExecuted += HandleSynergyUltimateExecuted;
             battleSystem.OnDamageDealt += HandleDamageDealt;
             battleSystem.OnUnitHealed += HandleUnitHealed;
             battleSystem.OnUnitStatusPop += HandleUnitStatusPop;
@@ -396,11 +447,13 @@ namespace MedievalRPG.UI
             battleSystem.OnGoldChanged += HandleGoldChanged;
             battleSystem.Inventory.OnInventoryChanged += RefreshItemBagUI;
             PlayerEquipmentManager.EnsureLoaded().OnEquipmentChanged += RefreshEquipmentButtonBadge;
+            PlayerCampProgressManager.EnsureLoaded().OnCampProgressChanged += RefreshGoldDisplay;
         }
 
         private void UnsubscribeEvents()
         {
             PlayerEquipmentManager.Instance.OnEquipmentChanged -= RefreshEquipmentButtonBadge;
+            PlayerCampProgressManager.Instance.OnCampProgressChanged -= RefreshGoldDisplay;
             if (battleSystem == null) return;
             battleSystem.OnBattleInitialized -= HandleBattleInitialized;
             battleSystem.OnWaveChanged -= HandleWaveChanged;
@@ -410,8 +463,13 @@ namespace MedievalRPG.UI
             battleSystem.OnTargetsChanged -= HandleTargetsChanged;
             battleSystem.OnDialogueChanged -= HandleDialogueChanged;
             battleSystem.OnQuizStarted -= HandleQuizStarted;
+            battleSystem.OnQuizStartedWithMode -= HandleQuizStartedWithMode;
             battleSystem.OnQuizResultShown -= HandleQuizResultShown;
             battleSystem.OnQuizEnded -= HandleQuizEnded;
+            battleSystem.OnKnowledgeGaugeChanged -= HandleKnowledgeGaugeChanged;
+            battleSystem.OnRoadsideEventStarted -= HandleRoadsideEventStarted;
+            battleSystem.OnRoadsideEventEnded -= HandleRoadsideEventEnded;
+            battleSystem.OnSynergyUltimateExecuted -= HandleSynergyUltimateExecuted;
             battleSystem.OnDamageDealt -= HandleDamageDealt;
             battleSystem.OnUnitHealed -= HandleUnitHealed;
             battleSystem.OnUnitStatusPop -= HandleUnitStatusPop;
@@ -425,8 +483,17 @@ namespace MedievalRPG.UI
             {
                 foreach (PartyMemberCardUI card in partyCards)
                 {
-                    if (card != null) card.OnCardClicked -= HandlePartyCardClicked;
+                    if (card != null)
+                    {
+                        card.OnCardClicked -= HandlePartyCardClicked;
+                        card.OnPointerHoverChanged -= HandleUnitHoverChanged;
+                    }
                 }
+            }
+
+            if (enemyCard != null)
+            {
+                enemyCard.OnPointerHoverChanged -= HandleUnitHoverChanged;
             }
 
             if (battleSystem.partyUnits != null)
@@ -534,7 +601,15 @@ namespace MedievalRPG.UI
                     RefreshActionButtons();
                 });
 
-            GameSettingsUIHelper.WireResetSaveButton(this, pauseResetSaveButton, pauseResetSaveLabelTMP);
+            GameSettingsUIHelper.WireResetSaveButton(this, pauseResetSaveButton, pauseResetSaveLabelTMP, () =>
+            {
+                if (battleSystem != null) battleSystem.ApplyPartyEquipment();
+                RefreshGoldDisplay();
+                RefreshCampBuffBadge();
+                RefreshEquipmentButtonBadge();
+                RefreshAllStatusDisplays();
+                RefreshActionButtons();
+            });
         }
 
         private void WireTutorialControls()
@@ -570,6 +645,7 @@ namespace MedievalRPG.UI
         private void BeginFirstTimeTutorial()
         {
             if (tutorialOverlayRoot == null) return;
+            if (statusTooltipRoot != null) statusTooltipRoot.SetActive(false);
             _pausedByTutorial = battleSystem != null && !battleSystem.IsPaused;
             if (_pausedByTutorial) battleSystem.SetPaused(true);
             ShowTutorialStep(0);
@@ -744,14 +820,25 @@ namespace MedievalRPG.UI
 
         private void HandleQuizStarted(QuizQuestion q, string actionContext)
         {
+            HandleQuizStartedWithMode(q, actionContext, QuizPromptMode.AttackSkill);
+        }
+
+        private void HandleQuizStartedWithMode(QuizQuestion q, string actionContext, QuizPromptMode mode)
+        {
             SetItemBagOpen(false);
             if (statusTooltipRoot != null) statusTooltipRoot.SetActive(false);
             if (quizModal != null)
             {
-                quizModal.ShowQuestion(
+                int streak = battleSystem != null ? battleSystem.CurrentQuizStreak : 0;
+                int freeHints = battleSystem != null ? battleSystem.FreeHintsRemaining : 0;
+                quizModal.ShowQuestionWithMode(
                     q,
                     actionContext,
-                    OnSubmitAnswerClickedWithSpeed,
+                    mode,
+                    streak,
+                    freeHints,
+                    battleSystem != null ? (System.Func<bool>)battleSystem.TryConsumeFreeHint : null,
+                    OnSubmitAnswerWithModeFlags,
                     () => battleSystem?.SkipQuizFeedbackWait()
                 );
             }
@@ -760,6 +847,64 @@ namespace MedievalRPG.UI
                 ShowQuizPrompt(q);
             }
             RefreshActionButtons();
+        }
+
+        private void HandleKnowledgeGaugeChanged(int current, int max)
+        {
+            RefreshKnowledgeGaugeUI(current, max);
+        }
+
+        private void HandleSynergyUltimateExecuted()
+        {
+            TriggerScreenFlash(MedievalUITheme.GoldSoft, 0.34f, 0.22f);
+        }
+
+        private void HandleRoadsideEventStarted(RoadsideEventOffer offer)
+        {
+            EnsureSynergyAndEventUI();
+            WireSynergyAndEventControls();
+            _activeRoadsideOffer = offer;
+            if (roadsideEventRoot == null || offer == null)
+            {
+                battleSystem?.SelectRoadsideEventChoice(null);
+                return;
+            }
+
+            if (roadsideTitleTMP != null) roadsideTitleTMP.text = offer.title;
+            if (roadsideDescTMP != null) roadsideDescTMP.text = offer.description;
+
+            int gold = PlayerCampProgressManager.EnsureLoaded().Gold;
+            for (int i = 0; i < 3; i++)
+            {
+                bool hasOpt = offer.options != null && i < offer.options.Count && offer.options[i] != null;
+                if (roadsideOptionButtons != null && i < roadsideOptionButtons.Length && roadsideOptionButtons[i] != null)
+                {
+                    roadsideOptionButtons[i].gameObject.SetActive(hasOpt);
+                    if (hasOpt)
+                    {
+                        RoadsideChoiceOption opt = offer.options[i];
+                        bool affordable = opt.goldCost <= 0 || gold >= opt.goldCost;
+                        roadsideOptionButtons[i].interactable = affordable;
+                        if (roadsideOptionLabels != null && i < roadsideOptionLabels.Length && roadsideOptionLabels[i] != null)
+                        {
+                            roadsideOptionLabels[i].text = $"[{i + 1}] {opt.label}";
+                        }
+                        if (roadsideOptionSubtitles != null && i < roadsideOptionSubtitles.Length && roadsideOptionSubtitles[i] != null)
+                        {
+                            roadsideOptionSubtitles[i].text = affordable ? opt.subtitle : $"{opt.subtitle} (Không đủ Vàng)";
+                        }
+                    }
+                }
+            }
+
+            roadsideEventRoot.SetActive(true);
+            roadsideEventRoot.transform.SetAsLastSibling();
+        }
+
+        private void HandleRoadsideEventEnded()
+        {
+            _activeRoadsideOffer = null;
+            if (roadsideEventRoot != null) roadsideEventRoot.SetActive(false);
         }
 
         private void HandleQuizResultShown(bool isCorrect, int selectedIndex, int correctIndex, int bonusDamage, string explanation, float waitTime)
@@ -801,6 +946,7 @@ namespace MedievalRPG.UI
         private void HandleBattleEnded(BattleState finalState)
         {
             SetItemBagOpen(false);
+            if (statusTooltipRoot != null) statusTooltipRoot.SetActive(false);
             if (collectLootButton != null) collectLootButton.gameObject.SetActive(false);
             if (finalState == BattleState.WON) ShowVictory();
             else if (finalState == BattleState.LOST) ShowGameOver();
@@ -836,6 +982,7 @@ namespace MedievalRPG.UI
             else
             {
                 SetItemBagOpen(false);
+                if (statusTooltipRoot != null) statusTooltipRoot.SetActive(false);
                 if (pausePanel != null && pausePanel.activeSelf)
                 {
                     pausePanel.SetActive(false);
@@ -1036,7 +1183,7 @@ namespace MedievalRPG.UI
         private void RefreshQuizStatsBadge()
         {
             if (quizStatsTMP == null || battleSystem == null) return;
-            string comboTag = battleSystem.CurrentQuizStreak >= 3 ? " (x1.2 ST!)" : "";
+            string comboTag = battleSystem.CurrentQuizStreak >= 3 ? " <color=#5CE09A>[COMBO x1.2!]</color>" : "";
             quizStatsTMP.text = $"Đúng: {battleSystem.CorrectAnswersCount}/{battleSystem.TotalQuestionsAnswered} • Chuỗi: {battleSystem.CurrentQuizStreak}{comboTag}";
         }
 
@@ -1232,6 +1379,8 @@ namespace MedievalRPG.UI
             string tauntHint = hero.characterClass == CharacterClassType.Knight ? " + Khiêu Khích" : "";
             SetActionButton(4, true, canAct, "Phòng Thủ", $"Miễn phí • +8 MP", shieldIcon, MedievalUITheme.BtnDefend,
                 $"Giảm 50% sát thương nhận vào, hồi ngay +8 MP{tauntHint} (không cần trả lời Quiz).");
+
+            RefreshKnowledgeGaugeUI(battleSystem.KnowledgeGauge, CombatCalculator.MaxKnowledgeGauge);
         }
 
         private void ConfigureSkillButton(int slotIndex, Unit hero, bool canAct, string quizTag)
@@ -1370,17 +1519,52 @@ namespace MedievalRPG.UI
             }
         }
 
+        public enum UnitPortraitKind
+        {
+            Knight,
+            Mage,
+            Archer,
+            Goblin,
+            Skeleton,
+            ShadowMage,
+            Boss
+        }
+
+        public static UnitPortraitKind ResolveUnitPortraitKind(Unit u)
+        {
+            if (u == null) return UnitPortraitKind.Knight;
+            string n = u.unitName ?? "";
+            if (u.isBoss || n.Contains("Dark") || n.Contains("Boss") || n.Contains("Ma Vương") || n.Contains("Thủ Lĩnh"))
+                return UnitPortraitKind.Boss;
+            if (n.Contains("Shadow") || n.Contains("Pháp Sư") || (u.isEnemy && u.characterClass == CharacterClassType.Mage))
+                return UnitPortraitKind.ShadowMage;
+            if (n.Contains("Skeleton") || n.Contains("Xương") || (u.isEnemy && u.characterClass == CharacterClassType.Archer))
+                return UnitPortraitKind.Skeleton;
+            if (u.isEnemy || n.Contains("Goblin")) return UnitPortraitKind.Goblin;
+            if (u.characterClass == CharacterClassType.Mage || n.Contains("Mage")) return UnitPortraitKind.Mage;
+            if (u.characterClass == CharacterClassType.Archer || n.Contains("Archer")) return UnitPortraitKind.Archer;
+            return UnitPortraitKind.Knight;
+        }
+
         private Sprite GetPortraitForUnit(Unit u)
         {
-            if (u == null) return knightPortrait;
-            string n = u.unitName ?? "";
-            if (u.isBoss || n.Contains("Dark") || n.Contains("Boss")) return darkKnightPortrait != null ? darkKnightPortrait : knightPortrait;
-            if (n.Contains("Shadow")) return darkKnightPortrait != null ? darkKnightPortrait : magePortrait;
-            if (n.Contains("Skeleton")) return skeletonPortrait != null ? skeletonPortrait : goblinPortrait;
-            if (u.isEnemy || n.Contains("Goblin")) return goblinPortrait;
-            if (u.characterClass == CharacterClassType.Mage || n.Contains("Mage")) return magePortrait;
-            if (u.characterClass == CharacterClassType.Archer || n.Contains("Archer")) return archerPortrait;
-            return knightPortrait;
+            switch (ResolveUnitPortraitKind(u))
+            {
+                case UnitPortraitKind.Boss:
+                    return darkKnightPortrait != null ? darkKnightPortrait : knightPortrait;
+                case UnitPortraitKind.ShadowMage:
+                    return darkKnightPortrait != null ? darkKnightPortrait : magePortrait;
+                case UnitPortraitKind.Skeleton:
+                    return skeletonPortrait != null ? skeletonPortrait : (archerPortrait != null ? archerPortrait : goblinPortrait);
+                case UnitPortraitKind.Goblin:
+                    return goblinPortrait;
+                case UnitPortraitKind.Mage:
+                    return magePortrait;
+                case UnitPortraitKind.Archer:
+                    return archerPortrait;
+                default:
+                    return knightPortrait;
+            }
         }
 
         private Sprite GetClassIconForUnit(Unit u)
@@ -1395,17 +1579,47 @@ namespace MedievalRPG.UI
 
         private float GetWorldOffsetForUnit(Unit u)
         {
-            if (u == null) return 0.9f;
-            if (u.isBoss) return 1.15f;
-            if (u.characterClass == CharacterClassType.Mage) return 0.95f;
-            if (u.characterClass == CharacterClassType.Archer) return 0.92f;
-            return 0.90f;
+            if (u == null) return 0.95f;
+            float scaleY = Mathf.Abs(u.transform.lossyScale.y);
+            if (scaleY < 0.05f) scaleY = 1f;
+
+            Sprite refSprite = null;
+            if (u.pixelAnimator != null && u.pixelAnimator.idleFrames != null && u.pixelAnimator.idleFrames.Count > 0)
+            {
+                refSprite = u.pixelAnimator.idleFrames[0];
+            }
+            if (refSprite == null && u.pixelAnimator != null && u.pixelAnimator.SpriteRendererComponent != null)
+            {
+                refSprite = u.pixelAnimator.SpriteRendererComponent.sprite;
+            }
+
+            if (refSprite != null)
+            {
+                float topWorldY = refSprite.bounds.max.y * scaleY;
+                float margin = u.isBoss ? 0.24f : 0.18f;
+                return Mathf.Max(0.85f, topWorldY + margin);
+            }
+
+            if (u.isBoss) return 1.35f;
+            if (u.characterClass == CharacterClassType.Mage) return 1.02f;
+            if (u.characterClass == CharacterClassType.Archer) return 1.08f;
+            return 1.12f;
         }
 
         private void Update()
         {
+            UpdateSynergyGaugeAnimation();
+
             Keyboard kb = Keyboard.current;
             if (kb == null || _isTransitioning) return;
+
+            if (roadsideEventRoot != null && roadsideEventRoot.activeSelf && _activeRoadsideOffer != null)
+            {
+                if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) ChooseRoadsideOption(0);
+                else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) ChooseRoadsideOption(1);
+                else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) ChooseRoadsideOption(2);
+                return;
+            }
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
@@ -1445,6 +1659,12 @@ namespace MedievalRPG.UI
 
             if (battleSystem != null && battleSystem.state == BattleState.PLAYERTURN && !battleSystem.IsActionInProgress && !battleSystem.IsPaused)
             {
+                if (kb.qKey.wasPressedThisFrame && battleSystem.IsSynergyReady)
+                {
+                    SetItemBagOpen(false);
+                    battleSystem.OnSynergyUltimateButton();
+                    return;
+                }
                 if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) TriggerActionByIndex(0);
                 else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) TriggerActionByIndex(1);
                 else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) TriggerActionByIndex(2);
@@ -1519,6 +1739,12 @@ namespace MedievalRPG.UI
             if (quizModal == null) HideQuizPrompt();
         }
 
+        public void OnSubmitAnswerWithModeFlags(int answerIndex, bool isQuickMind, bool wasSkipped)
+        {
+            if (battleSystem != null) battleSystem.ProcessQuizAnswer(answerIndex, isQuickMind, wasSkipped);
+            if (quizModal == null) HideQuizPrompt();
+        }
+
         private void HandleUnitHoverChanged(Unit unit, bool entered, Vector3 cardPos)
         {
             if (statusTooltipRoot == null) return;
@@ -1584,6 +1810,442 @@ namespace MedievalRPG.UI
         {
             if (victoryScreen != null) victoryScreen.SetActive(true);
             if (victorySummaryTMP != null) victorySummaryTMP.text = BuildEndSummaryText(true);
+            PlayMilestoneCelebration();
+        }
+
+        private void PlayMilestoneCelebration()
+        {
+            TriggerScreenFlash(MedievalUITheme.GoldSoft, 0.36f, 0.24f);
+            if (_celebrationCoroutine != null) StopCoroutine(_celebrationCoroutine);
+            _celebrationCoroutine = StartCoroutine(VictoryCelebrationRoutine());
+        }
+
+        private void TriggerScreenFlash(Color color, float peakAlpha, float duration)
+        {
+            EnsureScreenFlashExists();
+            if (screenFlashOverlay == null) return;
+            if (_flashCoroutine != null) StopCoroutine(_flashCoroutine);
+            _flashCoroutine = StartCoroutine(ScreenFlashRoutine(color, peakAlpha, duration));
+        }
+
+        private IEnumerator ScreenFlashRoutine(Color color, float peakAlpha, float duration)
+        {
+            screenFlashOverlay.gameObject.SetActive(true);
+            screenFlashOverlay.transform.SetAsLastSibling();
+            yield return MedievalEase.Tween(duration, k =>
+            {
+                if (screenFlashOverlay == null) return;
+                Color c = color;
+                c.a = Mathf.Lerp(peakAlpha, 0f, k);
+                screenFlashOverlay.color = c;
+            }, MedievalEase.OutCubic, unscaled: true);
+            if (screenFlashOverlay != null) screenFlashOverlay.gameObject.SetActive(false);
+            _flashCoroutine = null;
+        }
+
+        private IEnumerator VictoryCelebrationRoutine()
+        {
+            if (victoryScreen != null)
+            {
+                Transform endCard = victoryScreen.transform.Find("EndCard");
+                if (endCard != null)
+                {
+                    endCard.localScale = Vector3.one * 0.78f;
+                    StartCoroutine(MedievalEase.Tween(0.35f, k =>
+                    {
+                        if (endCard != null)
+                        {
+                            float s = Mathf.LerpUnclamped(0.78f, 1.0f, k);
+                            endCard.localScale = new Vector3(s, s, 1f);
+                        }
+                    }, MedievalEase.OutBack, unscaled: true));
+                }
+
+                // UI Confetti Burst trên VictoryScreen
+                const int pieceCount = 32;
+                Color[] palette =
+                {
+                    MedievalUITheme.GoldSoft,
+                    MedievalUITheme.SuccessGreen,
+                    MedievalUITheme.MpSapphire,
+                    MedievalUITheme.RarityEpic
+                };
+                RectTransform[] rects = new RectTransform[pieceCount];
+                Image[] imgs = new Image[pieceCount];
+                Vector2[] vels = new Vector2[pieceCount];
+                float[] spins = new float[pieceCount];
+
+                for (int i = 0; i < pieceCount; i++)
+                {
+                    GameObject p = new GameObject($"UIConfetti_{i}", typeof(RectTransform), typeof(Image));
+                    p.transform.SetParent(victoryScreen.transform, false);
+                    RectTransform rt = p.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(12f, 8f);
+                    rt.anchoredPosition = new Vector2(UnityEngine.Random.Range(-320f, 320f), -60f);
+                    Image im = p.GetComponent<Image>();
+                    im.color = palette[i % palette.Length];
+                    im.raycastTarget = false;
+                    rects[i] = rt;
+                    imgs[i] = im;
+                    vels[i] = new Vector2(UnityEngine.Random.Range(-240f, 240f), UnityEngine.Random.Range(420f, 760f));
+                    spins[i] = UnityEngine.Random.Range(-360f, 360f);
+                }
+
+                float elapsed = 0f;
+                const float dur = 1.45f;
+                while (elapsed < dur && victoryScreen != null && victoryScreen.activeSelf)
+                {
+                    float dt = Time.unscaledDeltaTime;
+                    elapsed += dt;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    for (int i = 0; i < pieceCount; i++)
+                    {
+                        if (rects[i] == null) continue;
+                        vels[i].y -= 920f * dt;
+                        rects[i].anchoredPosition += vels[i] * dt;
+                        rects[i].Rotate(0f, 0f, spins[i] * dt);
+                        Color c = imgs[i].color;
+                        c.a = t < 0.7f ? 1f : 1f - ((t - 0.7f) / 0.3f);
+                        imgs[i].color = c;
+                    }
+                    yield return null;
+                }
+
+                for (int i = 0; i < pieceCount; i++)
+                {
+                    if (rects[i] != null) Destroy(rects[i].gameObject);
+                }
+            }
+            _celebrationCoroutine = null;
+        }
+
+        private void EnsureScreenFlashExists()
+        {
+            if (screenFlashOverlay != null || rootCanvas == null) return;
+            Transform existing = rootCanvas.transform.Find("ScreenFlashOverlay");
+            if (existing != null && existing.TryGetComponent<Image>(out var exImg))
+            {
+                screenFlashOverlay = exImg;
+                return;
+            }
+            GameObject go = new GameObject("ScreenFlashOverlay", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(rootCanvas.transform, false);
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            screenFlashOverlay = go.GetComponent<Image>();
+            screenFlashOverlay.color = new Color(1f, 0.85f, 0.35f, 0f);
+            screenFlashOverlay.raycastTarget = false;
+            go.SetActive(false);
+        }
+
+        private void WireSynergyAndEventControls()
+        {
+            if (synergyUltimateButton != null)
+            {
+                synergyUltimateButton.onClick.RemoveAllListeners();
+                synergyUltimateButton.onClick.AddListener(() =>
+                {
+                    if (battleSystem == null) return;
+                    SetItemBagOpen(false);
+                    battleSystem.OnSynergyUltimateButton();
+                });
+            }
+
+            if (roadsideOptionButtons != null)
+            {
+                for (int i = 0; i < roadsideOptionButtons.Length; i++)
+                {
+                    if (roadsideOptionButtons[i] == null) continue;
+                    int idx = i;
+                    roadsideOptionButtons[i].onClick.RemoveAllListeners();
+                    roadsideOptionButtons[i].onClick.AddListener(() => ChooseRoadsideOption(idx));
+                }
+            }
+        }
+
+        private void ChooseRoadsideOption(int idx)
+        {
+            if (_activeRoadsideOffer == null || _activeRoadsideOffer.options == null || idx < 0 || idx >= _activeRoadsideOffer.options.Count) return;
+            RoadsideChoiceOption opt = _activeRoadsideOffer.options[idx];
+            if (opt.goldCost > 0 && PlayerCampProgressManager.EnsureLoaded().Gold < opt.goldCost) return;
+            AudioManager.Instance?.PlayButtonClick();
+            battleSystem?.SelectRoadsideEventChoice(opt);
+        }
+
+        private void RefreshKnowledgeGaugeUI(int current, int max)
+        {
+            _targetKnowledgeRatio = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
+            bool ready = current >= max && max > 0;
+            bool canPress = ready && battleSystem != null && battleSystem.state == BattleState.PLAYERTURN && !battleSystem.IsActionInProgress;
+
+            if (synergyUltimateButton != null) synergyUltimateButton.interactable = canPress;
+            if (synergyButtonBackground != null)
+            {
+                synergyButtonBackground.color = ready ? MedievalUITheme.BtnPrimaryGold : MedievalUITheme.ObsidianPanel;
+            }
+            if (synergyGaugeFill != null)
+            {
+                synergyGaugeFill.color = ready ? MedievalUITheme.GoldSoft : MedievalUITheme.MpSapphire;
+            }
+            if (synergyLabelTMP != null)
+            {
+                synergyLabelTMP.text = ready
+                    ? "[Q] TUYỆT KỸ HỢP KÍCH! (SẴN SÀNG)"
+                    : $"NỘ TRI THỨC: {current}/{max}";
+                synergyLabelTMP.color = ready ? MedievalUITheme.DarkInkText : MedievalUITheme.IvoryText;
+            }
+        }
+
+        private void UpdateSynergyGaugeAnimation()
+        {
+            if (synergyGaugeFill != null)
+            {
+                _displayedKnowledgeRatio = Mathf.Lerp(_displayedKnowledgeRatio, _targetKnowledgeRatio, Time.unscaledDeltaTime * 8f);
+                synergyGaugeFill.fillAmount = _displayedKnowledgeRatio;
+            }
+
+            if (synergyUltimateButton != null && synergyUltimateButton.interactable && synergyButtonBackground != null)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
+                synergyButtonBackground.color = Color.Lerp(MedievalUITheme.BtnPrimaryGold, MedievalUITheme.GoldSoft, pulse * 0.45f);
+            }
+        }
+
+        private void EnsureSynergyAndEventUI()
+        {
+            if (rootCanvas == null) return;
+            TMP_FontAsset fontBold = dialogueTMP != null ? dialogueTMP.font : TMP_Settings.defaultFontAsset;
+            Image samplePanel = actionPanel != null ? actionPanel.GetComponent<Image>() : null;
+            Sprite panelSprite = samplePanel != null ? samplePanel.sprite : null;
+
+            if (synergyUltimateButton == null)
+            {
+                Transform existing = rootCanvas.transform.Find("SynergyGaugeButton");
+                if (existing != null)
+                {
+                    synergyUltimateButton = existing.GetComponent<Button>();
+                    synergyButtonBackground = existing.GetComponent<Image>();
+                    synergyGaugeFill = existing.Find("Fill")?.GetComponent<Image>();
+                    synergyLabelTMP = existing.Find("Label")?.GetComponent<TextMeshProUGUI>();
+                }
+                else
+                {
+                    GameObject synGo = new GameObject("SynergyGaugeButton", typeof(RectTransform), typeof(Image), typeof(Button));
+                    synGo.transform.SetParent(rootCanvas.transform, false);
+                    RectTransform sRt = synGo.GetComponent<RectTransform>();
+                    sRt.anchorMin = new Vector2(0f, 0f);
+                    sRt.anchorMax = new Vector2(0f, 0f);
+                    sRt.pivot = new Vector2(0f, 0f);
+                    sRt.anchoredPosition = new Vector2(64f, 234f);
+                    sRt.sizeDelta = new Vector2(390f, 38f);
+
+                    synergyButtonBackground = synGo.GetComponent<Image>();
+                    synergyButtonBackground.sprite = panelSprite;
+                    synergyButtonBackground.type = panelSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+                    synergyButtonBackground.pixelsPerUnitMultiplier = 0.7f;
+                    synergyButtonBackground.color = MedievalUITheme.ObsidianPanel;
+
+                    synergyUltimateButton = synGo.GetComponent<Button>();
+                    synergyUltimateButton.targetGraphic = synergyButtonBackground;
+                    synergyUltimateButton.interactable = false;
+
+                    GameObject fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+                    fillGo.transform.SetParent(synGo.transform, false);
+                    RectTransform fRt = fillGo.GetComponent<RectTransform>();
+                    fRt.anchorMin = Vector2.zero;
+                    fRt.anchorMax = Vector2.one;
+                    fRt.offsetMin = new Vector2(4f, 4f);
+                    fRt.offsetMax = new Vector2(-4f, -4f);
+                    synergyGaugeFill = fillGo.GetComponent<Image>();
+                    synergyGaugeFill.sprite = GetWhiteBarSprite();
+                    synergyGaugeFill.type = Image.Type.Filled;
+                    synergyGaugeFill.fillMethod = Image.FillMethod.Horizontal;
+                    synergyGaugeFill.fillAmount = 0f;
+                    synergyGaugeFill.color = MedievalUITheme.MpSapphire;
+                    synergyGaugeFill.raycastTarget = false;
+
+                    GameObject lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    lblGo.transform.SetParent(synGo.transform, false);
+                    RectTransform lRt = lblGo.GetComponent<RectTransform>();
+                    lRt.anchorMin = Vector2.zero;
+                    lRt.anchorMax = Vector2.one;
+                    lRt.offsetMin = new Vector2(8f, 2f);
+                    lRt.offsetMax = new Vector2(-8f, -2f);
+                    synergyLabelTMP = lblGo.GetComponent<TextMeshProUGUI>();
+                    if (fontBold != null) synergyLabelTMP.font = fontBold;
+                    synergyLabelTMP.fontSize = 14f;
+                    synergyLabelTMP.fontStyle = FontStyles.Bold;
+                    synergyLabelTMP.alignment = TextAlignmentOptions.Center;
+                    synergyLabelTMP.color = MedievalUITheme.IvoryText;
+                    synergyLabelTMP.raycastTarget = false;
+                }
+            }
+
+            if (roadsideEventRoot == null)
+            {
+                Transform existingEv = rootCanvas.transform.Find("RoadsideEventOverlay");
+                if (existingEv != null)
+                {
+                    roadsideEventRoot = existingEv.gameObject;
+                    Transform card = existingEv.Find("EventCard");
+                    if (card != null)
+                    {
+                        if (roadsideTitleTMP == null) roadsideTitleTMP = card.Find("EventTitle")?.GetComponent<TextMeshProUGUI>();
+                        if (roadsideDescTMP == null) roadsideDescTMP = card.Find("EventDesc")?.GetComponent<TextMeshProUGUI>();
+                        Transform optParent = card.Find("Options");
+                        if (optParent != null && (roadsideOptionButtons == null || roadsideOptionButtons.Length < 3 || roadsideOptionButtons[0] == null))
+                        {
+                            roadsideOptionButtons = new Button[3];
+                            roadsideOptionLabels = new TextMeshProUGUI[3];
+                            roadsideOptionSubtitles = new TextMeshProUGUI[3];
+                            for (int i = 0; i < 3; i++)
+                            {
+                                Transform opt = optParent.Find($"Option_{i}");
+                                if (opt == null) continue;
+                                roadsideOptionButtons[i] = opt.GetComponent<Button>();
+                                roadsideOptionLabels[i] = opt.Find("Title")?.GetComponent<TextMeshProUGUI>();
+                                roadsideOptionSubtitles[i] = opt.Find("Subtitle")?.GetComponent<TextMeshProUGUI>();
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    GameObject evOverlay = new GameObject("RoadsideEventOverlay", typeof(RectTransform), typeof(Image));
+                    evOverlay.transform.SetParent(rootCanvas.transform, false);
+                    RectTransform ovRt = evOverlay.GetComponent<RectTransform>();
+                    ovRt.anchorMin = Vector2.zero;
+                    ovRt.anchorMax = Vector2.one;
+                    ovRt.offsetMin = Vector2.zero;
+                    ovRt.offsetMax = Vector2.zero;
+                    Image scrim = evOverlay.GetComponent<Image>();
+                    scrim.color = MedievalUITheme.ScrimDark;
+
+                    GameObject cardGo = new GameObject("EventCard", typeof(RectTransform), typeof(Image));
+                    cardGo.transform.SetParent(evOverlay.transform, false);
+                    RectTransform cRt = cardGo.GetComponent<RectTransform>();
+                    cRt.anchorMin = new Vector2(0.5f, 0.5f);
+                    cRt.anchorMax = new Vector2(0.5f, 0.5f);
+                    cRt.pivot = new Vector2(0.5f, 0.5f);
+                    cRt.sizeDelta = new Vector2(780f, 440f);
+                    Image cardImg = cardGo.GetComponent<Image>();
+                    cardImg.sprite = panelSprite;
+                    cardImg.type = panelSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+                    cardImg.pixelsPerUnitMultiplier = 0.65f;
+                    cardImg.color = MedievalUITheme.ObsidianPanel;
+
+                    GameObject titleGo = new GameObject("EventTitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    titleGo.transform.SetParent(cardGo.transform, false);
+                    roadsideTitleTMP = titleGo.GetComponent<TextMeshProUGUI>();
+                    if (fontBold != null) roadsideTitleTMP.font = fontBold;
+                    roadsideTitleTMP.fontSize = 24f;
+                    roadsideTitleTMP.fontStyle = FontStyles.Bold;
+                    roadsideTitleTMP.color = MedievalUITheme.GoldSoft;
+                    roadsideTitleTMP.alignment = TextAlignmentOptions.Center;
+                    RectTransform tRt = roadsideTitleTMP.rectTransform;
+                    tRt.anchorMin = new Vector2(0f, 1f);
+                    tRt.anchorMax = new Vector2(1f, 1f);
+                    tRt.offsetMin = new Vector2(24f, -64f);
+                    tRt.offsetMax = new Vector2(-24f, -18f);
+
+                    GameObject descGo = new GameObject("EventDesc", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    descGo.transform.SetParent(cardGo.transform, false);
+                    roadsideDescTMP = descGo.GetComponent<TextMeshProUGUI>();
+                    if (fontBold != null) roadsideDescTMP.font = fontBold;
+                    roadsideDescTMP.fontSize = 16.5f;
+                    roadsideDescTMP.color = MedievalUITheme.IvoryText;
+                    roadsideDescTMP.alignment = TextAlignmentOptions.Center;
+                    roadsideDescTMP.textWrappingMode = TextWrappingModes.Normal;
+                    RectTransform dRt = roadsideDescTMP.rectTransform;
+                    dRt.anchorMin = new Vector2(0f, 1f);
+                    dRt.anchorMax = new Vector2(1f, 1f);
+                    dRt.offsetMin = new Vector2(28f, -124f);
+                    dRt.offsetMax = new Vector2(-28f, -68f);
+
+                    GameObject optList = new GameObject("Options", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                    optList.transform.SetParent(cardGo.transform, false);
+                    RectTransform olRt = optList.GetComponent<RectTransform>();
+                    olRt.anchorMin = Vector2.zero;
+                    olRt.anchorMax = Vector2.one;
+                    olRt.offsetMin = new Vector2(28f, 24f);
+                    olRt.offsetMax = new Vector2(-28f, -138f);
+                    VerticalLayoutGroup vlg = optList.GetComponent<VerticalLayoutGroup>();
+                    vlg.spacing = 10f;
+                    vlg.childControlWidth = true;
+                    vlg.childControlHeight = true;
+                    vlg.childForceExpandWidth = true;
+                    vlg.childForceExpandHeight = true;
+
+                    roadsideOptionButtons = new Button[3];
+                    roadsideOptionLabels = new TextMeshProUGUI[3];
+                    roadsideOptionSubtitles = new TextMeshProUGUI[3];
+                    Color[] optColors = { MedievalUITheme.BtnPrimaryGold, MedievalUITheme.BtnDefend, MedievalUITheme.BtnNeutralSlate };
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        GameObject bGo = new GameObject($"Option_{i}", typeof(RectTransform), typeof(Image), typeof(Button));
+                        bGo.transform.SetParent(optList.transform, false);
+                        Image bBg = bGo.GetComponent<Image>();
+                        bBg.sprite = panelSprite;
+                        bBg.type = panelSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+                        bBg.pixelsPerUnitMultiplier = 0.65f;
+                        bBg.color = optColors[i];
+
+                        Button btn = bGo.GetComponent<Button>();
+                        btn.targetGraphic = bBg;
+
+                        GameObject lGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+                        lGo.transform.SetParent(bGo.transform, false);
+                        TextMeshProUGUI lTmp = lGo.GetComponent<TextMeshProUGUI>();
+                        if (fontBold != null) lTmp.font = fontBold;
+                        lTmp.fontSize = 16.5f;
+                        lTmp.fontStyle = FontStyles.Bold;
+                        lTmp.color = MedievalUITheme.IvoryText;
+                        lTmp.alignment = TextAlignmentOptions.MidlineLeft;
+                        lTmp.raycastTarget = false;
+                        lTmp.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                        lTmp.rectTransform.anchorMax = new Vector2(1f, 1f);
+                        lTmp.rectTransform.offsetMin = new Vector2(16f, 0f);
+                        lTmp.rectTransform.offsetMax = new Vector2(-16f, -6f);
+
+                        GameObject sGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+                        sGo.transform.SetParent(bGo.transform, false);
+                        TextMeshProUGUI sTmp = sGo.GetComponent<TextMeshProUGUI>();
+                        if (fontBold != null) sTmp.font = fontBold;
+                        sTmp.fontSize = 13.5f;
+                        sTmp.color = MedievalUITheme.GoldSoft;
+                        sTmp.alignment = TextAlignmentOptions.MidlineLeft;
+                        sTmp.raycastTarget = false;
+                        sTmp.rectTransform.anchorMin = new Vector2(0f, 0f);
+                        sTmp.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                        sTmp.rectTransform.offsetMin = new Vector2(16f, 6f);
+                        sTmp.rectTransform.offsetMax = new Vector2(-16f, 0f);
+
+                        roadsideOptionButtons[i] = btn;
+                        roadsideOptionLabels[i] = lTmp;
+                        roadsideOptionSubtitles[i] = sTmp;
+                    }
+
+                    evOverlay.SetActive(false);
+                    roadsideEventRoot = evOverlay;
+                }
+            }
+        }
+
+        private static Sprite _fallbackBarSprite;
+        private static Sprite GetWhiteBarSprite()
+        {
+            if (_fallbackBarSprite != null) return _fallbackBarSprite;
+            Texture2D tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 4; y++)
+                for (int x = 0; x < 4; x++)
+                    tex.SetPixel(x, y, Color.white);
+            tex.Apply();
+            _fallbackBarSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 16f);
+            return _fallbackBarSprite;
         }
 
         public void ShowGameOver()
@@ -1672,10 +2334,14 @@ namespace MedievalRPG.UI
                 ? "\n- <color=#FFD24A><b>ĐÃ MỞ KHÓA CHƯƠNG CHIẾN DỊCH TIẾP THEO!</b></color>"
                 : "";
 
+            string quizLine = total > 0
+                ? $"- Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)  |  Chuỗi cao nhất: <b>{battleSystem.BestQuizStreak}</b>"
+                : "- Chế độ Quiz: <b>Tắt (Tự do)</b>  |  <i>Bật Quiz đạt ≥75% để mở khóa Sao thứ 3</i>";
+
             return $"{headline}\n\n" +
                    $"- Chiến trường: <b>{battleSystem.ActiveStage.title}</b> ({stageWaveStr}){starStr}\n" +
                    $"- Tổng hiệp: <b>{battleSystem.TurnCount}</b>  |  Sống sót: <b>{aliveCount}/{battleSystem.partyUnits.Count}</b>\n" +
-                   $"- Câu hỏi đúng: <b>{correct}/{total}</b> ({pct}%)  |  Chuỗi cao nhất: <b>{battleSystem.BestQuizStreak}</b>\n" +
+                   $"{quizLine}\n" +
                    $"- Thưởng trận: <b>+{battleSystem.SessionGoldEarned} Vàng</b>{firstGoldStr}  |  <b>+{battleSystem.SessionExpEarned} EXP</b> (Quỹ: {battleSystem.TotalPlayerGold}V)\n" +
                    $"{lootLine}{highlightLine}{levelUpStr}{unlockStr}";
         }
@@ -1705,7 +2371,7 @@ namespace MedievalRPG.UI
         {
             _isTransitioning = true;
             if (fadeOverlay != null) yield return FadeRoutine(0f, 1f, 0.28f);
-            Time.timeScale = 1f;
+            TimeScaleController.Reset();
             SceneManager.LoadScene(sceneIndex);
         }
 
@@ -1713,7 +2379,7 @@ namespace MedievalRPG.UI
         {
             _isTransitioning = true;
             if (fadeOverlay != null) yield return FadeRoutine(0f, 1f, 0.28f);
-            Time.timeScale = 1f;
+            TimeScaleController.Reset();
             SceneManager.LoadScene(sceneName);
         }
 

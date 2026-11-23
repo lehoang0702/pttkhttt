@@ -17,10 +17,10 @@ MonoBehaviour:
   baseLevel: 2
   isBoss: 0
   loreDescription: A stalwart protector clad in iron plate armor.
-  maxHealth: 105
+  maxHealth: 125
   maxMana: 45
-  physicalAttack: 20
-  magicAttack: 8
+  physicalAttack: 24
+  magicAttack: 9
   physicalDefense: 9
   magicDefense: 8
   speed: 16

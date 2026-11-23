@@ -12,6 +12,7 @@ namespace MedievalRPG.UI
     public class WorldUnitHUD : MonoBehaviour
     {
         [SerializeField] private Image hpFillImage;
+        [SerializeField] private Image hpTrailImage;
         [SerializeField] private TextMeshProUGUI nameLabel;
         [SerializeField] private GameObject turnArrowRoot;
         [SerializeField] private GameObject defendBadgeRoot;
@@ -26,9 +27,16 @@ namespace MedievalRPG.UI
         private RectTransform _parentRect;
         private Canvas _rootCanvas;
         private float _headOffsetWorld = 0.95f;
+        private float _displayedHpRatio = 1f;
+        private float _trailHpRatio = 1f;
         private bool _isTurnActive;
         private Vector2 _arrowBaseAnchoredPos;
         private RectTransform _arrowRect;
+
+        public void ConfigureTrailImage(Image trailImg)
+        {
+            hpTrailImage = trailImg;
+        }
 
         public void Configure(
             Image hpFill, TextMeshProUGUI nameTxt,
@@ -73,11 +81,51 @@ namespace MedievalRPG.UI
             }
             if (hpFillImage != null)
             {
+                EnsureTrailImageExists();
                 hpFillImage.color = unit.isEnemy ? MedievalUITheme.DangerRed : MedievalUITheme.SuccessGreen;
+                float initRatio = unit.maxHP > 0 ? Mathf.Clamp01((float)unit.currentHP / unit.maxHP) : 0f;
+                _displayedHpRatio = initRatio;
+                _trailHpRatio = initRatio;
+                hpFillImage.fillAmount = initRatio;
+                if (hpTrailImage != null) hpTrailImage.fillAmount = initRatio;
             }
 
             gameObject.SetActive(true);
             Refresh(false, false);
+        }
+
+        private void EnsureTrailImageExists()
+        {
+            if (hpTrailImage != null || hpFillImage == null) return;
+            Transform barFrame = hpFillImage.transform.parent;
+            if (barFrame == null) return;
+
+            Transform existing = barFrame.Find("MiniHPTrailFill");
+            if (existing != null && existing.TryGetComponent<Image>(out var exImg))
+            {
+                hpTrailImage = exImg;
+                return;
+            }
+
+            GameObject go = new GameObject("MiniHPTrailFill", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(barFrame, false);
+            int fillIdx = hpFillImage.transform.GetSiblingIndex();
+            go.transform.SetSiblingIndex(Mathf.Max(0, fillIdx));
+
+            hpTrailImage = go.GetComponent<Image>();
+            hpTrailImage.sprite = hpFillImage.sprite;
+            hpTrailImage.type = Image.Type.Filled;
+            hpTrailImage.fillMethod = Image.FillMethod.Horizontal;
+            hpTrailImage.color = MedievalUITheme.HpTrailGold;
+            hpTrailImage.raycastTarget = false;
+
+            RectTransform rt = hpTrailImage.rectTransform;
+            RectTransform fillRt = hpFillImage.rectTransform;
+            rt.anchorMin = fillRt.anchorMin;
+            rt.anchorMax = fillRt.anchorMax;
+            rt.pivot = fillRt.pivot;
+            rt.offsetMin = fillRt.offsetMin;
+            rt.offsetMax = fillRt.offsetMax;
         }
 
         public void Refresh(bool isActiveTurn, bool isTargeted = false)
@@ -146,7 +194,19 @@ namespace MedievalRPG.UI
             if (hpFillImage != null)
             {
                 float targetFill = _unit.maxHP > 0 ? Mathf.Clamp01((float)_unit.currentHP / _unit.maxHP) : 0f;
-                hpFillImage.fillAmount = Mathf.Lerp(hpFillImage.fillAmount, targetFill, Time.deltaTime * 12f);
+                _displayedHpRatio = Mathf.Lerp(_displayedHpRatio, targetFill, Time.deltaTime * 12f);
+                _trailHpRatio = targetFill < _trailHpRatio
+                    ? Mathf.Lerp(_trailHpRatio, targetFill, Time.deltaTime * 3.0f)
+                    : _displayedHpRatio;
+                hpFillImage.fillAmount = _displayedHpRatio;
+                if (!_unit.isEnemy)
+                {
+                    hpFillImage.color = targetFill < 0.30f ? MedievalUITheme.HpWarning : MedievalUITheme.SuccessGreen;
+                }
+                if (hpTrailImage != null)
+                {
+                    hpTrailImage.fillAmount = _trailHpRatio;
+                }
             }
 
             Vector3 worldPos = _unit.transform.position + new Vector3(0f, _headOffsetWorld, 0f);

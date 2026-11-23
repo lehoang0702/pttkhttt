@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: mage_acc_epic_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: mage_acc_epic_3
+  itemName: "Ma \u0110i\u1EC3n H\u1ECFa Long"
+  description: "Cu\u1ED1n ma \u0111i\u1EC3n b\u1ECDc da r\u1ED3ng ch\u1EE9a \u0111\u1EF1ng b\xED thu\u1EADt thi\xEAu \u0111\u1ED1t."
+  requiredClass: 1
+  slot: 2
+  rarity: 2
+  icon: {fileID: 21300000, guid: 4a7f5b8dbd5e685618688a6336a23304, type: 3}
+  bonusMaxHP: 23
+  bonusMaxMP: 34
+  bonusPhysicalAttack: 0
+  bonusMagicAttack: 15
+  bonusPhysicalDefense: 3
+  bonusMagicDefense: 8
+  bonusSpeed: 2
+  bonusCritRate: 0.08

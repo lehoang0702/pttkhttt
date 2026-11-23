@@ -16,7 +16,7 @@ MonoBehaviour:
   description: "Bắn ra tia năng lượng ma thuật sắc bén vào một mục tiêu."
   requiredClass: 1
   icon: {fileID: 0}
-  manaCost: 5
+  manaCost: 0
   cooldownTurns: 0
   targetType: 0
   damageType: 1

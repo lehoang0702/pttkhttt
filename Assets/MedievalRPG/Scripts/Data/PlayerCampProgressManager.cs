@@ -31,9 +31,24 @@ namespace MedievalRPG.Data
     }
 
     [Serializable]
+    public class TopicQuizStatEntry
+    {
+        public string topicKey;
+        public int answeredCount;
+        public int correctCount;
+    }
+
+    [Serializable]
+    public class MistakeRecordEntry
+    {
+        public string questionText;
+        public int wrongCount = 1;
+    }
+
+    [Serializable]
     public class CampProgressSavePayload
     {
-        public int version = 2;
+        public int version = 3;
         public int gold = 180;
         public List<ConsumableStockEntry> consumables = new List<ConsumableStockEntry>();
         public List<CampBuffType> activeBuffs = new List<CampBuffType>();
@@ -48,6 +63,8 @@ namespace MedievalRPG.Data
         public List<HeroProgressEntry> heroProgress = new List<HeroProgressEntry>();
         public List<StageProgressEntry> stageProgress = new List<StageProgressEntry>();
         public List<string> mistakeQuestions = new List<string>();
+        public List<MistakeRecordEntry> mistakeRecords = new List<MistakeRecordEntry>();
+        public List<TopicQuizStatEntry> topicStats = new List<TopicQuizStatEntry>();
         public List<AchievementId> unlockedAchievements = new List<AchievementId>();
         public List<AchievementId> claimedAchievements = new List<AchievementId>();
     }
@@ -124,6 +141,8 @@ namespace MedievalRPG.Data
         private readonly Dictionary<CharacterClassType, HeroProgressEntry> _heroProgress = new Dictionary<CharacterClassType, HeroProgressEntry>();
         private readonly Dictionary<CampaignStageId, StageProgressEntry> _stageProgress = new Dictionary<CampaignStageId, StageProgressEntry>();
         private readonly List<string> _mistakeQuestions = new List<string>();
+        private readonly Dictionary<string, int> _mistakeWrongCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, TopicQuizStatEntry> _topicStats = new Dictionary<string, TopicQuizStatEntry>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<AchievementId> _unlockedAchievements = new HashSet<AchievementId>();
         private readonly HashSet<AchievementId> _claimedAchievements = new HashSet<AchievementId>();
 
@@ -135,6 +154,7 @@ namespace MedievalRPG.Data
         private int _mistakesReviewedCount;
         private bool _isLoaded;
         private bool _disableDiskPersistence;
+        private string _customSavePath;
 
         public int Gold { get { LoadIfNeeded(); return _gold; } }
         public CampaignStageId SelectedStage { get { LoadIfNeeded(); return _selectedStage; } }
@@ -179,9 +199,18 @@ namespace MedievalRPG.Data
         public void InitializeForTests(int startingGold = DefaultStartingGold)
         {
             _disableDiskPersistence = true;
+            _customSavePath = null;
             ResetStateInMemory(startingGold);
             _isLoaded = true;
             OnCampProgressChanged?.Invoke();
+        }
+
+        public void InitializeForDiskTests(string customSavePath, int startingGold = DefaultStartingGold)
+        {
+            _disableDiskPersistence = false;
+            _customSavePath = customSavePath;
+            ResetStateInMemory(startingGold);
+            _isLoaded = false;
         }
 
         private void ResetStateInMemory(int startingGold)
@@ -192,6 +221,8 @@ namespace MedievalRPG.Data
             ResetHeroProgressDefaults();
             ResetStageProgressDefaults();
             _mistakeQuestions.Clear();
+            _mistakeWrongCounts.Clear();
+            _topicStats.Clear();
             _unlockedAchievements.Clear();
             _claimedAchievements.Clear();
             _selectedStage = CampaignStageId.ForestChapter1;
@@ -244,14 +275,16 @@ namespace MedievalRPG.Data
 
             if (_disableDiskPersistence) return;
             string path = GetSavePath();
-            if (!File.Exists(path)) return;
+            CampProgressSavePayload payload = SaveFileUtility.LoadWithBackup(
+                path,
+                TryDeserializePayload,
+                out _,
+                out _,
+                msg => Debug.LogWarning($"[PlayerCampProgressManager] {msg}"));
+            if (payload == null) return;
 
             try
             {
-                string json = File.ReadAllText(path);
-                CampProgressSavePayload payload = JsonUtility.FromJson<CampProgressSavePayload>(json);
-                if (payload == null) return;
-
                 _gold = Mathf.Max(0, payload.gold);
                 _selectedStage = payload.selectedStage;
                 _quizFilter = payload.quizFilter;
@@ -308,7 +341,37 @@ namespace MedievalRPG.Data
                     foreach (string q in payload.mistakeQuestions)
                     {
                         if (!string.IsNullOrWhiteSpace(q) && !_mistakeQuestions.Contains(q))
+                        {
                             _mistakeQuestions.Add(q);
+                            _mistakeWrongCounts[q] = 1;
+                        }
+                    }
+                }
+                if (payload.mistakeRecords != null)
+                {
+                    foreach (MistakeRecordEntry rec in payload.mistakeRecords)
+                    {
+                        if (rec == null || string.IsNullOrWhiteSpace(rec.questionText)) continue;
+                        if (!_mistakeQuestions.Contains(rec.questionText))
+                        {
+                            _mistakeQuestions.Add(rec.questionText);
+                        }
+                        _mistakeWrongCounts[rec.questionText] = Mathf.Max(1, rec.wrongCount);
+                    }
+                }
+                if (payload.topicStats != null)
+                {
+                    foreach (TopicQuizStatEntry ts in payload.topicStats)
+                    {
+                        if (ts == null || string.IsNullOrWhiteSpace(ts.topicKey) || ts.answeredCount <= 0) continue;
+                        string norm = NormalizeTopicKey(ts.topicKey);
+                        if (!_topicStats.TryGetValue(norm, out TopicQuizStatEntry existing))
+                        {
+                            existing = new TopicQuizStatEntry { topicKey = norm };
+                            _topicStats[norm] = existing;
+                        }
+                        existing.answeredCount += Mathf.Max(0, ts.answeredCount);
+                        existing.correctCount = Mathf.Min(existing.answeredCount, existing.correctCount + Mathf.Max(0, ts.correctCount));
                     }
                 }
                 if (payload.unlockedAchievements != null)
@@ -322,8 +385,16 @@ namespace MedievalRPG.Data
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[PlayerCampProgressManager] Không thể đọc file tiến trình: {ex.Message}");
+                Debug.LogWarning($"[PlayerCampProgressManager] Lỗi áp dụng dữ liệu tiến trình: {ex.Message}");
             }
+        }
+
+        private static CampProgressSavePayload TryDeserializePayload(string json)
+        {
+            if (!SaveFileUtility.LooksLikeJsonObject(json)) return null;
+            string trimmed = json.Trim();
+            if (!trimmed.Contains("\"version\"") && !trimmed.Contains("\"gold\"")) return null;
+            return JsonUtility.FromJson<CampProgressSavePayload>(trimmed);
         }
 
         public void SaveToDisk()
@@ -333,7 +404,7 @@ namespace MedievalRPG.Data
             {
                 CampProgressSavePayload payload = new CampProgressSavePayload
                 {
-                    version = 2,
+                    version = 3,
                     gold = _gold,
                     selectedStage = _selectedStage,
                     quizFilter = _quizFilter,
@@ -348,10 +419,26 @@ namespace MedievalRPG.Data
                 foreach (var kv in _heroProgress) payload.heroProgress.Add(kv.Value);
                 foreach (var kv in _stageProgress) payload.stageProgress.Add(kv.Value);
                 payload.mistakeQuestions.AddRange(_mistakeQuestions);
+                for (int i = 0; i < _mistakeQuestions.Count; i++)
+                {
+                    string qText = _mistakeQuestions[i];
+                    payload.mistakeRecords.Add(new MistakeRecordEntry
+                    {
+                        questionText = qText,
+                        wrongCount = _mistakeWrongCounts.TryGetValue(qText, out int wc) ? Mathf.Max(1, wc) : 1
+                    });
+                }
+                foreach (var kv in _topicStats)
+                {
+                    if (kv.Value != null && kv.Value.answeredCount > 0) payload.topicStats.Add(kv.Value);
+                }
                 foreach (AchievementId a in _unlockedAchievements) payload.unlockedAchievements.Add(a);
                 foreach (AchievementId a in _claimedAchievements) payload.claimedAchievements.Add(a);
 
-                File.WriteAllText(GetSavePath(), JsonUtility.ToJson(payload, true));
+                SaveFileUtility.WriteAtomicWithBackup(
+                    GetSavePath(),
+                    JsonUtility.ToJson(payload, true),
+                    msg => Debug.LogWarning($"[PlayerCampProgressManager] {msg}"));
             }
             catch (Exception ex)
             {
@@ -359,7 +446,9 @@ namespace MedievalRPG.Data
             }
         }
 
-        private static string GetSavePath() => Path.Combine(Application.persistentDataPath, SaveFileName);
+        private string GetSavePath() => !string.IsNullOrEmpty(_customSavePath)
+            ? _customSavePath
+            : Path.Combine(Application.persistentDataPath, SaveFileName);
 
         // =====================================================================
         // VÀNG, SHOP & BÙA LỢI
@@ -718,13 +807,142 @@ namespace MedievalRPG.Data
             SaveToDisk();
         }
 
+        public static string NormalizeTopicKey(string category)
+        {
+            if (string.IsNullOrWhiteSpace(category)) return "General";
+            string raw = category.Trim();
+            int dotIdx = raw.IndexOf('•');
+            if (dotIdx >= 0 && dotIdx + 1 < raw.Length)
+            {
+                raw = raw.Substring(dotIdx + 1).Trim();
+            }
+            else
+            {
+                int dashIdx = raw.IndexOf('-');
+                if (dashIdx >= 0 && dashIdx + 1 < raw.Length)
+                {
+                    raw = raw.Substring(dashIdx + 1).Trim();
+                }
+            }
+            if (string.Equals(raw, "Modal Verbs", StringComparison.OrdinalIgnoreCase)) return "Modals";
+            return string.IsNullOrWhiteSpace(raw) ? "General" : raw;
+        }
+
+        public void RecordQuizAttemptStats(string category, bool isCorrect) =>
+            RecordQuizAttemptStats(category, isCorrect, true);
+
+        public void RecordQuizAttemptStats(string category, bool isCorrect, bool saveImmediate)
+        {
+            LoadIfNeeded();
+            string topic = NormalizeTopicKey(category);
+            if (!_topicStats.TryGetValue(topic, out TopicQuizStatEntry entry))
+            {
+                entry = new TopicQuizStatEntry { topicKey = topic, answeredCount = 0, correctCount = 0 };
+                _topicStats[topic] = entry;
+            }
+            entry.answeredCount++;
+            if (isCorrect) entry.correctCount++;
+            if (saveImmediate)
+            {
+                SaveToDisk();
+                OnCampProgressChanged?.Invoke();
+            }
+        }
+
+        public List<TopicQuizStatEntry> GetTopicStatsSortedByWeakness()
+        {
+            LoadIfNeeded();
+            List<TopicQuizStatEntry> list = new List<TopicQuizStatEntry>(_topicStats.Count);
+            foreach (var kv in _topicStats)
+            {
+                if (kv.Value != null && kv.Value.answeredCount > 0)
+                {
+                    list.Add(new TopicQuizStatEntry
+                    {
+                        topicKey = kv.Value.topicKey,
+                        answeredCount = kv.Value.answeredCount,
+                        correctCount = kv.Value.correctCount
+                    });
+                }
+            }
+            list.Sort((a, b) =>
+            {
+                float accA = (float)a.correctCount / a.answeredCount;
+                float accB = (float)b.correctCount / b.answeredCount;
+                int accCmp = accA.CompareTo(accB);
+                if (accCmp != 0) return accCmp;
+                int cntCmp = b.answeredCount.CompareTo(a.answeredCount);
+                if (cntCmp != 0) return cntCmp;
+                return string.CompareOrdinal(a.topicKey, b.topicKey);
+            });
+            return list;
+        }
+
+        public void GetOverallQuizAccuracy(out int totalAnswered, out int totalCorrect)
+        {
+            LoadIfNeeded();
+            totalAnswered = 0;
+            totalCorrect = 0;
+            foreach (var kv in _topicStats)
+            {
+                if (kv.Value == null) continue;
+                totalAnswered += kv.Value.answeredCount;
+                totalCorrect += kv.Value.correctCount;
+            }
+        }
+
+        public string GetWeakestTopicsSummary(int maxTopics = 3)
+        {
+            List<TopicQuizStatEntry> sorted = GetTopicStatsSortedByWeakness();
+            if (sorted.Count == 0)
+            {
+                return "Điểm yếu chủ đề: Chưa có dữ liệu trả lời Quiz trong trận.";
+            }
+
+            int take = Mathf.Min(Mathf.Max(1, maxTopics), sorted.Count);
+            List<string> parts = new List<string>(take);
+            for (int i = 0; i < take; i++)
+            {
+                TopicQuizStatEntry e = sorted[i];
+                int pct = Mathf.RoundToInt((float)e.correctCount / e.answeredCount * 100f);
+                string hex = pct < 60 ? "#FF7A7A" : (pct < 80 ? "#F2CA6B" : "#5CE09A");
+                parts.Add($"<color={hex}>{e.topicKey} {pct}% ({e.correctCount}/{e.answeredCount})</color>");
+            }
+            return $"Chủ đề cần chú ý: {string.Join("  •  ", parts)}";
+        }
+
+        public bool HasQuizMistake(string questionText)
+        {
+            LoadIfNeeded();
+            return !string.IsNullOrWhiteSpace(questionText) && _mistakeQuestions.Contains(questionText);
+        }
+
+        public int GetMistakeWrongCount(string questionText)
+        {
+            LoadIfNeeded();
+            if (string.IsNullOrWhiteSpace(questionText)) return 0;
+            return _mistakeWrongCounts.TryGetValue(questionText, out int c) ? c : (_mistakeQuestions.Contains(questionText) ? 1 : 0);
+        }
+
         public void RecordQuizMistake(string questionText)
         {
             LoadIfNeeded();
             if (string.IsNullOrWhiteSpace(questionText)) return;
-            if (_mistakeQuestions.Contains(questionText)) return;
+            if (_mistakeQuestions.Contains(questionText))
+            {
+                _mistakeWrongCounts[questionText] = GetMistakeWrongCount(questionText) + 1;
+                SaveToDisk();
+                OnCampProgressChanged?.Invoke();
+                return;
+            }
             _mistakeQuestions.Add(questionText);
-            if (_mistakeQuestions.Count > 40) _mistakeQuestions.RemoveAt(0);
+            _mistakeWrongCounts[questionText] = 1;
+            if (_mistakeQuestions.Count > 40)
+            {
+                string removed = _mistakeQuestions[0];
+                _mistakeQuestions.RemoveAt(0);
+                _mistakeWrongCounts.Remove(removed);
+            }
             SaveToDisk();
             OnCampProgressChanged?.Invoke();
         }
@@ -733,6 +951,7 @@ namespace MedievalRPG.Data
         {
             LoadIfNeeded();
             if (!_mistakeQuestions.Remove(questionText)) return false;
+            _mistakeWrongCounts.Remove(questionText);
             _mistakesReviewedCount++;
             if (_mistakesReviewedCount >= 3)
             {
@@ -787,8 +1006,7 @@ namespace MedievalRPG.Data
             _isLoaded = true;
             if (!_disableDiskPersistence)
             {
-                string path = GetSavePath();
-                if (File.Exists(path)) File.Delete(path);
+                SaveFileUtility.DeleteSaveAndBackups(GetSavePath());
             }
             if (alsoClearEquipment)
             {

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_armor_common_4
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_armor_common_4
+  itemName: "\xC1o Chi\u1EBFn C\u01A1 B\u1EA3n"
+  description: "\xC1o chi\u1EBFn \u0111\u1ED9n b\xF4ng l\xF3t th\xE9p nh\u1EB9 gi\u1EEF \u1EA5m v\xE0 gi\u1EA3m ch\u1EA5n th\u01B0\u01A1ng."
+  requiredClass: 0
+  slot: 1
+  rarity: 0
+  icon: {fileID: 21300000, guid: 05771088f6a095d42b2b51b47e5aef41, type: 3}
+  bonusMaxHP: 19
+  bonusMaxMP: 3
+  bonusPhysicalAttack: 1
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 3
+  bonusMagicDefense: 3
+  bonusSpeed: 0
+  bonusCritRate: 0

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: mage_acc_epic_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: mage_acc_epic_2
+  itemName: "Qu\u1EA3 C\u1EA7u Tinh T\xFA"
+  description: "Qu\u1EA3 c\u1EA7u xoay v\u1EA7n tinh v\xE2n cung c\u1EA5p ngu\u1ED3n mana g\u1EA7n nh\u01B0 v\xF4 t\u1EADn."
+  requiredClass: 1
+  slot: 2
+  rarity: 2
+  icon: {fileID: 21300000, guid: d9bb7a52ee7f13238b2dae50077c6d0c, type: 3}
+  bonusMaxHP: 26
+  bonusMaxMP: 38
+  bonusPhysicalAttack: 0
+  bonusMagicAttack: 13
+  bonusPhysicalDefense: 3
+  bonusMagicDefense: 10
+  bonusSpeed: 3
+  bonusCritRate: 0.06

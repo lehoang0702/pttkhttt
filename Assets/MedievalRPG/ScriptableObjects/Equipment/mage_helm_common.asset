@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: mage_helm_common
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: mage_helm_common
+  itemName: "M\u0169 V\u1EA3i H\u1ECDc Tr\xF2"
+  description: "M\u0169 ch\xF3p v\u1EA3i th\xF4 quen thu\u1ED9c c\u1EE7a m\u1ECDi ph\xE1p s\u01B0 h\u1ECDc vi\u1EC7n."
+  requiredClass: 1
+  slot: 3
+  rarity: 0
+  icon: {fileID: 21300000, guid: a9993326ab2de5cc291fae529b7c839b, type: 3}
+  bonusMaxHP: 7
+  bonusMaxMP: 10
+  bonusPhysicalAttack: 0
+  bonusMagicAttack: 2
+  bonusPhysicalDefense: 1
+  bonusMagicDefense: 3
+  bonusSpeed: 0
+  bonusCritRate: 0

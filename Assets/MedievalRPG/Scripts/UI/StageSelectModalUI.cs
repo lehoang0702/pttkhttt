@@ -19,6 +19,12 @@ namespace MedievalRPG.UI
         [SerializeField] private TMP_FontAsset fontBold;
         [SerializeField] private TMP_FontAsset fontBody;
 
+        public void OverrideFonts(TMP_FontAsset bold, TMP_FontAsset body)
+        {
+            if (bold != null) fontBold = bold;
+            if (body != null) fontBody = body;
+        }
+
         [Header("Thành phần hiển thị")]
         [SerializeField] private Transform stageListContent;
         [SerializeField] private TextMeshProUGUI selectedSummaryTMP;
@@ -188,8 +194,8 @@ namespace MedievalRPG.UI
                 : (selected ? new Color(0.14f, 0.21f, 0.28f, 0.98f) : new Color(0.09f, 0.11f, 0.16f, 0.96f));
 
             LayoutElement le = rowGo.AddComponent<LayoutElement>();
-            le.preferredHeight = 96f;
-            le.minHeight = 96f;
+            le.preferredHeight = 106f;
+            le.minHeight = 106f;
 
             // Thanh màu chủ đề bên trái
             GameObject stripeGo = new GameObject("ThemeStripe");
@@ -258,14 +264,14 @@ namespace MedievalRPG.UI
                     : "";
                 descTMP.text = $"Đề xuất Lv.{def.recommendedLevel}  |  Trọng tâm: {def.quizFocusLabel}  |  Thưởng x{def.rewardMultiplier:0.0}{bonusFirst}";
             }
-            descTMP.fontSize = 14f;
+            descTMP.fontSize = 14.5f;
             descTMP.enableAutoSizing = true;
-            descTMP.fontSizeMin = 11f;
-            descTMP.fontSizeMax = 14f;
+            descTMP.fontSizeMin = 11.5f;
+            descTMP.fontSizeMax = 14.5f;
             descTMP.color = unlocked ? MedievalUITheme.GoldSoft : MedievalUITheme.SlateMuted;
             descTMP.alignment = TextAlignmentOptions.MidlineLeft;
-            descTMP.textWrappingMode = TextWrappingModes.NoWrap;
-            descTMP.overflowMode = TextOverflowModes.Truncate;
+            descTMP.textWrappingMode = TextWrappingModes.Normal;
+            descTMP.overflowMode = TextOverflowModes.Ellipsis;
             descTMP.raycastTarget = false;
             RectTransform dRt = descTMP.rectTransform;
             dRt.anchorMin = new Vector2(0f, 0.06f);

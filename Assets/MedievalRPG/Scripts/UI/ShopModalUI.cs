@@ -21,6 +21,12 @@ namespace MedievalRPG.UI
         [SerializeField] private Sprite badgePillSprite;
         [SerializeField] private TMP_FontAsset fontBold;
         [SerializeField] private TMP_FontAsset fontBody;
+
+        public void OverrideFonts(TMP_FontAsset bold, TMP_FontAsset body)
+        {
+            if (bold != null) fontBold = bold;
+            if (body != null) fontBody = body;
+        }
         [SerializeField] private Sprite iconHeart;
         [SerializeField] private Sprite iconMana;
         [SerializeField] private Sprite iconSword;
@@ -228,8 +234,8 @@ namespace MedievalRPG.UI
             rowBg.color = new Color(0.08f, 0.10f, 0.14f, 0.96f);
 
             LayoutElement le = rowGo.AddComponent<LayoutElement>();
-            le.preferredHeight = 74f;
-            le.minHeight = 74f;
+            le.preferredHeight = 84f;
+            le.minHeight = 84f;
 
             // Thanh màu phân loại bên trái
             GameObject stripeGo = new GameObject("Stripe");
@@ -298,14 +304,14 @@ namespace MedievalRPG.UI
             TextMeshProUGUI descTMP = descGo.AddComponent<TextMeshProUGUI>();
             if (fontBody != null) descTMP.font = fontBody;
             descTMP.text = descText;
-            descTMP.fontSize = 12.5f;
+            descTMP.fontSize = 13f;
             descTMP.enableAutoSizing = true;
-            descTMP.fontSizeMin = 9.5f;
-            descTMP.fontSizeMax = 12f;
+            descTMP.fontSizeMin = 11f;
+            descTMP.fontSizeMax = 13f;
             descTMP.color = MedievalUITheme.IvoryText;
             descTMP.alignment = TextAlignmentOptions.TopLeft;
             descTMP.textWrappingMode = TextWrappingModes.Normal;
-            descTMP.overflowMode = TextOverflowModes.Truncate;
+            descTMP.overflowMode = TextOverflowModes.Ellipsis;
             descTMP.raycastTarget = false;
             RectTransform dsRt = descTMP.rectTransform;
             dsRt.anchorMin = new Vector2(0f, 0f);

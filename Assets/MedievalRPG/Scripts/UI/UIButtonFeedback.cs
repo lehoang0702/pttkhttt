@@ -44,9 +44,11 @@ namespace MedievalRPG.UI
 
         private void OnDisable()
         {
+            bool wasHovered = _isHovered;
             _isHovered = false;
             _isPressed = false;
             transform.localScale = _initialScale;
+            if (wasHovered) OnHoverChanged?.Invoke(this, false);
         }
 
         public void SetBaseColor(Color color)

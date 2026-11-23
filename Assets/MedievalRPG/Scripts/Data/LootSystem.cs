@@ -208,5 +208,39 @@ namespace MedievalRPG.Data
 
             return drops;
         }
+
+        /// <summary>
+        /// Sinh chắc chắn 1 món trang bị (tối thiểu Hiếm) cho phần thưởng Rương Cổ / sự kiện đặc biệt.
+        /// </summary>
+        public static LootDropResult RollGuaranteedEquipmentDrop(
+            EquipmentCatalog catalog,
+            int waveIndex,
+            int totalWaves,
+            float extraLuck = 0.15f,
+            int quizStreak = 0,
+            ItemRarity minRarity = ItemRarity.Rare,
+            System.Random rng = null)
+        {
+            if (catalog == null || catalog.allItems == null || catalog.allItems.Count == 0)
+            {
+                return default;
+            }
+
+            float streakLuck = quizStreak >= 3 ? 0.08f : 0f;
+            float totalLuck = Mathf.Max(0f, extraLuck) + streakLuck;
+            float? fixedRoll = rng != null ? (float?)rng.NextDouble() : null;
+            ItemRarity rarity = RollRarity(waveIndex, totalWaves, false, totalLuck, fixedRoll);
+            if (rarity < minRarity) rarity = minRarity;
+
+            EquipmentItemData item = catalog.PickRandomItem(rarity, rng);
+            return new LootDropResult
+            {
+                equipment = item,
+                isConsumableOnly = false,
+                waveNumber = waveIndex + 1,
+                totalWaves = Mathf.Max(1, totalWaves),
+                dropChanceAtWave = 1f
+            };
+        }
     }
 }

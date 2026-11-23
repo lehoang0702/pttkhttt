@@ -31,6 +31,7 @@ namespace MedievalRPG.EditorTools
     {
         private const string UI_SPRITE_ROOT = "Assets/MedievalRPG/Sprites/UI";
         private const string FONT_ROOT      = "Assets/MedievalRPG/Fonts";
+        private const string FONT_SRC_ROOT  = "Assets/MedievalRPG/Resources/MedievalFonts";
         private const string MAIN_MENU_PATH = "Assets/MedievalRPG/Scenes/MainMenu.unity";
         private const string CAMP_HUB_PATH  = "Assets/MedievalRPG/Scenes/CampHub.unity";
         private const string BATTLE_PATH    = "Assets/MedievalRPG/Scenes/MedievalBattleDemo.unity";
@@ -39,6 +40,15 @@ namespace MedievalRPG.EditorTools
         static MedievalUIBuilder()
         {
             EditorApplication.delayCall += EnsureBuiltOnFirstLoad;
+            EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+        }
+
+        private static void HandlePlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                EnsureBuiltOnFirstLoad();
+            }
         }
 
         private static void EnsureBuiltOnFirstLoad()
@@ -48,7 +58,10 @@ namespace MedievalRPG.EditorTools
                 return;
             }
 
-            if (File.Exists($"{FONT_ROOT}/Montserrat-SemiBold SDF.asset") &&
+            if (File.Exists($"{FONT_ROOT}/UiSans-Regular SDF.asset") &&
+                File.Exists($"{FONT_ROOT}/UiSans-Bold SDF.asset") &&
+                File.Exists($"{FONT_ROOT}/UiSans-Italic SDF.asset") &&
+                File.Exists($"{FONT_ROOT}/UiSans-BoldItalic SDF.asset") &&
                 File.Exists("Assets/TextMesh Pro/Resources/TMP Settings.asset"))
             {
                 return;
@@ -214,9 +227,9 @@ namespace MedievalRPG.EditorTools
             if (reimported) AssetDatabase.Refresh();
         }
 
-        private static TMP_FontAsset CreateOrLoadVietnameseFontAsset(string fontFileName, string assetFileName)
+        private static TMP_FontAsset CreateOrLoadVietnameseFontAsset(string fontFileName, string assetFileName, bool isAlreadyBold = false)
         {
-            string fontPath = $"{FONT_ROOT}/{fontFileName}";
+            string fontPath = $"{FONT_SRC_ROOT}/{fontFileName}";
             string assetPath = $"{FONT_ROOT}/{assetFileName}";
 
             if (AssetImporter.GetAtPath(fontPath) is TrueTypeFontImporter fontImporter)
@@ -238,6 +251,10 @@ namespace MedievalRPG.EditorTools
             TMP_FontAsset existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
             if (existing != null && existing.atlasTextures != null && existing.atlasTextures.Length > 0 && existing.atlasTextures[0] != null)
             {
+                existing.normalStyle = 0f;
+                existing.normalSpacingOffset = 0f;
+                existing.boldStyle = isAlreadyBold ? 0f : 0.45f;
+                existing.boldSpacing = isAlreadyBold ? 0f : 4f;
                 existing.TryAddCharacters(VIETNAMESE_CHARS, out _);
                 EditorUtility.SetDirty(existing);
                 return existing;
@@ -249,12 +266,17 @@ namespace MedievalRPG.EditorTools
             }
 
             TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
-                sourceFont, 90, 9, GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic, true);
+                sourceFont, 64, 7, GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic, true);
             if (fontAsset == null)
             {
                 Debug.LogError($"[MedievalUIBuilder] Không tạo được TMP_FontAsset từ {fontPath}");
                 return TMP_Settings.defaultFontAsset;
             }
+
+            fontAsset.normalStyle = 0f;
+            fontAsset.normalSpacingOffset = 0f;
+            fontAsset.boldStyle = isAlreadyBold ? 0f : 0.45f;
+            fontAsset.boldSpacing = isAlreadyBold ? 0f : 4f;
 
             AssetDatabase.CreateAsset(fontAsset, assetPath);
 
@@ -293,8 +315,34 @@ namespace MedievalRPG.EditorTools
             return fontAsset;
         }
 
+        private static void ConfigureFontWeightTable(
+            TMP_FontAsset target,
+            TMP_FontAsset regular,
+            TMP_FontAsset italic,
+            TMP_FontAsset bold,
+            TMP_FontAsset boldItalic)
+        {
+            if (target == null) return;
+            TMP_FontWeightPair[] table = target.fontWeightTable;
+            if (table != null && table.Length >= 8)
+            {
+                table[0] = new TMP_FontWeightPair { regularTypeface = regular, italicTypeface = italic };
+                table[4] = new TMP_FontWeightPair { regularTypeface = regular, italicTypeface = italic };
+                table[7] = new TMP_FontWeightPair { regularTypeface = bold, italicTypeface = boldItalic };
+                EditorUtility.SetDirty(target);
+            }
+        }
+
         private static UIAssets LoadAndCreateAssets()
         {
+            TMP_FontAsset fontBold       = CreateOrLoadVietnameseFontAsset("UiSans-Bold.ttf", "UiSans-Bold SDF.asset", true);
+            TMP_FontAsset fontBody       = CreateOrLoadVietnameseFontAsset("UiSans-Regular.ttf", "UiSans-Regular SDF.asset", false);
+            TMP_FontAsset fontItalic     = CreateOrLoadVietnameseFontAsset("UiSans-Italic.ttf", "UiSans-Italic SDF.asset", false);
+            TMP_FontAsset fontBoldItalic = CreateOrLoadVietnameseFontAsset("UiSans-BoldItalic.ttf", "UiSans-BoldItalic SDF.asset", true);
+
+            ConfigureFontWeightTable(fontBody, fontBody, fontItalic, fontBold, fontBoldItalic);
+            ConfigureFontWeightTable(fontBold, fontBold, fontBoldItalic, fontBold, fontBoldItalic);
+
             UIAssets a = new UIAssets
             {
                 panelDarkGold  = AssetDatabase.LoadAssetAtPath<Sprite>($"{UI_SPRITE_ROOT}/UI_Panel_DarkGold.png"),
@@ -329,22 +377,34 @@ namespace MedievalRPG.EditorTools
                 portSkeleton   = AssetDatabase.LoadAssetAtPath<Sprite>($"{UI_SPRITE_ROOT}/Portraits/Portrait_Skeleton.png"),
                 portDarkKnight = AssetDatabase.LoadAssetAtPath<Sprite>($"{UI_SPRITE_ROOT}/Portraits/Portrait_DarkKnight.png"),
 
-                fontDisplay    = CreateOrLoadVietnameseFontAsset("STIXTwoText-Bold.otf", "STIXTwoText-Bold SDF.asset"),
-                fontBold       = CreateOrLoadVietnameseFontAsset("Montserrat-Bold.otf", "Montserrat-Bold SDF.asset"),
-                fontBody       = CreateOrLoadVietnameseFontAsset("Montserrat-SemiBold.otf", "Montserrat-SemiBold SDF.asset"),
+                fontDisplay    = fontBold,
+                fontBold       = fontBold,
+                fontBody       = fontBody,
             };
 
             if (TMP_Settings.instance != null && a.fontBody != null)
             {
-                if (TMP_Settings.fallbackFontAssets == null)
+                var tmpSettingsSo = new SerializedObject(TMP_Settings.instance);
+                var defProp = tmpSettingsSo.FindProperty("m_defaultFontAsset");
+                if (defProp != null && defProp.objectReferenceValue != a.fontBody)
                 {
-                    // TMP_Settings fallback list handled cleanly
+                    defProp.objectReferenceValue = a.fontBody;
                 }
-                else if (!TMP_Settings.fallbackFontAssets.Contains(a.fontBody))
+                tmpSettingsSo.ApplyModifiedPropertiesWithoutUndo();
+
+                if (TMP_Settings.fallbackFontAssets != null)
                 {
-                    TMP_Settings.fallbackFontAssets.Add(a.fontBody);
-                    EditorUtility.SetDirty(TMP_Settings.instance);
+                    TMP_Settings.fallbackFontAssets.RemoveAll(f => f != null && f.name.Contains("Montserrat"));
+                    if (!TMP_Settings.fallbackFontAssets.Contains(a.fontBody))
+                    {
+                        TMP_Settings.fallbackFontAssets.Insert(0, a.fontBody);
+                    }
+                    if (a.fontBold != null && !TMP_Settings.fallbackFontAssets.Contains(a.fontBold))
+                    {
+                        TMP_Settings.fallbackFontAssets.Add(a.fontBold);
+                    }
                 }
+                EditorUtility.SetDirty(TMP_Settings.instance);
             }
 
             return a;
@@ -490,13 +550,13 @@ namespace MedievalRPG.EditorTools
             ftRt.sizeDelta = new Vector2(880f, 34f);
 
             // --- Modal Hướng Dẫn ---
-            GameObject guideModal = CreateModalOverlay("InstructionsModal", canvas.transform, a, new Vector2(860f, 540f),
+            GameObject guideModal = CreateModalOverlay("InstructionsModal", canvas.transform, a, new Vector2(960f, 660f),
                 a.iconBook, "HƯỚNG DẪN CHIẾN ĐẤU", out Transform guideContent, out UnityEngine.UI.Button closeGuideBtn, "ĐÃ HIỂU");
             BuildInstructionsContent(guideContent, a);
             guideModal.SetActive(false);
 
             // --- Modal Cài Đặt ---
-            GameObject settingsModal = CreateModalOverlay("SettingsModal", canvas.transform, a, new Vector2(660f, 700f),
+            GameObject settingsModal = CreateModalOverlay("SettingsModal", canvas.transform, a, new Vector2(700f, 750f),
                 a.iconGear, "CÀI ĐẶT HỆ THỐNG", out Transform settContent, out UnityEngine.UI.Button closeSettBtn, "LƯU & ĐÓNG");
             BuildExtendedSettingsControls(settContent, a,
                 out UnityEngine.UI.Slider musicSlider, out TextMeshProUGUI musicValue,
@@ -549,9 +609,9 @@ namespace MedievalRPG.EditorTools
             Sprite aSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Archer/Frames/Idle/Archer_Idle_0.png");
             Sprite gSpr = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MedievalRPG/Characters/Enemies/Enemy_01/Frames/Idle/Enemy_Idle_0.png");
 
-            GameObject kGo = CreateWorldSprite("Showcase_Knight", root.transform, kSpr, new Vector3(-3.65f, -1.40f, 0f), Vector3.one, 1);
-            GameObject mGo = CreateWorldSprite("Showcase_Mage",   root.transform, mSpr, new Vector3(-4.85f, -1.25f, 0f), Vector3.one, 1);
-            GameObject aGo = CreateWorldSprite("Showcase_Archer", root.transform, aSpr, new Vector3(-4.20f, -0.95f, 0f), Vector3.one, 0);
+            GameObject kGo = CreateWorldSprite("Showcase_Knight", root.transform, kSpr, new Vector3(-3.65f, -1.52f, 0f), new Vector3(MedievalRPGAssetSetup.KnightVisualScale, MedievalRPGAssetSetup.KnightVisualScale, 1f), 1);
+            GameObject mGo = CreateWorldSprite("Showcase_Mage",   root.transform, mSpr, new Vector3(-4.85f, -1.27f, 0f), new Vector3(MedievalRPGAssetSetup.MageVisualScale, MedievalRPGAssetSetup.MageVisualScale, 1f), 1);
+            GameObject aGo = CreateWorldSprite("Showcase_Archer", root.transform, aSpr, new Vector3(-4.20f, -1.02f, 0f), new Vector3(MedievalRPGAssetSetup.ArcherVisualScale, MedievalRPGAssetSetup.ArcherVisualScale, 1f), 0);
             GameObject gGo = CreateWorldSprite("Showcase_Goblin", root.transform, gSpr, new Vector3(4.05f, -1.35f, 0f), Vector3.one, 1);
             if (gGo != null)
             {
@@ -607,20 +667,20 @@ namespace MedievalRPG.EditorTools
         private static void BuildInstructionsContent(Transform parent, UIAssets a)
         {
             VerticalLayoutGroup vlg = parent.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 14f;
+            vlg.spacing = 12f;
             vlg.childControlWidth = true;
-            vlg.childControlHeight = false;
+            vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            CreateRuleRow(parent, a, a.iconSword, MedievalUITheme.BtnAttack, "1. Đội Hình 3 Anh Hùng",
-                "• Hiệp Sĩ (Knight): Máu cao, giáp dày, bảo vệ đồng đội.\n• Pháp Sư (Mage): Sát thương phép & Hồi máu.\n• Cung Thủ (Archer): Tốc độ nhanh, tỉ lệ chí mạng cao.");
+            CreateRuleRow(parent, a, a.iconSword, MedievalUITheme.BtnAttack, "1. Đội Hình 3 Anh Hùng & Hợp Kích [Q]",
+                "• Hiệp Sĩ (Knight): Máu cao, giáp dày, bảo vệ đồng đội.\n• Pháp Sư (Mage): Sát thương phép & Hồi máu.\n• Cung Thủ (Archer): Tốc độ nhanh, tỉ lệ chí mạng cao.\n• Nộ Tri Thức (100/100): Tích từ Quiz đúng & đỡ đòn để tung Tuyệt Kỹ Tam Hùng Phá Thiên [Q]!");
 
-            CreateRuleRow(parent, a, a.iconScroll, MedievalUITheme.GoldPrimary, "2. Trắc Nghiệm Tiếng Anh B1 & B2",
-                "Khi chọn Tấn Công hoặc Kỹ Năng, hãy trả lời câu hỏi Tiếng Anh (CEFR B1–B2: Grammar, Vocab, Phrasal Verbs, Conditionals...).\n• ĐÚNG: Xuất chiêu + thưởng sát thương & +10 Vàng (Chuỗi >= 3 tăng +20% lực đánh!).\n• SAI: Anh hùng mất lượt.");
+            CreateRuleRow(parent, a, a.iconScroll, MedievalUITheme.GoldPrimary, "2. Trắc Nghiệm B1/B2 & Đỡ Đòn Phản Xạ",
+                "• Trả lời Quiz đúng để xuất chiêu (+sát thương & +10V; chuỗi >=3 tăng +20% lực đánh!). Mỗi trận có 1 Gợi ý 50:50 miễn phí.\n• Đỡ Đòn Phản Xạ (8s): Khi Tinh Anh/Boss tung đòn nặng, trả lời nhanh <=3.5s để Phản Đòn Giảm 65% ST (thường -50% ST).\n• Sổ Tay Sảnh Chờ [N]: Ôn câu sai (+15V) hoặc luyện chủ đề B1/B2 bất kỳ lúc nào (+5V).");
 
-            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Sảnh Chờ, Rớt Đồ & Hành Trình 6 Đợt",
-                "• Ghé Sảnh Chờ ngoài rừng để mặc trang bị [I], dùng Vàng mua thuốc & bùa hỗ trợ (+Máu, +Dame, +Giáp) [S].\n• Tiến dọc con đường rừng qua 6 đợt (Quái yếu -> Thành đàn -> Tinh Anh -> Boss); bấm vào rương hoặc [E] để nhặt đồ [1-5].");
+            CreateRuleRow(parent, a, a.iconShield, MedievalUITheme.BtnDefend, "3. Sảnh Chờ, Rớt Đồ & Sự Kiện Dọc Đường",
+                "• Ghé Sảnh Chờ ngoài rừng để mặc trang bị [I], mua thuốc & bùa hỗ trợ [S].\n• Hành trình 6 đợt: Có cơ hội gặp Rương Cổ Ngữ, Đền Rừng Thiêng hoặc Học Giả Lang Thang giữa đường [1-3]; bấm rương / [E] để nhặt trang bị.");
         }
 
         private static void CreateRuleRow(Transform parent, UIAssets a, Sprite icon, Color accent, string title, string body)
@@ -630,20 +690,27 @@ namespace MedievalRPG.EditorTools
             card.pixelsPerUnitMultiplier = 0.7f;
             card.raycastTarget = false;
             LayoutElement le = card.gameObject.AddComponent<LayoutElement>();
-            le.preferredHeight = 104f;
+            le.minHeight = 84f;
 
             HorizontalLayoutGroup hlg = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hlg.padding = new RectOffset(16, 16, 12, 12);
+            hlg.padding = new RectOffset(18, 18, 14, 14);
             hlg.spacing = 16f;
             hlg.childAlignment = TextAnchor.MiddleLeft;
-            hlg.childControlWidth = false;
-            hlg.childControlHeight = false;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = false;
 
             UnityEngine.UI.Image badge = CreateImage("IconBox", card.transform, a.badgePill, accent);
             badge.type = UnityEngine.UI.Image.Type.Sliced;
             badge.pixelsPerUnitMultiplier = 0.7f;
             badge.raycastTarget = false;
             badge.rectTransform.sizeDelta = new Vector2(56f, 56f);
+            LayoutElement badgeLe = badge.gameObject.AddComponent<LayoutElement>();
+            badgeLe.minWidth = 56f;
+            badgeLe.preferredWidth = 56f;
+            badgeLe.minHeight = 56f;
+            badgeLe.preferredHeight = 56f;
 
             UnityEngine.UI.Image ic = CreateImage("Icon", badge.transform, icon, Color.white);
             ic.preserveAspect = true;
@@ -654,22 +721,22 @@ namespace MedievalRPG.EditorTools
             ic.rectTransform.sizeDelta = new Vector2(36f, 36f);
 
             GameObject txtCol = CreateRect("TextCol", card.transform);
-            RectTransform txtRt = txtCol.GetComponent<RectTransform>();
-            txtRt.sizeDelta = new Vector2(690f, 82f);
+            LayoutElement txtLe = txtCol.AddComponent<LayoutElement>();
+            txtLe.flexibleWidth = 1f;
+            VerticalLayoutGroup colVlg = txtCol.AddComponent<VerticalLayoutGroup>();
+            colVlg.spacing = 5f;
+            colVlg.childAlignment = TextAnchor.UpperLeft;
+            colVlg.childControlWidth = true;
+            colVlg.childControlHeight = true;
+            colVlg.childForceExpandWidth = true;
+            colVlg.childForceExpandHeight = false;
 
-            TextMeshProUGUI titleTMP = CreateTMP("Title", txtCol.transform, title, a.fontBold, 19f, MedievalUITheme.GoldSoft, TextAlignmentOptions.TopLeft);
-            titleTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
-            titleTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
-            titleTMP.rectTransform.pivot = new Vector2(0f, 1f);
-            titleTMP.rectTransform.anchoredPosition = Vector2.zero;
-            titleTMP.rectTransform.sizeDelta = new Vector2(0f, 26f);
+            TextMeshProUGUI titleTMP = CreateTMP("Title", txtCol.transform, title, a.fontBold, 18.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.TopLeft);
+            titleTMP.textWrappingMode = TextWrappingModes.Normal;
 
             TextMeshProUGUI bodyTMP = CreateTMP("Body", txtCol.transform, body, a.fontBody, 15.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.TopLeft);
             bodyTMP.textWrappingMode = TextWrappingModes.Normal;
-            bodyTMP.rectTransform.anchorMin = new Vector2(0f, 0f);
-            bodyTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
-            bodyTMP.rectTransform.offsetMin = Vector2.zero;
-            bodyTMP.rectTransform.offsetMax = new Vector2(0f, -26f);
+            bodyTMP.overflowMode = TextOverflowModes.Overflow;
         }
 
         // =====================================================================
@@ -891,10 +958,10 @@ namespace MedievalRPG.EditorTools
 
             TextMeshProUGUI campDialogueTMP = CreateTMP("CampDialogueText", diagStrip.transform,
                 "Chào mừng tới Sảnh Chờ! Bấm vào Rương Đồ, Quầy Thuốc trên đường hoặc các nút bên dưới để chuẩn bị.",
-                a.fontBody, 15f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                a.fontBody, 16f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
             campDialogueTMP.enableAutoSizing = true;
-            campDialogueTMP.fontSizeMin = 12f;
-            campDialogueTMP.fontSizeMax = 15f;
+            campDialogueTMP.fontSizeMin = 13f;
+            campDialogueTMP.fontSizeMax = 16.5f;
             campDialogueTMP.overflowMode = TextOverflowModes.Truncate;
             campDialogueTMP.rectTransform.anchorMin = Vector2.zero;
             campDialogueTMP.rectTransform.anchorMax = Vector2.one;
@@ -947,7 +1014,7 @@ namespace MedievalRPG.EditorTools
             AchievementsModalUI achModal = CreateAchievementsModal(canvas.transform, a);
             achModal.gameObject.SetActive(false);
 
-            GameObject campSettingsModal = CreateModalOverlay("CampSettingsModal", canvas.transform, a, new Vector2(660f, 700f),
+            GameObject campSettingsModal = CreateModalOverlay("CampSettingsModal", canvas.transform, a, new Vector2(700f, 750f),
                 a.iconGear, "CÀI ĐẶT SẢNH CHỜ", out Transform campSettContent, out UnityEngine.UI.Button closeCampSettBtn, "LƯU & ĐÓNG");
             BuildExtendedSettingsControls(campSettContent, a,
                 out UnityEngine.UI.Slider cMusicSlider, out TextMeshProUGUI cMusicVal,
@@ -1734,6 +1801,32 @@ namespace MedievalRPG.EditorTools
             lootToastDetail.rectTransform.offsetMax = new Vector2(-14f, 0f);
             lootToastImg.gameObject.SetActive(false);
 
+            // --- Nút Nộ Tri Thức & Tuyệt Kỹ Hợp Kích [Q] (góc dưới trái, trên thanh lệnh) ---
+            UnityEngine.UI.Image synBg = CreateImage("SynergyGaugeButton", canvas.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
+            synBg.type = UnityEngine.UI.Image.Type.Sliced;
+            synBg.pixelsPerUnitMultiplier = 0.7f;
+            RectTransform synRt = synBg.rectTransform;
+            synRt.anchorMin = new Vector2(0f, 0f);
+            synRt.anchorMax = new Vector2(0f, 0f);
+            synRt.pivot = new Vector2(0f, 0f);
+            synRt.anchoredPosition = new Vector2(64f, 234f);
+            synRt.sizeDelta = new Vector2(390f, 38f);
+            UnityEngine.UI.Button synBtn = synBg.gameObject.AddComponent<UnityEngine.UI.Button>();
+            synBtn.targetGraphic = synBg;
+            synBtn.interactable = false;
+
+            UnityEngine.UI.Image synFill = CreateImage("Fill", synBg.transform, a.barFill, MedievalUITheme.MpSapphire);
+            synFill.type = UnityEngine.UI.Image.Type.Filled;
+            synFill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
+            synFill.fillOrigin = 0;
+            synFill.fillAmount = 0f;
+            synFill.raycastTarget = false;
+            StretchWithPadding(synFill.rectTransform, 4f);
+
+            TextMeshProUGUI synLbl = CreateTMP("Label", synBg.transform, "NỘ TRI THỨC: 0/100",
+                a.fontBold, 14f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+            StretchWithPadding(synLbl.rectTransform, 6f);
+
             // --- Layer 3: Quiz Modal ---
             QuizModalUI quizModal = CreateQuizModal(canvas.transform, a);
             quizModal.gameObject.SetActive(false);
@@ -1742,8 +1835,77 @@ namespace MedievalRPG.EditorTools
             EquipmentModalUI battleEquipModal = CreateEquipmentModal(canvas.transform, a);
             battleEquipModal.gameObject.SetActive(false);
 
+            // --- Layer 3.6: Roadside Event Modal ([1-3]) ---
+            UnityEngine.UI.Image evOverlay = CreateImage("RoadsideEventOverlay", canvas.transform, null, MedievalUITheme.ScrimDark);
+            StretchFull(evOverlay.rectTransform);
+            UnityEngine.UI.Image evCard = CreateImage("EventCard", evOverlay.transform, a.panelDarkGold, MedievalUITheme.ObsidianPanel);
+            evCard.type = UnityEngine.UI.Image.Type.Sliced;
+            evCard.pixelsPerUnitMultiplier = 0.65f;
+            evCard.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            evCard.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            evCard.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            evCard.rectTransform.sizeDelta = new Vector2(780f, 440f);
+
+            TextMeshProUGUI evTitle = CreateTMP("EventTitle", evCard.transform, "SỰ KIỆN DỌC ĐƯỜNG",
+                a.fontBold, 24f, MedievalUITheme.GoldSoft, TextAlignmentOptions.Center);
+            evTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            evTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            evTitle.rectTransform.offsetMin = new Vector2(24f, -64f);
+            evTitle.rectTransform.offsetMax = new Vector2(-24f, -18f);
+
+            TextMeshProUGUI evDesc = CreateTMP("EventDesc", evCard.transform, "",
+                a.fontBold, 16.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.Center);
+            evDesc.textWrappingMode = TextWrappingModes.Normal;
+            evDesc.rectTransform.anchorMin = new Vector2(0f, 1f);
+            evDesc.rectTransform.anchorMax = new Vector2(1f, 1f);
+            evDesc.rectTransform.offsetMin = new Vector2(28f, -124f);
+            evDesc.rectTransform.offsetMax = new Vector2(-28f, -68f);
+
+            GameObject evOptList = CreateRect("Options", evCard.transform);
+            RectTransform evOlRt = evOptList.GetComponent<RectTransform>();
+            evOlRt.anchorMin = Vector2.zero;
+            evOlRt.anchorMax = Vector2.one;
+            evOlRt.offsetMin = new Vector2(28f, 24f);
+            evOlRt.offsetMax = new Vector2(-28f, -138f);
+            VerticalLayoutGroup evVlg = evOptList.AddComponent<VerticalLayoutGroup>();
+            evVlg.spacing = 10f;
+            evVlg.childControlWidth = true;
+            evVlg.childControlHeight = true;
+            evVlg.childForceExpandWidth = true;
+            evVlg.childForceExpandHeight = true;
+
+            var evOptBtns = new UnityEngine.UI.Button[3];
+            var evOptLbls = new TextMeshProUGUI[3];
+            var evOptSubs = new TextMeshProUGUI[3];
+            Color[] evColors = { MedievalUITheme.BtnPrimaryGold, MedievalUITheme.BtnDefend, MedievalUITheme.BtnNeutralSlate };
+            for (int i = 0; i < 3; i++)
+            {
+                UnityEngine.UI.Image optBg = CreateImage($"Option_{i}", evOptList.transform, a.buttonFill, evColors[i]);
+                optBg.type = UnityEngine.UI.Image.Type.Sliced;
+                optBg.pixelsPerUnitMultiplier = 0.65f;
+                UnityEngine.UI.Button optBtn = optBg.gameObject.AddComponent<UnityEngine.UI.Button>();
+                optBtn.targetGraphic = optBg;
+
+                TextMeshProUGUI optTitle = CreateTMP("Title", optBg.transform, "-", a.fontBold, 16.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                optTitle.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                optTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+                optTitle.rectTransform.offsetMin = new Vector2(16f, 0f);
+                optTitle.rectTransform.offsetMax = new Vector2(-16f, -6f);
+
+                TextMeshProUGUI optSub = CreateTMP("Subtitle", optBg.transform, "-", a.fontBody, 13.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+                optSub.rectTransform.anchorMin = new Vector2(0f, 0f);
+                optSub.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                optSub.rectTransform.offsetMin = new Vector2(16f, 6f);
+                optSub.rectTransform.offsetMax = new Vector2(-16f, 0f);
+
+                evOptBtns[i] = optBtn;
+                evOptLbls[i] = optTitle;
+                evOptSubs[i] = optSub;
+            }
+            evOverlay.gameObject.SetActive(false);
+
             // --- Layer 4: Pause & Settings Modal ---
-            GameObject pauseModal = CreateModalOverlay("PauseSettingsModal", canvas.transform, a, new Vector2(760f, 750f),
+            GameObject pauseModal = CreateModalOverlay("PauseSettingsModal", canvas.transform, a, new Vector2(780f, 800f),
                 a.iconGear, "TẠM DỪNG & CÀI ĐẶT", out Transform pauseContent, out UnityEngine.UI.Button resumeBtn, "TIẾP TỤC");
             BuildExtendedSettingsControls(pauseContent, a,
                 out UnityEngine.UI.Slider pMusicSlider, out TextMeshProUGUI pMusicVal,
@@ -1801,7 +1963,12 @@ namespace MedievalRPG.EditorTools
                 "THỬ LẠI NGAY", MedievalUITheme.BtnAttack);
             gameOverModal.SetActive(false);
 
-            // --- Layer 6: Fade Overlay ---
+            // --- Layer 6: Screen Flash & Fade Overlay ---
+            UnityEngine.UI.Image screenFlashImg = CreateImage("ScreenFlashOverlay", canvas.transform, null, new Color(1f, 1f, 1f, 0f));
+            screenFlashImg.raycastTarget = false;
+            StretchFull(screenFlashImg.rectTransform);
+            screenFlashImg.gameObject.SetActive(false);
+
             CanvasGroup fadeOverlay = CreateFadeOverlay(canvas.transform);
 
             if (uiMgr != null)
@@ -1839,6 +2006,11 @@ namespace MedievalRPG.EditorTools
                     statusTooltipRoot, statusTooltipTitle, statusTooltipBody,
                     pauseRetreatBtn,
                     pTimerToggle, pShakeToggle, pFullToggle, pResetSaveBtn, pResetSaveLbl);
+                uiMgr.ConfigureSynergyAndEventUI(
+                    synBtn, synBg, synFill, synLbl,
+                    evOverlay.gameObject, evTitle, evDesc,
+                    evOptBtns, evOptLbls, evOptSubs,
+                    screenFlashImg);
 
                 // Gắn persistent UnityEvents cho các nút modal (hoạt động cả khi scene vừa tải)
                 WirePersistentAction(resumeBtn, uiMgr.ResumeBattle);
@@ -2177,6 +2349,12 @@ namespace MedievalRPG.EditorTools
             barBg.rectTransform.anchoredPosition = new Vector2(0f, 12f);
             barBg.rectTransform.sizeDelta = new Vector2(96f, 14f);
 
+            UnityEngine.UI.Image hpTrail = CreateImage("MiniHPTrailFill", barBg.transform, a.barFill, new Color(1f, 0.85f, 0.42f, 0.9f));
+            hpTrail.type = UnityEngine.UI.Image.Type.Filled;
+            hpTrail.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
+            hpTrail.raycastTarget = false;
+            StretchWithPadding(hpTrail.rectTransform, 3f);
+
             UnityEngine.UI.Image hpFill = CreateImage("MiniHPFill", barBg.transform, a.barFill, MedievalUITheme.SuccessGreen);
             hpFill.type = UnityEngine.UI.Image.Type.Filled;
             hpFill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
@@ -2196,6 +2374,7 @@ namespace MedievalRPG.EditorTools
             WorldUnitHUD hud = root.AddComponent<WorldUnitHUD>();
             hud.Configure(hpFill, nameTxt, arrow.gameObject, shieldBadge.gameObject, cg,
                 reticle.gameObject, intentPill.gameObject, intentLabel, intentPill);
+            hud.ConfigureTrailImage(hpTrail);
             return hud;
         }
 
@@ -2247,7 +2426,7 @@ namespace MedievalRPG.EditorTools
             battleRoad.BuildOrRebuildRoadVisuals();
             bs.forestRoad = battleRoad;
 
-            if (bs.knightBattleStation != null) bs.knightBattleStation.position = new Vector3(-1.45f, -1.24f, 0f);
+            if (bs.knightBattleStation != null) bs.knightBattleStation.position = new Vector3(-1.45f, -1.36f, 0f);
             if (bs.mageBattleStation != null) bs.mageBattleStation.position = new Vector3(-2.95f, -1.04f, 0f);
             if (bs.archerBattleStation != null) bs.archerBattleStation.position = new Vector3(-4.10f, -1.38f, 0f);
 
@@ -2435,30 +2614,30 @@ namespace MedievalRPG.EditorTools
             clsHeaderTMP.rectTransform.offsetMin = new Vector2(16f, -92f);
             clsHeaderTMP.rectTransform.offsetMax = new Vector2(-16f, -66f);
 
-            // 3 Ô Trang bị (Weapon, Armor, Accessory)
+            // 4 Ô Trang bị (Vũ Khí, Mũ, Giáp, Phụ Kiện)
             GameObject slotsBox = CreateRect("EquippedSlotsBox", leftCol.transform);
             RectTransform sbRt = slotsBox.GetComponent<RectTransform>();
-            sbRt.anchorMin = new Vector2(0f, 1f);
+            sbRt.anchorMin = new Vector2(0f, 0f);
             sbRt.anchorMax = new Vector2(1f, 1f);
-            sbRt.pivot = new Vector2(0.5f, 1f);
-            sbRt.offsetMin = new Vector2(14f, -384f);
+            sbRt.pivot = new Vector2(0.5f, 0.5f);
+            sbRt.offsetMin = new Vector2(14f, 150f);
             sbRt.offsetMax = new Vector2(-14f, -98f);
             VerticalLayoutGroup sbVlg = slotsBox.AddComponent<VerticalLayoutGroup>();
-            sbVlg.spacing = 10f;
+            sbVlg.spacing = 6f;
             sbVlg.childControlWidth = true;
             sbVlg.childControlHeight = true;
             sbVlg.childForceExpandWidth = true;
             sbVlg.childForceExpandHeight = true;
 
-            var sBorders = new UnityEngine.UI.Image[3];
-            var sIcons = new UnityEngine.UI.Image[3];
-            var sNames = new TextMeshProUGUI[3];
-            var sStats = new TextMeshProUGUI[3];
-            var sUnequips = new UnityEngine.UI.Button[3];
-            string[] slotDefaultLabels = { "Vũ Khí: Trống", "Giáp: Trống", "Phụ Kiện: Trống" };
-            Sprite[] slotDefaultIcons = { a.iconSword, a.iconShield, a.iconCrown };
+            var sBorders = new UnityEngine.UI.Image[4];
+            var sIcons = new UnityEngine.UI.Image[4];
+            var sNames = new TextMeshProUGUI[4];
+            var sStats = new TextMeshProUGUI[4];
+            var sUnequips = new UnityEngine.UI.Button[4];
+            string[] slotDefaultLabels = { "Vũ Khí: Trống", "Mũ: Trống", "Giáp: Trống", "Phụ Kiện: Trống" };
+            Sprite[] slotDefaultIcons = { a.iconSword, a.iconCrown, a.iconShield, a.iconCrown };
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 UnityEngine.UI.Image slotCard = CreateImage($"EquipSlotCard_{i}", slotsBox.transform, a.panelInset, MedievalUITheme.ObsidianPanel);
                 slotCard.type = UnityEngine.UI.Image.Type.Sliced;
@@ -2477,45 +2656,45 @@ namespace MedievalRPG.EditorTools
                 iconBox.rectTransform.anchorMax = new Vector2(0f, 0.5f);
                 iconBox.rectTransform.pivot = new Vector2(0f, 0.5f);
                 iconBox.rectTransform.anchoredPosition = new Vector2(12f, 0f);
-                iconBox.rectTransform.sizeDelta = new Vector2(52f, 52f);
+                iconBox.rectTransform.sizeDelta = new Vector2(46f, 46f);
 
                 UnityEngine.UI.Image ic = CreateImage("Icon", iconBox.transform, slotDefaultIcons[i], Color.white);
                 ic.preserveAspect = true;
                 ic.raycastTarget = false;
-                StretchWithPadding(ic.rectTransform, 8f);
+                StretchWithPadding(ic.rectTransform, 6f);
 
                 TextMeshProUGUI nameTxt = CreateTMP("ItemName", slotCard.transform, slotDefaultLabels[i],
-                    a.fontBold, 14.5f, MedievalUITheme.SlateMuted, TextAlignmentOptions.MidlineLeft);
+                    a.fontBold, 14f, MedievalUITheme.SlateMuted, TextAlignmentOptions.MidlineLeft);
                 nameTxt.enableAutoSizing = true;
-                nameTxt.fontSizeMin = 11f;
-                nameTxt.fontSizeMax = 14.5f;
+                nameTxt.fontSizeMin = 10.5f;
+                nameTxt.fontSizeMax = 14f;
                 nameTxt.overflowMode = TextOverflowModes.Truncate;
                 nameTxt.textWrappingMode = TextWrappingModes.NoWrap;
                 nameTxt.rectTransform.anchorMin = new Vector2(0f, 0.5f);
                 nameTxt.rectTransform.anchorMax = new Vector2(1f, 1f);
-                nameTxt.rectTransform.offsetMin = new Vector2(74f, 2f);
-                nameTxt.rectTransform.offsetMax = new Vector2(-74f, -8f);
+                nameTxt.rectTransform.offsetMin = new Vector2(68f, 1f);
+                nameTxt.rectTransform.offsetMax = new Vector2(-72f, -6f);
 
                 TextMeshProUGUI statTxt = CreateTMP("ItemStats", slotCard.transform, "Nhặt đồ trên bản đồ để trang bị",
-                    a.fontBody, 12.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                    a.fontBody, 12f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
                 statTxt.enableAutoSizing = true;
-                statTxt.fontSizeMin = 10f;
-                statTxt.fontSizeMax = 12.5f;
+                statTxt.fontSizeMin = 9.5f;
+                statTxt.fontSizeMax = 12f;
                 statTxt.overflowMode = TextOverflowModes.Truncate;
                 statTxt.textWrappingMode = TextWrappingModes.NoWrap;
                 statTxt.rectTransform.anchorMin = new Vector2(0f, 0f);
                 statTxt.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-                statTxt.rectTransform.offsetMin = new Vector2(74f, 8f);
-                statTxt.rectTransform.offsetMax = new Vector2(-74f, -2f);
+                statTxt.rectTransform.offsetMin = new Vector2(68f, 6f);
+                statTxt.rectTransform.offsetMax = new Vector2(-72f, -1f);
 
                 UnityEngine.UI.Button uneqBtn = CreateStyledMenuButton($"UnequipBtn_{i}", slotCard.transform, a, null,
-                    "GỠ", MedievalUITheme.BtnDangerSlate, 34f, 12f);
+                    "GỠ", MedievalUITheme.BtnDangerSlate, 32f, 11.5f);
                 RectTransform uRt = uneqBtn.GetComponent<RectTransform>();
                 uRt.anchorMin = new Vector2(1f, 0.5f);
                 uRt.anchorMax = new Vector2(1f, 0.5f);
                 uRt.pivot = new Vector2(1f, 0.5f);
                 uRt.anchoredPosition = new Vector2(-10f, 0f);
-                uRt.sizeDelta = new Vector2(56f, 34f);
+                uRt.sizeDelta = new Vector2(52f, 32f);
 
                 sBorders[i] = border;
                 sIcons[i] = ic;
@@ -2532,8 +2711,8 @@ namespace MedievalRPG.EditorTools
             bonusBox.rectTransform.anchorMin = new Vector2(0f, 0f);
             bonusBox.rectTransform.anchorMax = new Vector2(1f, 0f);
             bonusBox.rectTransform.pivot = new Vector2(0.5f, 0f);
-            bonusBox.rectTransform.offsetMin = new Vector2(14f, 76f);
-            bonusBox.rectTransform.offsetMax = new Vector2(-14f, 152f);
+            bonusBox.rectTransform.offsetMin = new Vector2(14f, 72f);
+            bonusBox.rectTransform.offsetMax = new Vector2(-14f, 140f);
 
             TextMeshProUGUI bonusTMP = CreateTMP("TotalBonusText", bonusBox.transform, "Tổng cộng thêm: Chưa mặc trang bị nào",
                 a.fontBody, 13.5f, MedievalUITheme.SuccessGreen, TextAlignmentOptions.MidlineLeft);
@@ -2871,7 +3050,7 @@ namespace MedievalRPG.EditorTools
             card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             card.rectTransform.anchoredPosition = new Vector2(0f, 20f);
-            card.rectTransform.sizeDelta = new Vector2(960f, 595f);
+            card.rectTransform.sizeDelta = new Vector2(1020f, 650f);
 
             // Header bar
             GameObject header = CreateRect("Header", card.transform);
@@ -2957,15 +3136,30 @@ namespace MedievalRPG.EditorTools
             catTMP.overflowMode = TextOverflowModes.Truncate;
             StretchWithPadding(catTMP.rectTransform, 8f);
 
-            // Pending action prompt
+            // Pending action prompt + Nút Gợi ý 50:50
             TextMeshProUGUI pendingTMP = CreateTMP("PendingActionText", card.transform,
                 "Anh hùng đang chuẩn bị xuất chiêu — Trả lời đúng để kích hoạt!",
-                a.fontBody, 16.5f, MedievalUITheme.SlateMuted, TextAlignmentOptions.MidlineLeft);
+                a.fontBody, 16f, MedievalUITheme.SlateMuted, TextAlignmentOptions.MidlineLeft);
+            pendingTMP.enableAutoSizing = true;
+            pendingTMP.fontSizeMin = 12f;
+            pendingTMP.fontSizeMax = 16f;
+            pendingTMP.overflowMode = TextOverflowModes.Truncate;
             pendingTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
             pendingTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
-            pendingTMP.rectTransform.pivot = new Vector2(0.5f, 1f);
-            pendingTMP.rectTransform.anchoredPosition = new Vector2(0f, -72f);
-            pendingTMP.rectTransform.sizeDelta = new Vector2(-48f, 28f);
+            pendingTMP.rectTransform.pivot = new Vector2(0f, 1f);
+            pendingTMP.rectTransform.anchoredPosition = new Vector2(24f, -72f);
+            pendingTMP.rectTransform.sizeDelta = new Vector2(-246f, 28f);
+
+            UnityEngine.UI.Button hint5050Btn = CreateStyledMenuButton("Hint5050Button", card.transform, a, null,
+                $"50:50 [H] (-{QuizModalUI.Hint5050GoldCost}V)", MedievalUITheme.BtnPrimaryGold, 32f, 13.5f);
+            RectTransform h50Rt = hint5050Btn.GetComponent<RectTransform>();
+            h50Rt.anchorMin = new Vector2(1f, 1f);
+            h50Rt.anchorMax = new Vector2(1f, 1f);
+            h50Rt.pivot = new Vector2(1f, 1f);
+            h50Rt.anchoredPosition = new Vector2(-24f, -69f);
+            h50Rt.sizeDelta = new Vector2(194f, 32f);
+            UnityEngine.UI.Image hint5050Bg = hint5050Btn.GetComponent<UnityEngine.UI.Image>();
+            TextMeshProUGUI hint5050Lbl = hint5050Btn.GetComponentInChildren<TextMeshProUGUI>();
 
             // Question Box
             UnityEngine.UI.Image qBox = CreateImage("QuestionInset", card.transform, a.panelInset, Color.white);
@@ -2976,11 +3170,15 @@ namespace MedievalRPG.EditorTools
             qBox.rectTransform.anchorMax = new Vector2(1f, 1f);
             qBox.rectTransform.pivot = new Vector2(0.5f, 1f);
             qBox.rectTransform.anchoredPosition = new Vector2(0f, -108f);
-            qBox.rectTransform.sizeDelta = new Vector2(-48f, 128f);
+            qBox.rectTransform.sizeDelta = new Vector2(-48f, 156f);
 
             TextMeshProUGUI qContentTMP = CreateTMP("QuestionContent", qBox.transform, "Nội dung câu hỏi?",
-                a.fontBold, 24f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                a.fontBold, 23f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
             qContentTMP.textWrappingMode = TextWrappingModes.Normal;
+            qContentTMP.enableAutoSizing = true;
+            qContentTMP.fontSizeMin = 15f;
+            qContentTMP.fontSizeMax = 23f;
+            qContentTMP.overflowMode = TextOverflowModes.Ellipsis;
             StretchWithPadding(qContentTMP.rectTransform, 18f);
 
             // 2x2 Options Grid
@@ -2989,11 +3187,11 @@ namespace MedievalRPG.EditorTools
             gridRt.anchorMin = new Vector2(0f, 1f);
             gridRt.anchorMax = new Vector2(1f, 1f);
             gridRt.pivot = new Vector2(0.5f, 1f);
-            gridRt.anchoredPosition = new Vector2(0f, -252f);
-            gridRt.sizeDelta = new Vector2(-48f, 176f);
+            gridRt.anchoredPosition = new Vector2(0f, -278f);
+            gridRt.sizeDelta = new Vector2(-48f, 184f);
 
             GridLayoutGroup grid = gridGo.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(428f, 80f);
+            grid.cellSize = new Vector2(460f, 84f);
             grid.spacing = new Vector2(16f, 16f);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 2;
@@ -3039,8 +3237,12 @@ namespace MedievalRPG.EditorTools
                 StretchFull(letterTMP.rectTransform);
 
                 TextMeshProUGUI ansTMP = CreateTMP("AnswerText", optBg.transform, $"Phương án {letter}",
-                    a.fontBody, 20f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                    a.fontBody, 19f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
                 ansTMP.textWrappingMode = TextWrappingModes.Normal;
+                ansTMP.enableAutoSizing = true;
+                ansTMP.fontSizeMin = 13.5f;
+                ansTMP.fontSizeMax = 19f;
+                ansTMP.overflowMode = TextOverflowModes.Ellipsis;
                 ansTMP.rectTransform.anchorMin = Vector2.zero;
                 ansTMP.rectTransform.anchorMax = Vector2.one;
                 ansTMP.rectTransform.offsetMin = new Vector2(70f, 8f);
@@ -3061,7 +3263,7 @@ namespace MedievalRPG.EditorTools
             fbContainer.rectTransform.anchorMax = new Vector2(1f, 0f);
             fbContainer.rectTransform.pivot = new Vector2(0.5f, 0f);
             fbContainer.rectTransform.anchoredPosition = new Vector2(0f, 18f);
-            fbContainer.rectTransform.sizeDelta = new Vector2(-48f, 128f);
+            fbContainer.rectTransform.sizeDelta = new Vector2(-48f, 138f);
 
             UnityEngine.UI.Image fbBorder = CreateImage("Frame", fbContainer.transform, a.buttonFrame, Color.white);
             fbBorder.type = UnityEngine.UI.Image.Type.Sliced;
@@ -3078,8 +3280,12 @@ namespace MedievalRPG.EditorTools
             fbTitleTMP.rectTransform.offsetMax = new Vector2(-176f, -8f);
 
             TextMeshProUGUI fbExplTMP = CreateTMP("FeedbackExplanation", fbContainer.transform, "Giải thích kiến thức...",
-                a.fontBody, 16.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.TopLeft);
+                a.fontBody, 16f, MedievalUITheme.IvoryText, TextAlignmentOptions.TopLeft);
             fbExplTMP.textWrappingMode = TextWrappingModes.Normal;
+            fbExplTMP.enableAutoSizing = true;
+            fbExplTMP.fontSizeMin = 12.5f;
+            fbExplTMP.fontSizeMax = 16f;
+            fbExplTMP.overflowMode = TextOverflowModes.Ellipsis;
             fbExplTMP.rectTransform.anchorMin = Vector2.zero;
             fbExplTMP.rectTransform.anchorMax = Vector2.one;
             fbExplTMP.rectTransform.offsetMin = new Vector2(18f, 18f);
@@ -3117,6 +3323,7 @@ namespace MedievalRPG.EditorTools
                 optButtons, optBgs, optBadges, optTexts, optFeedbacks,
                 fbContainer.gameObject, fbContainer, fbTitleTMP, fbExplTMP, timerFill, continueBtn);
             modal.ConfigureTimerUI(qTimerPill.gameObject, qTimerFill, qTimerTxt);
+            modal.ConfigureHintButton(hint5050Btn, hint5050Bg, hint5050Lbl);
 
             return modal;
         }
@@ -3200,7 +3407,7 @@ namespace MedievalRPG.EditorTools
             card.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            card.rectTransform.sizeDelta = new Vector2(780f, 520f);
+            card.rectTransform.sizeDelta = new Vector2(840f, 560f);
 
             UnityEngine.UI.Image emblem = CreateImage("EmblemIcon", card.transform, emblemIcon, Color.white);
             emblem.preserveAspect = true;
@@ -3278,11 +3485,11 @@ namespace MedievalRPG.EditorTools
 
             quizToggle = CreateToggleRow("QuizModeToggleRow", parent, a,
                 "Bật câu hỏi Trắc nghiệm Giáo dục",
-                "Yêu cầu trả lời đúng câu hỏi trước khi tung chiêu & nhận thưởng sát thương.", 48f);
+                "Yêu cầu trả lời đúng câu hỏi trước khi tung chiêu & nhận thưởng sát thương.", 56f);
 
             fastToggle = CreateToggleRow("FastSpeedToggleRow", parent, a,
                 "Tốc độ chiến đấu nhanh (1.5x)",
-                "Tăng tốc độ hoạt ảnh và chuyển lượt trong trận đấu.", 48f);
+                "Tăng tốc độ hoạt ảnh và chuyển lượt trong trận đấu.", 56f);
         }
 
         private static void BuildExtendedSettingsControls(
@@ -3306,15 +3513,15 @@ namespace MedievalRPG.EditorTools
 
             timerToggle = CreateToggleRow("QuizTimerToggleRow", parent, a,
                 "Giới hạn thời gian Quiz (20 giây)",
-                "Trả lời trong 5s đầu nhận thưởng Quick Mind (+15 Vàng, +15% Chí mạng).", 48f);
+                "Trả lời trong 5s đầu nhận thưởng Quick Mind (+15 Vàng, +15% Chí mạng).", 56f);
 
             shakeToggle = CreateToggleRow("CameraShakeToggleRow", parent, a,
                 "Rung màn hình khi Chí Mạng",
-                "Bật/tắt hiệu ứng rung camera lúc tung đòn mạnh.", 48f);
+                "Bật/tắt hiệu ứng rung camera lúc tung đòn mạnh.", 56f);
 
             fullscreenToggle = CreateToggleRow("FullscreenToggleRow", parent, a,
                 "Chế độ Toàn màn hình",
-                "Chuyển đổi giữa Toàn màn hình và Cửa sổ.", 48f);
+                "Chuyển đổi giữa Toàn màn hình và Cửa sổ.", 56f);
 
             resetSaveBtn = CreateStyledMenuButton("ResetSaveButton", parent, a, a.iconSkull,
                 "XÓA DỮ LIỆU CHƠI", MedievalUITheme.BtnDangerSlate, 42f, 14f);
@@ -3834,27 +4041,64 @@ namespace MedievalRPG.EditorTools
             summaryBox.pixelsPerUnitMultiplier = 0.65f;
             summaryBox.rectTransform.anchorMin = new Vector2(0f, 1f);
             summaryBox.rectTransform.anchorMax = new Vector2(1f, 1f);
-            summaryBox.rectTransform.offsetMin = new Vector2(22f, -100f);
+            summaryBox.rectTransform.offsetMin = new Vector2(22f, -118f);
             summaryBox.rectTransform.offsetMax = new Vector2(-22f, -64f);
 
             TextMeshProUGUI summaryTMP = CreateTMP("NotebookSummary", summaryBox.transform, "Cần ôn: 0 câu",
                 a.fontBold, 14f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
-            summaryTMP.rectTransform.anchorMin = Vector2.zero;
-            summaryTMP.rectTransform.anchorMax = Vector2.one;
-            summaryTMP.rectTransform.offsetMin = new Vector2(14f, 4f);
-            summaryTMP.rectTransform.offsetMax = new Vector2(-14f, -4f);
+            summaryTMP.rectTransform.anchorMin = new Vector2(0f, 0.50f);
+            summaryTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
+            summaryTMP.rectTransform.offsetMin = new Vector2(14f, 0f);
+            summaryTMP.rectTransform.offsetMax = new Vector2(-14f, -3f);
 
-            // Cột trái: Danh sách câu làm sai
+            TextMeshProUGUI weaknessTMP = CreateTMP("WeaknessSummary", summaryBox.transform, "Chủ đề cần chú ý: Chưa có dữ liệu.",
+                a.fontBody, 12.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+            weaknessTMP.enableAutoSizing = true;
+            weaknessTMP.fontSizeMin = 10f;
+            weaknessTMP.fontSizeMax = 12.5f;
+            weaknessTMP.overflowMode = TextOverflowModes.Truncate;
+            weaknessTMP.rectTransform.anchorMin = new Vector2(0f, 0f);
+            weaknessTMP.rectTransform.anchorMax = new Vector2(1f, 0.50f);
+            weaknessTMP.rectTransform.offsetMin = new Vector2(14f, 3f);
+            weaknessTMP.rectTransform.offsetMax = new Vector2(-14f, 0f);
+
+            // Cột trái: Danh sách câu làm sai & Chủ đề B1/B2
             UnityEngine.UI.Image leftCol = CreateImage("MistakesListColumn", card.transform, a.panelInset, MedievalUITheme.DeepInset);
             leftCol.type = UnityEngine.UI.Image.Type.Sliced;
             leftCol.pixelsPerUnitMultiplier = 0.65f;
             leftCol.rectTransform.anchorMin = new Vector2(0f, 0f);
             leftCol.rectTransform.anchorMax = new Vector2(0.42f, 1f);
             leftCol.rectTransform.offsetMin = new Vector2(22f, 22f);
-            leftCol.rectTransform.offsetMax = new Vector2(-8f, -110f);
+            leftCol.rectTransform.offsetMax = new Vector2(-8f, -126f);
+
+            GameObject tabsBar = CreateRect("NotebookTabsBar", leftCol.transform);
+            RectTransform tbRt = tabsBar.GetComponent<RectTransform>();
+            tbRt.anchorMin = new Vector2(0f, 1f);
+            tbRt.anchorMax = new Vector2(1f, 1f);
+            tbRt.offsetMin = new Vector2(8f, -48f);
+            tbRt.offsetMax = new Vector2(-8f, -8f);
+            HorizontalLayoutGroup tbHlg = tabsBar.AddComponent<HorizontalLayoutGroup>();
+            tbHlg.spacing = 6f;
+            tbHlg.childControlWidth = true;
+            tbHlg.childControlHeight = true;
+            tbHlg.childForceExpandWidth = true;
+            tbHlg.childForceExpandHeight = true;
+
+            UnityEngine.UI.Button tabMistakesBtn = CreateStyledMenuButton("TabMistakesBtn", tabsBar.transform, a, null,
+                "Lỗi Sai", MedievalUITheme.BtnNeutralSlate, 36f, 13f);
+            UnityEngine.UI.Image tabMistakesBg = tabMistakesBtn.GetComponent<UnityEngine.UI.Image>();
+            TextMeshProUGUI tabMistakesLbl = tabMistakesBtn.GetComponentInChildren<TextMeshProUGUI>();
+
+            UnityEngine.UI.Button tabTopicsBtn = CreateStyledMenuButton("TabTopicsBtn", tabsBar.transform, a, null,
+                "Chủ Đề B1/B2", MedievalUITheme.BtnNeutralSlate, 36f, 13f);
+            UnityEngine.UI.Image tabTopicsBg = tabTopicsBtn.GetComponent<UnityEngine.UI.Image>();
+            TextMeshProUGUI tabTopicsLbl = tabTopicsBtn.GetComponentInChildren<TextMeshProUGUI>();
+
+            UnityEngine.UI.Button weakestTopicBtn = CreateStyledMenuButton("WeakestBtn", tabsBar.transform, a, null,
+                "Luyện Yếu", new Color(0.42f, 0.24f, 0.14f, 0.98f), 36f, 13f);
 
             Transform listContent = CreateModalScrollView("MistakeScroll", leftCol.transform, a,
-                new Vector2(8f, 8f), new Vector2(-8f, -8f), 8f, out GameObject scrollGo);
+                new Vector2(8f, 8f), new Vector2(-8f, -54f), 8f, out GameObject scrollGo);
 
             TextMeshProUGUI emptyHint = CreateTMP("EmptyMistakeHint", scrollGo.transform,
                 "Tuyệt vời!\nHiện không có câu sai nào cần ôn.\nNếu làm sai trong trận, câu hỏi sẽ tự lưu vào đây.",
@@ -3869,7 +4113,7 @@ namespace MedievalRPG.EditorTools
             rightCol.rectTransform.anchorMin = new Vector2(0.42f, 0f);
             rightCol.rectTransform.anchorMax = new Vector2(1f, 1f);
             rightCol.rectTransform.offsetMin = new Vector2(8f, 22f);
-            rightCol.rectTransform.offsetMax = new Vector2(-22f, -110f);
+            rightCol.rectTransform.offsetMax = new Vector2(-22f, -126f);
 
             TextMeshProUGUI pCatTMP = CreateTMP("PracticeCategory", rightCol.transform, "ÔN TẬP B1/B2",
                 a.fontBold, 15f, MedievalUITheme.GoldPrimary, TextAlignmentOptions.MidlineLeft);
@@ -3955,6 +4199,11 @@ namespace MedievalRPG.EditorTools
                 summaryTMP, listContent, emptyHint.gameObject,
                 pCatTMP, pQuestTMP, optBtns, optBgs, optTxts,
                 pFeedbackTMP, closeBtn);
+            modal.ConfigureWeaknessSummary(weaknessTMP);
+            modal.ConfigureTopicTabs(
+                tabMistakesBtn, tabMistakesBg, tabMistakesLbl,
+                tabTopicsBtn, tabTopicsBg, tabTopicsLbl,
+                weakestTopicBtn);
             return modal;
         }
 
@@ -4031,10 +4280,10 @@ namespace MedievalRPG.EditorTools
             card.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            card.rectTransform.sizeDelta = new Vector2(340f, 186f);
+            card.rectTransform.sizeDelta = new Vector2(380f, 210f);
 
             titleTMP = CreateTMP("TooltipTitle", card.transform, "Unit (Lv.1)",
-                a.fontBold, 15.5f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
+                a.fontBold, 16f, MedievalUITheme.GoldSoft, TextAlignmentOptions.MidlineLeft);
             titleTMP.raycastTarget = false;
             titleTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
             titleTMP.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -4042,12 +4291,12 @@ namespace MedievalRPG.EditorTools
             titleTMP.rectTransform.offsetMax = new Vector2(-14f, -8f);
 
             bodyTMP = CreateTMP("TooltipBody", card.transform, "Chi tiết chỉ số...",
-                a.fontBody, 13f, MedievalUITheme.IvoryText, TextAlignmentOptions.TopLeft);
+                a.fontBody, 14f, MedievalUITheme.IvoryText, TextAlignmentOptions.TopLeft);
             bodyTMP.raycastTarget = false;
             bodyTMP.textWrappingMode = TextWrappingModes.Normal;
             bodyTMP.enableAutoSizing = true;
-            bodyTMP.fontSizeMin = 10.5f;
-            bodyTMP.fontSizeMax = 13f;
+            bodyTMP.fontSizeMin = 11.5f;
+            bodyTMP.fontSizeMax = 14f;
             bodyTMP.rectTransform.anchorMin = Vector2.zero;
             bodyTMP.rectTransform.anchorMax = Vector2.one;
             bodyTMP.rectTransform.offsetMin = new Vector2(14f, 10f);
@@ -4072,7 +4321,7 @@ namespace MedievalRPG.EditorTools
             card.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            card.rectTransform.sizeDelta = new Vector2(780f, 410f);
+            card.rectTransform.sizeDelta = new Vector2(840f, 460f);
 
             UnityEngine.UI.Image ribbon = CreateImage("HeaderRibbon", card.transform, a.headerRibbon, Color.white);
             ribbon.type = UnityEngine.UI.Image.Type.Sliced;
@@ -4111,11 +4360,11 @@ namespace MedievalRPG.EditorTools
             bodyBox.rectTransform.offsetMax = new Vector2(-28f, -96f);
 
             bodyTMP = CreateTMP("StepBody", bodyBox.transform, "Nội dung hướng dẫn...",
-                a.fontBody, 17f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
+                a.fontBody, 17.5f, MedievalUITheme.IvoryText, TextAlignmentOptions.MidlineLeft);
             bodyTMP.textWrappingMode = TextWrappingModes.Normal;
             bodyTMP.enableAutoSizing = true;
-            bodyTMP.fontSizeMin = 13f;
-            bodyTMP.fontSizeMax = 17f;
+            bodyTMP.fontSizeMin = 14f;
+            bodyTMP.fontSizeMax = 18f;
             StretchWithPadding(bodyTMP.rectTransform, 18f);
 
             GameObject btnRow = CreateRect("TutorialButtons", card.transform);

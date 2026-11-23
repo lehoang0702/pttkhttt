@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: mage_armor_rare_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: mage_armor_rare_2
+  itemName: "B\xE0o Ph\u1EE5c B\u0103ng Gi\xE1"
+  description: "S\u1EE3i b\u0103ng d\u1EC7t k\u1EBFt th\xE0nh l\u1EDBp khi\xEAn l\u1EA1nh b\u1EA3o v\u1EC7 ph\xE1p s\u01B0."
+  requiredClass: 1
+  slot: 1
+  rarity: 1
+  icon: {fileID: 21300000, guid: 3199d307fddb5bf79a2af1373a51a797, type: 3}
+  bonusMaxHP: 26
+  bonusMaxMP: 18
+  bonusPhysicalAttack: 0
+  bonusMagicAttack: 5
+  bonusPhysicalDefense: 5
+  bonusMagicDefense: 9
+  bonusSpeed: 1
+  bonusCritRate: 0.01

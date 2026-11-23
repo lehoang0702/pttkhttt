@@ -55,6 +55,7 @@ namespace MedievalRPG.Data
 
         private bool _isLoaded;
         private bool _disableDiskPersistence;
+        private string _customSavePath;
 
         public EquipmentCatalog Catalog
         {
@@ -92,19 +93,43 @@ namespace MedievalRPG.Data
         public void InitializeForTests(EquipmentCatalog testCatalog)
         {
             _disableDiskPersistence = true;
+            _customSavePath = null;
             _catalog = testCatalog != null ? testCatalog : EquipmentCatalog.CreateRuntimeFallbackCatalog();
             _ownedItems.Clear();
             _equippedMap.Clear();
             _isLoaded = true;
         }
 
+        public void InitializeForDiskTests(string customSavePath, EquipmentCatalog testCatalog = null)
+        {
+            _disableDiskPersistence = false;
+            _customSavePath = customSavePath;
+            _catalog = testCatalog != null ? testCatalog : EquipmentCatalog.CreateRuntimeFallbackCatalog();
+            _ownedItems.Clear();
+            _equippedMap.Clear();
+            _isLoaded = false;
+        }
+
         private void EnsureCatalog()
         {
             if (_catalog != null) return;
-            _catalog = Resources.Load<EquipmentCatalog>("MedievalEquipmentCatalog");
-            if (_catalog == null || _catalog.allItems == null || _catalog.allItems.Count == 0)
+            EquipmentCatalog loaded = Resources.Load<EquipmentCatalog>("MedievalEquipmentCatalog");
+            if (loaded == null || loaded.allItems == null || loaded.allItems.Count == 0)
             {
                 _catalog = EquipmentCatalog.CreateRuntimeFallbackCatalog();
+            }
+            else
+            {
+                EquipmentCatalog.EquipmentBlueprint[] defaults = EquipmentCatalog.GetDefaultBlueprints();
+                if (loaded.allItems.Count < defaults.Length)
+                {
+                    _catalog = UnityEngine.Object.Instantiate(loaded);
+                    _catalog.EnsureAllDefaultBlueprintsPresent();
+                }
+                else
+                {
+                    _catalog = loaded;
+                }
             }
             _catalog.RebuildLookup();
         }
@@ -114,20 +139,21 @@ namespace MedievalRPG.Data
             if (_isLoaded) return;
             EnsureCatalog();
             _isLoaded = true;
+            _ownedItems.Clear();
+            _equippedMap.Clear();
 
             if (_disableDiskPersistence) return;
             string path = GetSavePath();
-            if (!File.Exists(path)) return;
+            EquipmentSavePayload payload = SaveFileUtility.LoadWithBackup(
+                path,
+                TryDeserializePayload,
+                out _,
+                out _,
+                msg => Debug.LogWarning($"[PlayerEquipmentManager] {msg}"));
+            if (payload == null) return;
 
             try
             {
-                string json = File.ReadAllText(path);
-                EquipmentSavePayload payload = JsonUtility.FromJson<EquipmentSavePayload>(json);
-                if (payload == null) return;
-
-                _ownedItems.Clear();
-                _equippedMap.Clear();
-
                 if (payload.ownedItems != null)
                 {
                     foreach (OwnedEquipmentInstance inst in payload.ownedItems)
@@ -153,8 +179,16 @@ namespace MedievalRPG.Data
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[PlayerEquipmentManager] Không thể đọc file kho đồ: {ex.Message}");
+                Debug.LogWarning($"[PlayerEquipmentManager] Lỗi áp dụng dữ liệu kho đồ: {ex.Message}");
             }
+        }
+
+        private static EquipmentSavePayload TryDeserializePayload(string json)
+        {
+            if (!SaveFileUtility.LooksLikeJsonObject(json)) return null;
+            string trimmed = json.Trim();
+            if (!trimmed.Contains("\"ownedItems\"") && !trimmed.Contains("\"version\"")) return null;
+            return JsonUtility.FromJson<EquipmentSavePayload>(trimmed);
         }
 
         public void SaveToDisk()
@@ -176,7 +210,10 @@ namespace MedievalRPG.Data
                 }
 
                 string json = JsonUtility.ToJson(payload, true);
-                File.WriteAllText(GetSavePath(), json);
+                SaveFileUtility.WriteAtomicWithBackup(
+                    GetSavePath(),
+                    json,
+                    msg => Debug.LogWarning($"[PlayerEquipmentManager] {msg}"));
             }
             catch (Exception ex)
             {
@@ -184,7 +221,9 @@ namespace MedievalRPG.Data
             }
         }
 
-        private static string GetSavePath() => Path.Combine(Application.persistentDataPath, SaveFileName);
+        private string GetSavePath() => !string.IsNullOrEmpty(_customSavePath)
+            ? _customSavePath
+            : Path.Combine(Application.persistentDataPath, SaveFileName);
 
         public OwnedEquipmentInstance AddItem(EquipmentItemData item, int obtainedWave = 1)
         {
@@ -487,8 +526,7 @@ namespace MedievalRPG.Data
             _isLoaded = true;
             if (!_disableDiskPersistence)
             {
-                string path = GetSavePath();
-                if (File.Exists(path)) File.Delete(path);
+                SaveFileUtility.DeleteSaveAndBackups(GetSavePath());
             }
             OnEquipmentChanged?.Invoke();
         }

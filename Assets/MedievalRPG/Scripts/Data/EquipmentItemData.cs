@@ -146,6 +146,7 @@ namespace MedievalRPG.Data
                 case EquipmentSlot.Weapon: return "Vũ Khí";
                 case EquipmentSlot.Armor: return "Giáp";
                 case EquipmentSlot.Accessory: return "Phụ Kiện";
+                case EquipmentSlot.Helmet: return "Mũ";
                 default: return "Trang Bị";
             }
         }

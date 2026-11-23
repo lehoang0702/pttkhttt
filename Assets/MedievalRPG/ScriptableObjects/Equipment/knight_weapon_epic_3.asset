@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_weapon_epic_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_weapon_epic_3
+  itemName: "Th\xE1nh Ch\xF9y Quang Minh"
+  description: "B\u1EA3o ch\xF9y ho\xE0ng kim t\u1ECFa h\xE0o quang ch\u1EA5n \xE1p ma v\u1EADt b\xF3ng t\u1ED1i."
+  requiredClass: 0
+  slot: 0
+  rarity: 2
+  icon: {fileID: 21300000, guid: 8ba40c4aff3d8169da1b75092b90b0c2, type: 3}
+  bonusMaxHP: 40
+  bonusMaxMP: 8
+  bonusPhysicalAttack: 17
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 6
+  bonusMagicDefense: 4
+  bonusSpeed: 1
+  bonusCritRate: 0.06

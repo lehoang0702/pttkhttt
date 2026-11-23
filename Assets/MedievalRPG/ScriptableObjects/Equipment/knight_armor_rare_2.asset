@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_armor_rare_2
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_armor_rare_2
+  itemName: "Gi\xE1p T\u1EA5m C\u1EADn V\u1EC7"
+  description: "Chi\u1EBFn gi\xE1p lam b\u1EA1c c\xE2n b\u1EB1ng ho\xE0n h\u1EA3o gi\u1EEFa gi\xE1p v\xE0 kh\xE1ng ph\xE9p."
+  requiredClass: 0
+  slot: 1
+  rarity: 1
+  icon: {fileID: 21300000, guid: 2aa30ca1f6a3a0b8dba352d9f86c11c2, type: 3}
+  bonusMaxHP: 38
+  bonusMaxMP: 5
+  bonusPhysicalAttack: 2
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 8
+  bonusMagicDefense: 5
+  bonusSpeed: 1
+  bonusCritRate: 0.01

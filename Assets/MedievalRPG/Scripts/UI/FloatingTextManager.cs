@@ -11,6 +11,11 @@ namespace MedievalRPG.UI
         [SerializeField] private RectTransform containerRect;
         [SerializeField] private TMP_FontAsset fontAsset;
 
+        public void OverrideFont(TMP_FontAsset font)
+        {
+            if (font != null) fontAsset = font;
+        }
+
         public void Initialize(RectTransform container, TMP_FontAsset font)
         {
             containerRect = container;

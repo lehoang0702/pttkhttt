@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_acc_common_4
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_acc_common_4
+  itemName: "Kh\u0103n Cho\xE0ng T\xE2n Binh"
+  description: "Kh\u0103n cho\xE0ng \u0111\u1ECF b\u1EA3o v\u1EC7 vai g\xE1y v\xE0 gi\u1EEF nhi\u1EC7t gi\u1EEFa \u0111\xE8o tuy\u1EBFt."
+  requiredClass: 0
+  slot: 2
+  rarity: 0
+  icon: {fileID: 21300000, guid: 4cc07cc26ab4df81f973998a855b68b5, type: 3}
+  bonusMaxHP: 13
+  bonusMaxMP: 6
+  bonusPhysicalAttack: 1
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 2
+  bonusMagicDefense: 2
+  bonusSpeed: 1
+  bonusCritRate: 0

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: knight_weapon_rare_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: knight_weapon_rare_3
+  itemName: "B\xFAa Chi\u1EBFn B\u1EA1c"
+  description: "\u0110\u1EA7u b\xFAa n\u1EA1m th\xE9p b\u1EA1c \u0111\u1EADp tan khi\xEAn ch\u1EAFn h\u1EA1ng n\u1EB7ng."
+  requiredClass: 0
+  slot: 0
+  rarity: 1
+  icon: {fileID: 21300000, guid: 44a9ff9f0cdf28e08a465f311eb4c5d0, type: 3}
+  bonusMaxHP: 24
+  bonusMaxMP: 2
+  bonusPhysicalAttack: 10
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 4
+  bonusMagicDefense: 1
+  bonusSpeed: 0
+  bonusCritRate: 0.03

@@ -1,14 +1,18 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
+using MedievalRPG.Combat;
 using MedievalRPG.Data;
+using MedievalRPG.UI;
 
 namespace MedievalRPG.Visuals
 {
     /// <summary>
-    /// Quản lý hiệu ứng chiến đấu Pixel-Art (Vệt chém, Đạn phép/Tên bay, Nổ AoE, Cột sáng hồi máu,
-    /// Phá Khiên Bóng Tối, Mưa Tên, Bụi hành quân, Hitstop & Rung Camera nhẹ).
-    /// Toàn bộ sprite hiệu ứng được sinh procedural sắc nét (FilterMode.Point).
+    /// Quản lý hiệu ứng chiến đấu Pixel-Art dùng ObjectPool<SpriteRenderer> (zero-GC reuse):
+    /// Vệt chém, Đạn phép/Tên bay, Nổ AoE, Cột sáng hồi máu, Phá Khiên Bóng Tối, Mưa Tên,
+    /// Đỡ Đòn Hoàn Hảo, Tuyệt Kỹ Hợp Kích, Bụi hành quân, Confetti ăn mừng, Hitstop & Rung Camera.
     /// </summary>
     public class PixelCombatVFXManager : MonoBehaviour
     {
@@ -24,6 +28,7 @@ namespace MedievalRPG.Visuals
             _ringSprite = null;
             _shardSprite = null;
             _dustSprite = null;
+            _confettiSprite = null;
         }
 
         private static Sprite _slashSprite;
@@ -32,11 +37,18 @@ namespace MedievalRPG.Visuals
         private static Sprite _ringSprite;
         private static Sprite _shardSprite;
         private static Sprite _dustSprite;
+        private static Sprite _confettiSprite;
 
+        private ObjectPool<SpriteRenderer> _spritePool;
+        private Transform _poolRoot;
         private Coroutine _shakeCoroutine;
         private Coroutine _hitstopCoroutine;
         private Vector3 _cameraRestPos;
         private bool _hasCameraRestPos;
+
+        public int TotalPoolCreated { get; private set; }
+        public int ActivePooledCount => _spritePool != null ? _spritePool.CountActive : 0;
+        public int InactivePooledCount => _spritePool != null ? _spritePool.CountInactive : 0;
 
         public static PixelCombatVFXManager EnsureExists()
         {
@@ -45,25 +57,125 @@ namespace MedievalRPG.Visuals
             if (existing != null)
             {
                 Instance = existing;
+                existing.EnsurePoolInitialized();
                 return existing;
             }
             GameObject go = new GameObject("PixelCombatVFXManager");
             return go.AddComponent<PixelCombatVFXManager>();
         }
 
+        private static void SafeDestroyGameObject(GameObject go)
+        {
+            if (go == null) return;
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(gameObject);
+                SafeDestroyGameObject(gameObject);
                 return;
             }
             Instance = this;
+            EnsurePoolInitialized();
         }
 
         private void OnDestroy()
         {
-            if (Instance == this) Instance = null;
+            if (Instance == this)
+            {
+                TimeScaleController.SetHitstop(false);
+                Instance = null;
+            }
+            _spritePool?.Clear();
+            _spritePool = null;
+        }
+
+        public void EnsurePoolInitialized()
+        {
+            if (_spritePool != null) return;
+
+            if (_poolRoot == null)
+            {
+                GameObject root = new GameObject("PooledVFXRoot");
+                root.transform.SetParent(transform, false);
+                _poolRoot = root.transform;
+            }
+
+            _spritePool = new ObjectPool<SpriteRenderer>(
+                createFunc: CreatePooledSprite,
+                actionOnGet: sr =>
+                {
+                    if (sr == null) return;
+                    sr.gameObject.SetActive(true);
+                    sr.transform.localRotation = Quaternion.identity;
+                    sr.transform.localScale = Vector3.one;
+                    sr.flipX = false;
+                    sr.flipY = false;
+                    sr.color = Color.white;
+                    sr.sortingOrder = 16;
+                },
+                actionOnRelease: sr =>
+                {
+                    if (sr == null) return;
+                    sr.sprite = null;
+                    sr.gameObject.SetActive(false);
+                    if (_poolRoot != null) sr.transform.SetParent(_poolRoot, false);
+                },
+                actionOnDestroy: sr =>
+                {
+                    if (sr != null) SafeDestroyGameObject(sr.gameObject);
+                },
+                collectionCheck: false,
+                defaultCapacity: 24,
+                maxSize: 128);
+
+            PrewarmPool(8);
+        }
+
+        private void PrewarmPool(int count)
+        {
+            if (_spritePool == null || count <= 0) return;
+            List<SpriteRenderer> temp = new List<SpriteRenderer>(count);
+            for (int i = 0; i < count; i++)
+            {
+                temp.Add(_spritePool.Get());
+            }
+            for (int i = 0; i < temp.Count; i++)
+            {
+                _spritePool.Release(temp[i]);
+            }
+        }
+
+        private SpriteRenderer CreatePooledSprite()
+        {
+            TotalPoolCreated++;
+            GameObject go = new GameObject($"VFX_Pooled_{TotalPoolCreated}");
+            if (_poolRoot != null) go.transform.SetParent(_poolRoot, false);
+            go.SetActive(false);
+            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 16;
+            return sr;
+        }
+
+        private SpriteRenderer RentSprite(Sprite sprite, Vector3 worldPos, Color color, int sortingOrder = 16)
+        {
+            EnsurePoolInitialized();
+            SpriteRenderer sr = _spritePool.Get();
+            sr.sprite = sprite;
+            sr.color = color;
+            sr.sortingOrder = sortingOrder;
+            sr.transform.position = worldPos;
+            return sr;
+        }
+
+        private void ReturnSprite(SpriteRenderer sr)
+        {
+            if (sr == null) return;
+            if (_spritePool != null) _spritePool.Release(sr);
+            else SafeDestroyGameObject(sr.gameObject);
         }
 
         public void PlaySlashArc(Vector3 worldPos, Color color, bool flipX = false, float scale = 1.15f)
@@ -96,41 +208,77 @@ namespace MedievalRPG.Visuals
             StartCoroutine(RainOfArrowsRoutine(centerWorldPos, onImpact));
         }
 
+        public void PlayPerfectGuardBurst(Vector3 worldPos, bool isQuickParry)
+        {
+            Color col = isQuickParry ? MedievalUITheme.GoldSoft : MedievalUITheme.MpSapphire;
+            StartCoroutine(PerfectGuardRoutine(worldPos + new Vector3(0f, 0.28f, -0.08f), col, isQuickParry));
+        }
+
+        public void PlaySynergyUltimateVFX(Vector3 heroesCenter, IReadOnlyList<Vector3> enemyPositions)
+        {
+            StartCoroutine(PlaySynergyUltimateRoutine(heroesCenter, enemyPositions));
+        }
+
+        public IEnumerator PlaySynergyUltimateRoutine(Vector3 heroesCenter, IReadOnlyList<Vector3> enemyPositions)
+        {
+            PlayExplosionBurst(heroesCenter + new Vector3(0f, 0.25f, 0f), MedievalUITheme.GoldSoft, 1.55f);
+            TriggerHitstop(0.065f);
+            TriggerCameraShake(0.20f, 0.28f);
+
+            if (enemyPositions != null)
+            {
+                for (int i = 0; i < enemyPositions.Count; i++)
+                {
+                    Vector3 ep = enemyPositions[i];
+                    PlaySlashArc(ep, MedievalUITheme.GoldSoft, false, 1.65f);
+                    PlayExplosionBurst(ep, new Color(0.35f, 0.85f, 1f, 1f), 1.45f);
+                    PlayRainOfArrows(ep, null);
+                    yield return new WaitForSeconds(0.06f);
+                }
+            }
+        }
+
+        public void PlayConfettiWorldBurst(Vector3 center, int count = 34)
+        {
+            StartCoroutine(ConfettiWorldBurstRoutine(center, count));
+        }
+
         public IEnumerator PlayProjectileRoutine(Vector3 from, Vector3 to, Color color, bool isArrow, float duration, Action onHit)
         {
-            GameObject go = new GameObject(isArrow ? "VFX_Arrow" : "VFX_Orb");
-            go.transform.position = from + new Vector3(0f, 0.30f, -0.08f);
-            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = isArrow ? GetArrowSprite() : GetOrbSprite();
-            sr.color = color;
-            sr.sortingOrder = 16;
-
             Vector3 start = from + new Vector3(0f, 0.30f, -0.08f);
             Vector3 end = to + new Vector3(0f, 0.30f, -0.08f);
+            SpriteRenderer sr = RentSprite(isArrow ? GetArrowSprite() : GetOrbSprite(), start, color, 16);
+
             Vector3 dir = (end - start);
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-            if (isArrow) go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            if (isArrow) sr.transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
             float arcHeight = isArrow ? 0.42f : 0.14f;
             float elapsed = 0f;
             float dur = Mathf.Max(0.08f, duration);
 
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                Vector3 pos = Vector3.Lerp(start, end, t);
-                pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
-                go.transform.position = pos;
-                if (!isArrow)
+                while (elapsed < dur)
                 {
-                    go.transform.Rotate(0f, 0f, 480f * Time.deltaTime);
-                    go.transform.localScale = Vector3.one * (0.95f + 0.25f * Mathf.Sin(t * Mathf.PI));
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    Vector3 pos = Vector3.Lerp(start, end, t);
+                    pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+                    sr.transform.position = pos;
+                    if (!isArrow)
+                    {
+                        sr.transform.Rotate(0f, 0f, 480f * Time.deltaTime);
+                        sr.transform.localScale = Vector3.one * (0.95f + 0.25f * Mathf.Sin(t * Mathf.PI));
+                    }
+                    yield return null;
                 }
-                yield return null;
+            }
+            finally
+            {
+                ReturnSprite(sr);
             }
 
-            Destroy(go);
             onHit?.Invoke();
             if (!isArrow) PlayExplosionBurst(to, color, 0.9f);
         }
@@ -150,21 +298,20 @@ namespace MedievalRPG.Visuals
 
         public void TriggerHitstop(float unscaledDuration = 0.045f)
         {
-            if (Time.timeScale <= 0.05f || _hitstopCoroutine != null) return;
+            if (TimeScaleController.IsPaused || TimeScaleController.EffectiveTimeScale <= 0.05f || _hitstopCoroutine != null) return;
             _hitstopCoroutine = StartCoroutine(HitstopRoutine(unscaledDuration));
         }
 
         private IEnumerator HitstopRoutine(float dur)
         {
-            float prev = Time.timeScale;
-            Time.timeScale = 0.08f;
+            TimeScaleController.SetHitstop(true, 0.08f);
             float elapsed = 0f;
-            while (elapsed < dur)
+            while (elapsed < dur && !TimeScaleController.IsPaused)
             {
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
-            if (Time.timeScale < 0.2f) Time.timeScale = prev > 0.1f ? prev : 1f;
+            TimeScaleController.SetHitstop(false);
             _hitstopCoroutine = null;
         }
 
@@ -187,209 +334,293 @@ namespace MedievalRPG.Visuals
 
         private IEnumerator SlashArcRoutine(Vector3 pos, Color color, bool flipX, float scale)
         {
-            GameObject go = new GameObject("VFX_Slash");
-            go.transform.position = pos;
-            go.transform.localScale = new Vector3(flipX ? -scale : scale, scale, 1f);
-            go.transform.rotation = Quaternion.Euler(0f, 0f, flipX ? 18f : -18f);
+            SpriteRenderer sr = RentSprite(GetSlashSprite(), pos, color, 16);
+            sr.transform.localScale = new Vector3(flipX ? -scale : scale, scale, 1f);
+            sr.transform.rotation = Quaternion.Euler(0f, 0f, flipX ? 18f : -18f);
 
-            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = GetSlashSprite();
-            sr.color = color;
-            sr.sortingOrder = 16;
-
-            float elapsed = 0f;
-            const float dur = 0.20f;
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                go.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(flipX ? 28f : -28f, flipX ? -24f : 24f, t));
-                Color c = color;
-                c.a = 1f - t * t;
-                sr.color = c;
-                yield return null;
+                float elapsed = 0f;
+                const float dur = 0.20f;
+                while (elapsed < dur)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    sr.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(flipX ? 28f : -28f, flipX ? -24f : 24f, t));
+                    Color c = color;
+                    c.a = 1f - t * t;
+                    sr.color = c;
+                    yield return null;
+                }
             }
-            Destroy(go);
+            finally
+            {
+                ReturnSprite(sr);
+            }
         }
 
         private IEnumerator ExplosionBurstRoutine(Vector3 pos, Color color, float radiusScale)
         {
-            GameObject ring = new GameObject("VFX_Burst");
-            ring.transform.position = pos;
-            SpriteRenderer rSr = ring.AddComponent<SpriteRenderer>();
-            rSr.sprite = GetRingSprite();
-            rSr.color = color;
-            rSr.sortingOrder = 16;
+            SpriteRenderer rSr = RentSprite(GetRingSprite(), pos, color, 16);
 
-            // Vài tia lửa xung quanh
             const int sparkCount = 6;
-            Transform[] sparks = new Transform[sparkCount];
             SpriteRenderer[] sparkSrs = new SpriteRenderer[sparkCount];
             Vector2[] dirs = new Vector2[sparkCount];
+            Color sparkTint = Color.Lerp(color, Color.white, 0.35f);
             for (int i = 0; i < sparkCount; i++)
             {
                 float ang = (i / (float)sparkCount) * Mathf.PI * 2f + UnityEngine.Random.Range(-0.2f, 0.2f);
                 dirs[i] = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * (1.25f * radiusScale);
-                GameObject sp = new GameObject("VFX_Spark");
-                sp.transform.position = pos;
-                sp.transform.localScale = Vector3.one * 0.55f;
-                SpriteRenderer sSr = sp.AddComponent<SpriteRenderer>();
-                sSr.sprite = GetOrbSprite();
-                sSr.color = Color.Lerp(color, Color.white, 0.35f);
-                sSr.sortingOrder = 17;
-                sparks[i] = sp.transform;
+                SpriteRenderer sSr = RentSprite(GetOrbSprite(), pos, sparkTint, 17);
+                sSr.transform.localScale = Vector3.one * 0.55f;
                 sparkSrs[i] = sSr;
             }
 
-            float elapsed = 0f;
-            const float dur = 0.32f;
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                ring.transform.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.55f * radiusScale, t);
-                Color rc = color;
-                rc.a = 1f - t;
-                rSr.color = rc;
+                float elapsed = 0f;
+                const float dur = 0.32f;
+                while (elapsed < dur)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    float eased = MedievalEase.OutCubic(t);
+                    rSr.transform.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.55f * radiusScale, eased);
+                    Color rc = color;
+                    rc.a = 1f - t;
+                    rSr.color = rc;
 
+                    for (int i = 0; i < sparkCount; i++)
+                    {
+                        if (sparkSrs[i] == null) continue;
+                        sparkSrs[i].transform.position = pos + (Vector3)(dirs[i] * eased);
+                        sparkSrs[i].transform.localScale = Vector3.one * Mathf.Lerp(0.6f, 0.1f, t);
+                        Color sc = sparkTint;
+                        sc.a = 1f - t;
+                        sparkSrs[i].color = sc;
+                    }
+                    yield return null;
+                }
+            }
+            finally
+            {
+                ReturnSprite(rSr);
                 for (int i = 0; i < sparkCount; i++)
                 {
-                    if (sparks[i] == null) continue;
-                    sparks[i].position = pos + (Vector3)(dirs[i] * t);
-                    Color sc = sparkSrs[i].color;
-                    sc.a = 1f - t;
-                    sparkSrs[i].color = sc;
+                    ReturnSprite(sparkSrs[i]);
                 }
-                yield return null;
-            }
-
-            Destroy(ring);
-            for (int i = 0; i < sparkCount; i++)
-            {
-                if (sparks[i] != null) Destroy(sparks[i].gameObject);
             }
         }
 
         private IEnumerator HealColumnRoutine(Vector3 worldPos)
         {
-            GameObject ring = new GameObject("VFX_HealRing");
-            ring.transform.position = worldPos + new Vector3(0f, -0.1f, -0.08f);
-            SpriteRenderer sr = ring.AddComponent<SpriteRenderer>();
-            sr.sprite = GetRingSprite();
-            sr.color = new Color(0.45f, 1f, 0.68f, 0.9f);
-            sr.sortingOrder = 16;
+            SpriteRenderer sr = RentSprite(GetRingSprite(), worldPos + new Vector3(0f, -0.1f, -0.08f),
+                new Color(0.45f, 1f, 0.68f, 0.9f), 16);
 
             const int motes = 5;
-            Transform[] mTr = new Transform[motes];
             SpriteRenderer[] mSr = new SpriteRenderer[motes];
             Vector3[] offsets = new Vector3[motes];
+            Color moteBaseCol = new Color(0.95f, 0.95f, 0.45f, 1f);
             for (int i = 0; i < motes; i++)
             {
                 offsets[i] = new Vector3((i - 2) * 0.22f, UnityEngine.Random.Range(-0.15f, 0.25f), -0.08f);
-                GameObject m = new GameObject("HealMote");
-                m.transform.position = worldPos + offsets[i];
-                m.transform.localScale = Vector3.one * 0.42f;
-                SpriteRenderer s = m.AddComponent<SpriteRenderer>();
-                s.sprite = GetOrbSprite();
-                s.color = new Color(0.95f, 0.95f, 0.45f, 1f);
-                s.sortingOrder = 17;
-                mTr[i] = m.transform;
+                SpriteRenderer s = RentSprite(GetOrbSprite(), worldPos + offsets[i], moteBaseCol, 17);
+                s.transform.localScale = Vector3.one * 0.42f;
                 mSr[i] = s;
             }
 
-            float elapsed = 0f;
-            const float dur = 0.55f;
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                ring.transform.position = worldPos + new Vector3(0f, Mathf.Lerp(-0.15f, 0.95f, t), -0.08f);
-                ring.transform.localScale = new Vector3(1.1f, 0.55f, 1f) * (1f + 0.35f * t);
-                Color c = sr.color;
-                c.a = Mathf.Sin(t * Mathf.PI);
-                sr.color = c;
+                float elapsed = 0f;
+                const float dur = 0.55f;
+                while (elapsed < dur)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    sr.transform.position = worldPos + new Vector3(0f, Mathf.Lerp(-0.15f, 0.95f, t), -0.08f);
+                    sr.transform.localScale = new Vector3(1.1f, 0.55f, 1f) * (1f + 0.35f * t);
+                    Color c = sr.color;
+                    c.a = Mathf.Sin(t * Mathf.PI);
+                    sr.color = c;
 
+                    for (int i = 0; i < motes; i++)
+                    {
+                        if (mSr[i] == null) continue;
+                        mSr[i].transform.position = worldPos + offsets[i] + new Vector3(0f, t * 1.15f, 0f);
+                        Color mc = moteBaseCol;
+                        mc.a = 1f - t;
+                        mSr[i].color = mc;
+                    }
+                    yield return null;
+                }
+            }
+            finally
+            {
+                ReturnSprite(sr);
                 for (int i = 0; i < motes; i++)
                 {
-                    if (mTr[i] == null) continue;
-                    mTr[i].position = worldPos + offsets[i] + new Vector3(0f, t * 1.15f, 0f);
-                    Color mc = mSr[i].color;
-                    mc.a = 1f - t;
-                    mSr[i].color = mc;
+                    ReturnSprite(mSr[i]);
                 }
-                yield return null;
-            }
-
-            Destroy(ring);
-            for (int i = 0; i < motes; i++)
-            {
-                if (mTr[i] != null) Destroy(mTr[i].gameObject);
             }
         }
 
         private IEnumerator ShieldShatterRoutine(Vector3 center)
         {
             const int shards = 8;
-            Transform[] tr = new Transform[shards];
             SpriteRenderer[] srs = new SpriteRenderer[shards];
             Vector2[] vels = new Vector2[shards];
+            Color shardCol = new Color(0.75f, 0.45f, 1f, 1f);
             for (int i = 0; i < shards; i++)
             {
                 float ang = (i / (float)shards) * Mathf.PI * 2f;
                 vels[i] = new Vector2(Mathf.Cos(ang) * 1.9f, Mathf.Sin(ang) * 1.5f + 0.7f);
-                GameObject sh = new GameObject("ShieldShard");
-                sh.transform.position = center;
-                sh.transform.localScale = Vector3.one * 0.75f;
-                SpriteRenderer s = sh.AddComponent<SpriteRenderer>();
-                s.sprite = GetShardSprite();
-                s.color = new Color(0.75f, 0.45f, 1f, 1f);
-                s.sortingOrder = 17;
-                tr[i] = sh.transform;
+                SpriteRenderer s = RentSprite(GetShardSprite(), center, shardCol, 17);
+                s.transform.localScale = Vector3.one * 0.75f;
                 srs[i] = s;
             }
 
-            float elapsed = 0f;
-            const float dur = 0.45f;
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                for (int i = 0; i < shards; i++)
+                float elapsed = 0f;
+                const float dur = 0.45f;
+                while (elapsed < dur)
                 {
-                    tr[i].position = center + (Vector3)(vels[i] * t) + new Vector3(0f, -1.6f * t * t, 0f);
-                    tr[i].Rotate(0f, 0f, 360f * Time.deltaTime);
-                    Color c = srs[i].color;
-                    c.a = 1f - t;
-                    srs[i].color = c;
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    for (int i = 0; i < shards; i++)
+                    {
+                        if (srs[i] == null) continue;
+                        srs[i].transform.position = center + (Vector3)(vels[i] * t) + new Vector3(0f, -1.6f * t * t, 0f);
+                        srs[i].transform.Rotate(0f, 0f, 360f * Time.deltaTime);
+                        Color c = shardCol;
+                        c.a = 1f - t;
+                        srs[i].color = c;
+                    }
+                    yield return null;
                 }
-                yield return null;
             }
-            for (int i = 0; i < shards; i++) Destroy(tr[i].gameObject);
+            finally
+            {
+                for (int i = 0; i < shards; i++) ReturnSprite(srs[i]);
+            }
         }
 
         private IEnumerator DustPuffRoutine(Vector3 pos)
         {
-            GameObject go = new GameObject("VFX_Dust");
-            go.transform.position = pos;
-            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = GetDustSprite();
-            sr.color = new Color(0.76f, 0.66f, 0.52f, 0.75f);
-            sr.sortingOrder = 4;
+            Color baseDust = new Color(0.76f, 0.66f, 0.52f, 0.75f);
+            SpriteRenderer sr = RentSprite(GetDustSprite(), pos, baseDust, 4);
 
-            float elapsed = 0f;
-            const float dur = 0.28f;
-            while (elapsed < dur)
+            try
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / dur);
-                go.transform.position = pos + new Vector3(-0.35f * t, 0.14f * t, 0f);
-                go.transform.localScale = Vector3.one * Mathf.Lerp(0.55f, 1.15f, t);
-                Color c = sr.color;
-                c.a = (1f - t) * 0.75f;
-                sr.color = c;
-                yield return null;
+                float elapsed = 0f;
+                const float dur = 0.28f;
+                while (elapsed < dur)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    sr.transform.position = pos + new Vector3(-0.35f * t, 0.14f * t, 0f);
+                    sr.transform.localScale = Vector3.one * Mathf.Lerp(0.55f, 1.15f, t);
+                    Color c = baseDust;
+                    c.a = (1f - t) * 0.75f;
+                    sr.color = c;
+                    yield return null;
+                }
             }
-            Destroy(go);
+            finally
+            {
+                ReturnSprite(sr);
+            }
+        }
+
+        private IEnumerator PerfectGuardRoutine(Vector3 pos, Color col, bool isQuickParry)
+        {
+            SpriteRenderer ring = RentSprite(GetRingSprite(), pos, col, 17);
+            SpriteRenderer core = RentSprite(GetOrbSprite(), pos, Color.white, 18);
+
+            try
+            {
+                float elapsed = 0f;
+                float dur = isQuickParry ? 0.34f : 0.26f;
+                while (elapsed < dur)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    float eased = MedievalEase.OutBack(t);
+                    ring.transform.localScale = Vector3.one * Mathf.Lerp(0.45f, isQuickParry ? 1.85f : 1.45f, eased);
+                    Color rc = col;
+                    rc.a = 1f - t;
+                    ring.color = rc;
+
+                    core.transform.localScale = Vector3.one * Mathf.Lerp(1.2f, 0.1f, t);
+                    Color cc = Color.Lerp(Color.white, col, t);
+                    cc.a = 1f - t;
+                    core.color = cc;
+                    yield return null;
+                }
+            }
+            finally
+            {
+                ReturnSprite(ring);
+                ReturnSprite(core);
+            }
+        }
+
+        private IEnumerator ConfettiWorldBurstRoutine(Vector3 center, int count)
+        {
+            int safeCount = Mathf.Clamp(count, 8, 48);
+            Color[] palette =
+            {
+                MedievalUITheme.GoldSoft,
+                MedievalUITheme.SuccessGreen,
+                MedievalUITheme.MpSapphire,
+                MedievalUITheme.RarityEpic,
+                MedievalUITheme.HpWarning
+            };
+
+            SpriteRenderer[] pieces = new SpriteRenderer[safeCount];
+            Vector2[] vels = new Vector2[safeCount];
+            float[] spins = new float[safeCount];
+            Color[] cols = new Color[safeCount];
+
+            for (int i = 0; i < safeCount; i++)
+            {
+                Color c = palette[i % palette.Length];
+                cols[i] = c;
+                SpriteRenderer sr = RentSprite(GetConfettiSprite(), center, c, 20);
+                sr.transform.localScale = Vector3.one * UnityEngine.Random.Range(0.55f, 0.95f);
+                pieces[i] = sr;
+                float ang = UnityEngine.Random.Range(35f, 145f) * Mathf.Deg2Rad;
+                float spd = UnityEngine.Random.Range(2.4f, 5.2f);
+                vels[i] = new Vector2(Mathf.Cos(ang) * spd, Mathf.Sin(ang) * spd);
+                spins[i] = UnityEngine.Random.Range(-420f, 420f);
+            }
+
+            try
+            {
+                float elapsed = 0f;
+                const float dur = 1.15f;
+                while (elapsed < dur)
+                {
+                    float dt = Time.unscaledDeltaTime;
+                    elapsed += dt;
+                    float t = Mathf.Clamp01(elapsed / dur);
+                    for (int i = 0; i < safeCount; i++)
+                    {
+                        if (pieces[i] == null) continue;
+                        vels[i].y -= 6.5f * dt;
+                        pieces[i].transform.position += (Vector3)(vels[i] * dt);
+                        pieces[i].transform.Rotate(0f, 0f, spins[i] * dt);
+                        Color c = cols[i];
+                        c.a = t < 0.7f ? 1f : 1f - ((t - 0.7f) / 0.3f);
+                        pieces[i].color = c;
+                    }
+                    yield return null;
+                }
+            }
+            finally
+            {
+                for (int i = 0; i < safeCount; i++) ReturnSprite(pieces[i]);
+            }
         }
 
         private IEnumerator RainOfArrowsRoutine(Vector3 center, Action onImpact)
@@ -474,11 +705,9 @@ namespace MedievalRPG.Visuals
                 tex.SetPixel(x, 3, new Color(0.85f, 0.72f, 0.45f, 1f));
                 tex.SetPixel(x, 4, new Color(0.92f, 0.80f, 0.55f, 1f));
             }
-            // Mũi tên nhọn bên phải
             for (int y = 2; y <= 5; y++) tex.SetPixel(18, y, Color.white);
             for (int y = 2; y <= 5; y++) tex.SetPixel(19, y, Color.white);
             for (int y = 3; y <= 4; y++) { tex.SetPixel(20, y, Color.white); tex.SetPixel(21, y, Color.white); }
-            // Lông đuôi
             tex.SetPixel(1, 2, Color.white); tex.SetPixel(2, 2, Color.white);
             tex.SetPixel(1, 5, Color.white); tex.SetPixel(2, 5, Color.white);
             tex.Apply();
@@ -531,6 +760,19 @@ namespace MedievalRPG.Visuals
             tex.Apply();
             _dustSprite = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 32f);
             return _dustSprite;
+        }
+
+        private static Sprite GetConfettiSprite()
+        {
+            if (_confettiSprite != null) return _confettiSprite;
+            const int w = 8, h = 6;
+            Texture2D tex = CreateTex(w, h);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    tex.SetPixel(x, y, (x >= 1 && x <= 6 && y >= 1 && y <= 4) ? Color.white : Color.clear);
+            tex.Apply();
+            _confettiSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32f);
+            return _confettiSprite;
         }
 
         private static Texture2D CreateTex(int w, int h)

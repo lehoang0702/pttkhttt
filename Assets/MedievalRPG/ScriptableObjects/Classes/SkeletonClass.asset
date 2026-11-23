@@ -17,9 +17,9 @@ MonoBehaviour:
   baseLevel: 2
   isBoss: 0
   loreDescription: "Chi\u1EBFn binh b\u1ED9 x\u01B0\u01A1ng s\u1ED1ng l\u1EA1i t\u1EEB h\u1EA7m ng\u1EE5c c\u1ED5 x\u01B0a, s\u1EDF h\u1EEFu gi\xE1p ph\xF2ng ng\u1EF1 cao."
-  maxHealth: 130
+  maxHealth: 155
   maxMana: 30
-  physicalAttack: 22
+  physicalAttack: 26
   magicAttack: 4
   physicalDefense: 14
   magicDefense: 6

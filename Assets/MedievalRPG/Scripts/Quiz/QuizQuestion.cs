@@ -56,6 +56,54 @@ namespace MedievalRPG.Quiz
         }
 
         /// <summary>
+        /// Tạo bản sao câu hỏi với thứ tự đáp án được xáo trộn ngẫu nhiên (Fisher-Yates)
+        /// và tự động cập nhật correctAnswerIndex, không làm thay đổi dữ liệu gốc trong questionBank.
+        /// </summary>
+        public QuizQuestion CreateShuffledCopy(System.Random rng = null)
+        {
+            int len = answers != null ? answers.Length : 0;
+            string[] copied = new string[len];
+            if (len > 0)
+            {
+                Array.Copy(answers, copied, len);
+            }
+
+            int safeCorrect = (len > 0 && correctAnswerIndex >= 0 && correctAnswerIndex < len)
+                ? correctAnswerIndex
+                : 0;
+
+            if (len > 1)
+            {
+                int[] order = new int[len];
+                for (int i = 0; i < len; i++) order[i] = i;
+
+                for (int i = len - 1; i > 0; i--)
+                {
+                    int j = rng != null ? rng.Next(0, i + 1) : UnityEngine.Random.Range(0, i + 1);
+                    int tmp = order[i];
+                    order[i] = order[j];
+                    order[j] = tmp;
+                }
+
+                string[] shuffled = new string[len];
+                int mappedCorrect = safeCorrect;
+                for (int i = 0; i < len; i++)
+                {
+                    int srcIdx = order[i];
+                    shuffled[i] = copied[srcIdx];
+                    if (srcIdx == safeCorrect)
+                    {
+                        mappedCorrect = i;
+                    }
+                }
+                copied = shuffled;
+                safeCorrect = mappedCorrect;
+            }
+
+            return new QuizQuestion(category, questionText, copied, safeCorrect, explanation, bonusDamage);
+        }
+
+        /// <summary>
         /// Kiểm tra đáp án người chơi chọn có đúng không
         /// </summary>
         /// <param name="selectedIndex">Chỉ số đáp án người chơi chọn (0 - 3)</param>

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bf9332642f15648a20582534a87c1f, type: 3}
+  m_Name: archer_helm_rare_3
+  m_EditorClassIdentifier: MedievalRPG.Runtime::MedievalRPG.Data.EquipmentItemData
+  itemId: archer_helm_rare_3
+  itemName: "M\u0169 B\u1EA1c \u01AFng Nh\xE3n"
+  description: "Gia c\u1ED1 ch\u1ECFm th\xE9p b\u1EA1c m\u1ECFng b\u1EA3o v\u1EC7 \u0111\u1EA7u v\xE0 tr\u1EE3 gi\xFAp th\u1ECB l\u1EF1c."
+  requiredClass: 2
+  slot: 3
+  rarity: 1
+  icon: {fileID: 21300000, guid: dc3917805cf8508b7a85df449759feb7, type: 3}
+  bonusMaxHP: 19
+  bonusMaxMP: 4
+  bonusPhysicalAttack: 5
+  bonusMagicAttack: 0
+  bonusPhysicalDefense: 5
+  bonusMagicDefense: 3
+  bonusSpeed: 2
+  bonusCritRate: 0.04

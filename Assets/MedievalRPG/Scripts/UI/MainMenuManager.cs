@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using MedievalRPG.Audio;
+using MedievalRPG.Combat;
 
 namespace MedievalRPG.UI
 {
@@ -101,7 +102,7 @@ namespace MedievalRPG.UI
 
         private void Start()
         {
-            Time.timeScale = 1f;
+            TimeScaleController.Reset();
             AudioManager audio = AudioManager.EnsureExists();
             audio.SetPausedDuck(false);
             audio.PlayMenuMusic();

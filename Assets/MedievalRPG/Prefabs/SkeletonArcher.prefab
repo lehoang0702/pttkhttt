@@ -30,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.32, y: 1.32, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -167,15 +167,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: "X\u01B0\u01A1ng Cung Th\u1EE7"
   unitLevel: 2
-  damage: 20
-  maxHP: 105
-  currentHP: 105
+  damage: 24
+  maxHP: 125
+  currentHP: 125
   characterClass: 2
   maxMP: 45
   currentMP: 45
   defense: 9
   magicDefense: 8
-  magicDamage: 8
+  magicDamage: 9
   speed: 16
   critRate: 0.14
   critMultiplier: 1.5
@@ -233,5 +233,5 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.25, y: 1.45}
+  m_Size: {x: 0.95, y: 1.1}
   m_EdgeRadius: 0

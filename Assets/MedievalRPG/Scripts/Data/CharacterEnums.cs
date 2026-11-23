@@ -70,7 +70,8 @@ namespace MedievalRPG.Data
     {
         Weapon = 0,     // Vũ Khí
         Armor = 1,      // Giáp
-        Accessory = 2   // Phụ Kiện
+        Accessory = 2,  // Phụ Kiện
+        Helmet = 3      // Mũ
     }
 
     public enum QuizDifficultyFilter

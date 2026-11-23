@@ -19,6 +19,12 @@ namespace MedievalRPG.Visuals
         [SerializeField] private Transform foregroundLayer;
         [SerializeField] private TMP_FontAsset labelFont;
 
+        public void OverrideFont(TMP_FontAsset font)
+        {
+            if (font != null) labelFont = font;
+            if (_milestoneTextTMP != null && font != null) _milestoneTextTMP.font = font;
+        }
+
         private readonly List<Transform> _roadTiles = new List<Transform>();
         private readonly List<Transform> _roadsideProps = new List<Transform>();
         private Transform _milestoneRoot;
@@ -37,11 +43,37 @@ namespace MedievalRPG.Visuals
         private static Sprite _cachedPebbleBushSprite;
         private static Sprite _cachedMilestoneSprite;
         private static Sprite _cachedMoteSprite;
+        private static Sprite _cachedLeafSprite;
+        private static Sprite _cachedMistSprite;
+        private static Sprite _cachedEventChestSprite;
+        private static Sprite _cachedEventShrineSprite;
+        private static Sprite _cachedEventCartSprite;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticSprites()
+        {
+            _cachedRoadSprite = null;
+            _cachedPebbleBushSprite = null;
+            _cachedMilestoneSprite = null;
+            _cachedMoteSprite = null;
+            _cachedLeafSprite = null;
+            _cachedMistSprite = null;
+            _cachedEventChestSprite = null;
+            _cachedEventShrineSprite = null;
+            _cachedEventCartSprite = null;
+        }
 
         private readonly List<Transform> _ambientMotes = new List<Transform>();
         private readonly List<SpriteRenderer> _ambientMoteSrs = new List<SpriteRenderer>();
         private readonly List<float> _ambientSpeeds = new List<float>();
+        private readonly List<Transform> _weatherParticles = new List<Transform>();
+        private readonly List<SpriteRenderer> _weatherSrs = new List<SpriteRenderer>();
+        private readonly List<Vector2> _weatherVelocities = new List<Vector2>();
+        private readonly List<Transform> _mistBands = new List<Transform>();
+        private readonly List<SpriteRenderer> _mistSrs = new List<SpriteRenderer>();
+        private GameObject _eventPropGo;
         private EnvironmentThemeType _currentTheme = EnvironmentThemeType.MistyForest;
+        private bool _hasStarted;
 
         public bool HasRoadTiles => _roadTiles.Count > 0;
 
@@ -73,27 +105,83 @@ namespace MedievalRPG.Visuals
 
         private void Start()
         {
+            _hasStarted = true;
             SpawnAmbientMotes();
+            SpawnThemeWeatherParticles();
         }
 
         private void Update()
         {
-            if (_ambientMotes.Count == 0) return;
-            for (int i = 0; i < _ambientMotes.Count; i++)
+            float dt = Time.deltaTime;
+            float t = Time.time;
+
+            if (_ambientMotes.Count > 0)
             {
-                Transform tr = _ambientMotes[i];
-                if (tr == null) continue;
-                float spd = _ambientSpeeds[i];
-                tr.position += new Vector3(-spd * 0.45f * Time.deltaTime, Mathf.Sin(Time.time * 2.1f + i) * 0.14f * Time.deltaTime, 0f);
-                if (tr.position.x < -7.5f)
+                for (int i = 0; i < _ambientMotes.Count; i++)
                 {
-                    tr.position = new Vector3(7.5f, UnityEngine.Random.Range(-1.5f, 2.2f), 0.12f);
+                    Transform tr = _ambientMotes[i];
+                    if (tr == null) continue;
+                    float spd = _ambientSpeeds[i];
+                    tr.position += new Vector3(-spd * 0.45f * dt, Mathf.Sin(t * 2.1f + i) * 0.14f * dt, 0f);
+                    if (tr.position.x < -7.5f)
+                    {
+                        tr.position = new Vector3(7.5f, UnityEngine.Random.Range(-1.5f, 2.2f), 0.12f);
+                    }
+                    if (_ambientMoteSrs[i] != null)
+                    {
+                        Color c = _ambientMoteSrs[i].color;
+                        c.a = 0.35f + 0.35f * Mathf.Sin(t * 3.0f + i * 1.3f);
+                        _ambientMoteSrs[i].color = c;
+                    }
                 }
-                if (_ambientMoteSrs[i] != null)
+            }
+
+            if (_weatherParticles.Count > 0)
+            {
+                for (int i = 0; i < _weatherParticles.Count; i++)
                 {
-                    Color c = _ambientMoteSrs[i].color;
-                    c.a = 0.35f + 0.35f * Mathf.Sin(Time.time * 3.0f + i * 1.3f);
-                    _ambientMoteSrs[i].color = c;
+                    Transform tr = _weatherParticles[i];
+                    if (tr == null) continue;
+                    Vector2 vel = _weatherVelocities[i];
+                    tr.position += new Vector3(vel.x * dt, vel.y * dt, 0f);
+
+                    if (_currentTheme == EnvironmentThemeType.MistyForest)
+                    {
+                        tr.Rotate(0f, 0f, 32f * dt);
+                        if (tr.position.y < -2.3f || tr.position.x < -8.2f)
+                        {
+                            tr.position = new Vector3(UnityEngine.Random.Range(-3.5f, 8.2f), UnityEngine.Random.Range(2.4f, 3.6f), 0.10f);
+                        }
+                    }
+                    else
+                    {
+                        tr.position += new Vector3(Mathf.Sin(t * 2.5f + i) * 0.16f * dt, 0f, 0f);
+                        if (tr.position.y > 3.2f || tr.position.x < -8.2f || tr.position.x > 8.2f)
+                        {
+                            tr.position = new Vector3(UnityEngine.Random.Range(-7.0f, 7.0f), UnityEngine.Random.Range(-2.3f, -1.6f), 0.10f);
+                        }
+                        if (_weatherSrs[i] != null)
+                        {
+                            Color c = _weatherSrs[i].color;
+                            float heightNorm = Mathf.Clamp01((tr.position.y + 2.3f) / 5.2f);
+                            c.a = Mathf.Sin(heightNorm * Mathf.PI) * 0.78f;
+                            _weatherSrs[i].color = c;
+                        }
+                    }
+                }
+            }
+
+            if (_mistBands.Count > 0)
+            {
+                for (int i = 0; i < _mistBands.Count; i++)
+                {
+                    Transform mb = _mistBands[i];
+                    if (mb == null) continue;
+                    mb.position += new Vector3(-(0.28f + i * 0.12f) * dt, 0f, 0f);
+                    if (mb.position.x < -11.5f)
+                    {
+                        mb.position = new Vector3(11.5f, mb.position.y, mb.position.z);
+                    }
                 }
             }
         }
@@ -153,6 +241,11 @@ namespace MedievalRPG.Visuals
             for (int i = 0; i < _ambientMoteSrs.Count; i++)
             {
                 if (_ambientMoteSrs[i] != null) _ambientMoteSrs[i].color = moteColor;
+            }
+
+            if (_hasStarted && Application.isPlaying)
+            {
+                RefreshThemeWeatherVisuals();
             }
         }
 
@@ -233,7 +326,18 @@ namespace MedievalRPG.Visuals
             }
             _roadTiles.Clear();
             _roadsideProps.Clear();
+            _ambientMotes.Clear();
+            _ambientMoteSrs.Clear();
+            _ambientSpeeds.Clear();
+            _weatherParticles.Clear();
+            _weatherSrs.Clear();
+            _weatherVelocities.Clear();
+            _mistBands.Clear();
+            _mistSrs.Clear();
+            _eventPropGo = null;
             _milestoneRoot = null;
+            _milestoneTextTMP = null;
+            _milestoneFlagSr = null;
 
             Sprite roadSp = GetOrCreateRoadSprite();
             _roadTileWidth = roadSp.bounds.size.x;
@@ -269,6 +373,220 @@ namespace MedievalRPG.Visuals
             }
 
             BuildMilestoneMarker();
+            if (_hasStarted && Application.isPlaying)
+            {
+                SpawnAmbientMotes();
+                SpawnThemeWeatherParticles();
+            }
+        }
+
+        private void SpawnThemeWeatherParticles()
+        {
+            if (_weatherParticles.Count == 0)
+            {
+                for (int i = 0; i < 14; i++)
+                {
+                    GameObject go = new GameObject($"WeatherParticle_{i}");
+                    go.transform.SetParent(transform, false);
+                    SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+                    sr.sortingOrder = 1;
+                    _weatherParticles.Add(go.transform);
+                    _weatherSrs.Add(sr);
+                    _weatherVelocities.Add(Vector2.zero);
+                }
+            }
+
+            if (_mistBands.Count == 0)
+            {
+                Sprite mistSp = GetOrCreateMistSprite();
+                for (int i = 0; i < 3; i++)
+                {
+                    GameObject m = new GameObject($"MistBand_{i}");
+                    m.transform.SetParent(transform, false);
+                    m.transform.position = new Vector3(-7f + i * 7.5f, _roadY - 0.32f + i * 0.22f, 0.14f);
+                    m.transform.localScale = new Vector3(4.5f, 0.75f, 1f);
+                    SpriteRenderer sr = m.AddComponent<SpriteRenderer>();
+                    sr.sprite = mistSp;
+                    sr.sortingOrder = -1;
+                    _mistBands.Add(m.transform);
+                    _mistSrs.Add(sr);
+                }
+            }
+
+            RefreshThemeWeatherVisuals();
+        }
+
+        private void RefreshThemeWeatherVisuals()
+        {
+            Sprite leafSp = GetOrCreateLeafSprite();
+            Sprite moteSp = GetOrCreateMoteSprite();
+
+            for (int i = 0; i < _weatherParticles.Count; i++)
+            {
+                Transform tr = _weatherParticles[i];
+                SpriteRenderer sr = _weatherSrs[i];
+                if (tr == null || sr == null) continue;
+
+                if (_currentTheme == EnvironmentThemeType.MistyForest)
+                {
+                    sr.sprite = leafSp;
+                    sr.color = (i % 3 == 0)
+                        ? new Color(0.84f, 0.74f, 0.34f, 0.78f)
+                        : new Color(0.42f, 0.78f, 0.44f, 0.78f);
+                    tr.position = new Vector3(UnityEngine.Random.Range(-7.2f, 7.8f), UnityEngine.Random.Range(-1.4f, 3.2f), 0.10f);
+                    tr.localScale = Vector3.one * UnityEngine.Random.Range(0.75f, 1.15f);
+                    _weatherVelocities[i] = new Vector2(UnityEngine.Random.Range(-0.95f, -0.45f), UnityEngine.Random.Range(-0.65f, -0.35f));
+                }
+                else if (_currentTheme == EnvironmentThemeType.AncientCrypt)
+                {
+                    sr.sprite = moteSp;
+                    sr.color = new Color(0.45f, 0.88f, 1.0f, 0.72f);
+                    tr.position = new Vector3(UnityEngine.Random.Range(-7.0f, 7.0f), UnityEngine.Random.Range(-2.2f, 2.4f), 0.10f);
+                    tr.localScale = Vector3.one * UnityEngine.Random.Range(0.65f, 1.20f);
+                    tr.rotation = Quaternion.identity;
+                    _weatherVelocities[i] = new Vector2(UnityEngine.Random.Range(-0.22f, 0.22f), UnityEngine.Random.Range(0.32f, 0.65f));
+                }
+                else
+                {
+                    sr.sprite = moteSp;
+                    sr.color = (i % 2 == 0)
+                        ? new Color(1.0f, 0.48f, 0.18f, 0.85f)
+                        : new Color(1.0f, 0.78f, 0.28f, 0.82f);
+                    tr.position = new Vector3(UnityEngine.Random.Range(-7.0f, 7.0f), UnityEngine.Random.Range(-2.2f, 2.4f), 0.10f);
+                    tr.localScale = Vector3.one * UnityEngine.Random.Range(0.55f, 1.05f);
+                    tr.rotation = Quaternion.identity;
+                    _weatherVelocities[i] = new Vector2(UnityEngine.Random.Range(-0.55f, -0.15f), UnityEngine.Random.Range(0.55f, 1.10f));
+                }
+            }
+
+            Color mistCol = _currentTheme switch
+            {
+                EnvironmentThemeType.AncientCrypt => new Color(0.45f, 0.64f, 0.92f, 0.16f),
+                EnvironmentThemeType.DarkCitadel  => new Color(0.68f, 0.20f, 0.18f, 0.16f),
+                _                                 => new Color(0.80f, 0.92f, 0.82f, 0.15f)
+            };
+            for (int i = 0; i < _mistSrs.Count; i++)
+            {
+                if (_mistSrs[i] != null) _mistSrs[i].color = mistCol;
+            }
+        }
+
+        public void ShowRoadsideEventProp(RoadsideEventType eventType)
+        {
+            HideRoadsideEventProp();
+            _eventPropGo = new GameObject($"RoadsideEventProp_{eventType}");
+            _eventPropGo.transform.SetParent(transform, false);
+            _eventPropGo.transform.position = new Vector3(1.15f, _roadY + 0.25f, 0.08f);
+            _eventPropGo.transform.localScale = Vector3.one * 1.45f;
+
+            SpriteRenderer sr = _eventPropGo.AddComponent<SpriteRenderer>();
+            sr.sprite = GetOrCreateEventPropSprite(eventType);
+            sr.sortingOrder = 4;
+        }
+
+        public void HideRoadsideEventProp()
+        {
+            if (_eventPropGo != null)
+            {
+                Destroy(_eventPropGo);
+                _eventPropGo = null;
+            }
+        }
+
+        private static Sprite GetOrCreateLeafSprite()
+        {
+            if (_cachedLeafSprite != null) return _cachedLeafSprite;
+            const int s = 8;
+            Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            for (int y = 0; y < s; y++)
+                for (int x = 0; x < s; x++)
+                    tex.SetPixel(x, y, (Mathf.Abs(x - 3.5f) + Mathf.Abs(y - 3.5f) <= 2.6f) ? Color.white : Color.clear);
+            tex.Apply();
+            _cachedLeafSprite = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 32f);
+            return _cachedLeafSprite;
+        }
+
+        private static Sprite GetOrCreateMistSprite()
+        {
+            if (_cachedMistSprite != null) return _cachedMistSprite;
+            const int w = 64, h = 16;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            for (int y = 0; y < h; y++)
+            {
+                float ny = Mathf.Abs((y / (float)(h - 1)) * 2f - 1f);
+                for (int x = 0; x < w; x++)
+                {
+                    float nx = Mathf.Abs((x / (float)(w - 1)) * 2f - 1f);
+                    float a = Mathf.Clamp01(1f - nx * nx) * Mathf.Clamp01(1f - ny * ny);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            }
+            tex.Apply();
+            _cachedMistSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32f);
+            return _cachedMistSprite;
+        }
+
+        private static Sprite GetOrCreateEventPropSprite(RoadsideEventType type)
+        {
+            if (type == RoadsideEventType.AncientRuneChest && _cachedEventChestSprite != null) return _cachedEventChestSprite;
+            if (type == RoadsideEventType.SacredForestShrine && _cachedEventShrineSprite != null) return _cachedEventShrineSprite;
+            if (type == RoadsideEventType.WanderingScholar && _cachedEventCartSprite != null) return _cachedEventCartSprite;
+
+            const int w = 28, h = 28;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            Color clear = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    tex.SetPixel(x, y, clear);
+
+            if (type == RoadsideEventType.AncientRuneChest)
+            {
+                Color wood = new Color(0.45f, 0.27f, 0.14f, 1f);
+                Color gold = new Color(0.95f, 0.78f, 0.28f, 1f);
+                Color rune = new Color(0.45f, 0.88f, 1.0f, 1f);
+                for (int y = 4; y <= 18; y++)
+                    for (int x = 4; x <= 23; x++)
+                        tex.SetPixel(x, y, (x == 4 || x == 23 || y == 4 || y == 18 || y == 11) ? gold : wood);
+                for (int y = 9; y <= 13; y++)
+                    for (int x = 12; x <= 15; x++)
+                        tex.SetPixel(x, y, rune);
+                tex.Apply();
+                _cachedEventChestSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.1f), 28f);
+                return _cachedEventChestSprite;
+            }
+
+            if (type == RoadsideEventType.SacredForestShrine)
+            {
+                Color stone = new Color(0.44f, 0.48f, 0.54f, 1f);
+                Color stoneLight = new Color(0.64f, 0.68f, 0.74f, 1f);
+                Color glow = new Color(0.32f, 0.90f, 0.64f, 1f);
+                for (int y = 2; y <= 6; y++)
+                    for (int x = 5; x <= 22; x++) tex.SetPixel(x, y, stone);
+                for (int y = 7; y <= 21; y++)
+                    for (int x = 9; x <= 18; x++) tex.SetPixel(x, y, x < 14 ? stone : stoneLight);
+                for (int y = 12; y <= 17; y++)
+                    for (int x = 12; x <= 15; x++) tex.SetPixel(x, y, glow);
+                tex.Apply();
+                _cachedEventShrineSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.1f), 28f);
+                return _cachedEventShrineSprite;
+            }
+
+            // WanderingScholar: bàn sách + đèn lồng
+            Color cartWood = new Color(0.46f, 0.28f, 0.15f, 1f);
+            Color cloth = new Color(0.24f, 0.42f, 0.68f, 1f);
+            Color lantern = new Color(1.0f, 0.80f, 0.32f, 1f);
+            for (int y = 5; y <= 14; y++)
+                for (int x = 4; x <= 23; x++) tex.SetPixel(x, y, cartWood);
+            for (int y = 15; y <= 23; y++)
+                for (int x = 6; x <= 21; x++) tex.SetPixel(x, y, cloth);
+            for (int y = 15; y <= 19; y++)
+                for (int x = 21; x <= 24; x++) tex.SetPixel(x, y, lantern);
+            tex.Apply();
+            _cachedEventCartSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.1f), 28f);
+            return _cachedEventCartSprite;
         }
 
         private void BuildMilestoneMarker()
