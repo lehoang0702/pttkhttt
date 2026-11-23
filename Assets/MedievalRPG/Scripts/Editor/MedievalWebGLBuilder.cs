@@ -1,16 +1,22 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unity.Pipeline.Commands;
 using UnityEditor;
+using UnityEditor.Analytics;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEditor.CrashReporting;
+using UnityEditor.EngineDiagnostics;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
 namespace MedievalRPG.EditorTools
 {
     /// <summary>
-    /// Cấu hình phát hành và build bản WebGL cho game Chiến Binh Tri Thức (tương thích GitHub Pages, itch.io và local HTTP).
+    /// Cấu hình phát hành, dọn package/Cloud thừa và build bản WebGL cho game Chiến Binh Tri Thức.
     /// </summary>
     public static class MedievalWebGLBuilder
     {
@@ -19,10 +25,46 @@ namespace MedievalRPG.EditorTools
         public const string GameCompanyName = "MedievalRPG";
         public const string CustomWebTemplate = "PROJECT:ChienBinhTriThuc";
 
+        private static readonly string[] UnusedCloudAndHeavyPackages =
+        {
+            "com.unity.ai.assistant",
+            "com.unity.ai.inference",
+            "com.unity.collab-proxy",
+            "com.unity.visualscripting",
+            "com.unity.modules.unityanalytics"
+        };
+
+        private static ListRequest _activeListRequest;
+        private static AddAndRemoveRequest _activeRemoveRequest;
+        private static string[] _pendingRemovePackages;
+        private static bool _isPollingPackageCleanup;
+
+        /// <summary>
+        /// Gỡ bỏ các package không dùng gây gọi Unity Cloud / cảnh báo shader Sentis và tắt Cloud Diagnostics.
+        /// </summary>
+        [MenuItem("MedievalRPG/WebGL/0. Clean Unused Packages (Fix Cloud & Shader Warnings)")]
+        public static void CleanUnusedPackagesAndCloudSettings()
+        {
+            DisableCloudAndDiagnosticsSettings();
+            AssetDatabase.SaveAssets();
+
+            if (_activeListRequest != null || _activeRemoveRequest != null)
+            {
+                Debug.LogWarning("[MedievalWebGLBuilder] Package cleanup is already in progress.");
+                return;
+            }
+
+            _activeListRequest = Client.List(true, false);
+            HookPackageCleanupPoll();
+            Debug.Log("[MedievalWebGLBuilder] Checking installed packages to clean unused Cloud/AI/Analytics modules...");
+        }
+
         [MenuItem("MedievalRPG/WebGL/1. Apply WebGL Release Settings")]
         [CliCommand("medieval_apply_webgl_settings", "Apply WebGL release PlayerSettings for Chien Binh Tri Thuc")]
         public static string ApplyWebGLReleaseSettings()
         {
+            DisableCloudAndDiagnosticsSettings();
+
             NamedBuildTarget webTarget = NamedBuildTarget.WebGL;
 
             PlayerSettings.companyName = GameCompanyName;
@@ -63,7 +105,8 @@ namespace MedievalRPG.EditorTools
                 $"  managedStrippingLevel={PlayerSettings.GetManagedStrippingLevel(webTarget)}\n" +
                 $"  il2cppCodeGeneration={PlayerSettings.GetIl2CppCodeGeneration(webTarget)}\n" +
                 $"  wasm2023={PlayerSettings.WebGL.wasm2023}\n" +
-                $"  codeOptimization={UnityEditor.WebGL.UserBuildSettings.codeOptimization}";
+                $"  codeOptimization={UnityEditor.WebGL.UserBuildSettings.codeOptimization}\n" +
+                $"  engineDiagnosticsEnabled={EngineDiagnosticsSettings.enabled}";
 
             Debug.Log($"[MedievalWebGLBuilder] {summary}");
             return summary;
@@ -112,6 +155,7 @@ namespace MedievalRPG.EditorTools
 
             string fullOutput = Path.GetFullPath(outputPath);
             Directory.CreateDirectory(fullOutput);
+            CleanStaleWebGLArtifacts(fullOutput);
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
@@ -135,6 +179,187 @@ namespace MedievalRPG.EditorTools
             string msg = $"OK: WebGL build succeeded at '{fullOutput}' ({mb:F2} MB, {summary.totalTime.TotalSeconds:F1}s).";
             Debug.Log($"[MedievalWebGLBuilder] {msg}");
             return msg;
+        }
+
+        /// <summary>
+        /// Tắt Unity Cloud Project binding, Engine Diagnostics (Insights), CrashReporting và Analytics
+        /// để quá trình build WebGL không gọi Token Exchange lên services.unity.com.
+        /// </summary>
+        private static void DisableCloudAndDiagnosticsSettings()
+        {
+            EngineDiagnosticsSettings.enabled = false;
+            AnalyticsSettings.enabled = false;
+            AnalyticsSettings.initializeOnStartup = false;
+            CrashReportingSettings.enabled = false;
+            CrashReportingSettings.captureEditorExceptions = false;
+
+            ApplySerializedProperties(
+                "ProjectSettings/ProjectSettings.asset",
+                ("cloudProjectId", string.Empty),
+                ("organizationId", string.Empty),
+                ("cloudEnabled", false),
+                ("submitAnalytics", false));
+
+            ApplySerializedProperties(
+                "ProjectSettings/UnityConnectSettings.asset",
+                ("m_Enabled", false),
+                ("InsightsSettings.m_EngineDiagnosticsEnabled", false),
+                ("CrashReportingSettings.m_CaptureEditorExceptions", false),
+                ("UnityAnalyticsSettings.m_Enabled", false),
+                ("UnityAnalyticsSettings.m_InitializeOnStartup", false),
+                ("UnityAdsSettings.m_Enabled", false),
+                ("UnityAdsSettings.m_InitializeOnStartup", false));
+        }
+
+        private static void ApplySerializedProperties(string assetPath, params (string Path, object Value)[] updates)
+        {
+            UnityEngine.Object asset = AssetDatabase.LoadAllAssetsAtPath(assetPath).FirstOrDefault();
+            if (asset == null)
+            {
+                return;
+            }
+
+            SerializedObject serializedObject = new SerializedObject(asset);
+            bool changed = false;
+
+            foreach ((string path, object value) in updates)
+            {
+                SerializedProperty property = serializedObject.FindProperty(path);
+                if (property == null)
+                {
+                    continue;
+                }
+
+                if (value is bool boolValue && property.propertyType == SerializedPropertyType.Boolean)
+                {
+                    if (property.boolValue != boolValue)
+                    {
+                        property.boolValue = boolValue;
+                        changed = true;
+                    }
+                }
+                else if (value is string stringValue && property.propertyType == SerializedPropertyType.String)
+                {
+                    if (!string.Equals(property.stringValue, stringValue, StringComparison.Ordinal))
+                    {
+                        property.stringValue = stringValue;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        private static void CleanStaleWebGLArtifacts(string fullOutput)
+        {
+            string buildDir = Path.Combine(fullOutput, "Build");
+            if (Directory.Exists(buildDir))
+            {
+                Directory.Delete(buildDir, true);
+            }
+
+            string templateDir = Path.Combine(fullOutput, "TemplateData");
+            if (Directory.Exists(templateDir))
+            {
+                Directory.Delete(templateDir, true);
+            }
+
+            string indexPath = Path.Combine(fullOutput, "index.html");
+            if (File.Exists(indexPath))
+            {
+                File.Delete(indexPath);
+            }
+        }
+
+        private static void HookPackageCleanupPoll()
+        {
+            if (_isPollingPackageCleanup)
+            {
+                return;
+            }
+
+            EditorApplication.update += PollPackageCleanup;
+            _isPollingPackageCleanup = true;
+        }
+
+        private static void UnhookPackageCleanupPoll()
+        {
+            if (!_isPollingPackageCleanup)
+            {
+                return;
+            }
+
+            EditorApplication.update -= PollPackageCleanup;
+            _isPollingPackageCleanup = false;
+        }
+
+        private static void PollPackageCleanup()
+        {
+            if (_activeListRequest != null)
+            {
+                if (!_activeListRequest.IsCompleted)
+                {
+                    return;
+                }
+
+                ListRequest completedList = _activeListRequest;
+                _activeListRequest = null;
+
+                if (completedList.Status != StatusCode.Success)
+                {
+                    UnhookPackageCleanupPoll();
+                    Debug.LogError($"[MedievalWebGLBuilder] Failed to list packages: {completedList.Error?.message}");
+                    return;
+                }
+
+                HashSet<string> installed = new HashSet<string>(
+                    completedList.Result.Select(p => p.name),
+                    StringComparer.Ordinal);
+                _pendingRemovePackages = UnusedCloudAndHeavyPackages.Where(installed.Contains).ToArray();
+
+                if (_pendingRemovePackages.Length == 0)
+                {
+                    UnhookPackageCleanupPoll();
+                    Debug.Log("[MedievalWebGLBuilder] OK: No unused Cloud/AI/Analytics packages remain. Cloud diagnostics disabled.");
+                    return;
+                }
+
+                _activeRemoveRequest = Client.AddAndRemove(Array.Empty<string>(), _pendingRemovePackages);
+                return;
+            }
+
+            if (_activeRemoveRequest != null)
+            {
+                if (!_activeRemoveRequest.IsCompleted)
+                {
+                    return;
+                }
+
+                AddAndRemoveRequest completedRemove = _activeRemoveRequest;
+                string[] removedNames = _pendingRemovePackages ?? Array.Empty<string>();
+                _activeRemoveRequest = null;
+                _pendingRemovePackages = null;
+                UnhookPackageCleanupPoll();
+
+                if (completedRemove.Status != StatusCode.Success)
+                {
+                    Debug.LogError($"[MedievalWebGLBuilder] Failed to remove packages: {completedRemove.Error?.message}");
+                    return;
+                }
+
+                DisableCloudAndDiagnosticsSettings();
+                AssetDatabase.SaveAssets();
+                Debug.Log(
+                    $"[MedievalWebGLBuilder] OK: Removed unused packages ({string.Join(", ", removedNames)}) and disabled Cloud/Diagnostics. " +
+                    "Please restart Unity Editor once, then click 'MedievalRPG > WebGL > 2. Build WebGL Release (Builds/WebGL)'.");
+                return;
+            }
+
+            UnhookPackageCleanupPoll();
         }
 
         private static string ResolveBuildOutputFromArgs(string fallback)
